@@ -104,7 +104,7 @@ fun GameLogEntry(event: GameEvent) {
     if (text.isNotEmpty()) {
         Text(
             text = text,
-            fontSize = 11.sp,
+            fontSize = 14.sp,
             color = color,
             modifier = Modifier.padding(vertical = 1.dp)
         )
