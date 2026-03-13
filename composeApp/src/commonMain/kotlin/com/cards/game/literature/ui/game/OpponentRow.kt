@@ -65,11 +65,11 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(72.dp)
+        modifier = Modifier.width(88.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(64.dp)
                 .clip(CircleShape)
                 .background(
                     if (isOpponent) CardRed.copy(alpha = 0.3f * alpha)
@@ -80,7 +80,7 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
         ) {
             Text(
                 text = player.name.first().uppercase(),
-                fontSize = 18.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
             )
@@ -88,14 +88,14 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = player.name,
-            fontSize = 11.sp,
+            fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
             textAlign = TextAlign.Center,
             maxLines = 1
         )
         Text(
             text = "${player.cardCount} cards",
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)
         )
     }

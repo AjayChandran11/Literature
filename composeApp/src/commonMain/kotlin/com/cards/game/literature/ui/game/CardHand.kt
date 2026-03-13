@@ -51,7 +51,7 @@ fun CardHand(
                     Column {
                         Text(
                             halfSuit.displayName,
-                            fontSize = 9.sp,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 2.dp, bottom = 2.dp)
                         )
@@ -79,10 +79,10 @@ fun CardView(card: Card, isSelected: Boolean, onClick: () -> Unit) {
 
     Box(
         modifier = Modifier
-            .width(48.dp)
-            .height(68.dp)
-            .background(bgColor, RoundedCornerShape(6.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(6.dp))
+            .width(72.dp)
+            .height(100.dp)
+            .background(bgColor, RoundedCornerShape(8.dp))
+            .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             .padding(4.dp),
         contentAlignment = Alignment.Center
@@ -90,7 +90,7 @@ fun CardView(card: Card, isSelected: Boolean, onClick: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = card.value.displayName,
-                fontSize = 16.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = cardColor
             )
@@ -103,7 +103,7 @@ fun CardView(card: Card, isSelected: Boolean, onClick: () -> Unit) {
                         Suit.CLUBS -> "\u2663"
                     }
                 },
-                fontSize = 14.sp,
+                fontSize = 20.sp,
                 color = cardColor
             )
         }

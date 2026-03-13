@@ -27,19 +27,19 @@ fun ActionButtons(
         Button(
             onClick = onAskCard,
             enabled = isMyTurn,
-            modifier = Modifier.weight(1f).height(48.dp),
+            modifier = Modifier.weight(1f).height(56.dp),
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
             )
         ) {
-            Text("ASK CARD", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text("ASK CARD", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
         Button(
             onClick = onClaimDeck,
             enabled = isMyTurn,
-            modifier = Modifier.weight(1f).height(48.dp),
+            modifier = Modifier.weight(1f).height(56.dp),
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = GoldAccent,
@@ -47,7 +47,7 @@ fun ActionButtons(
                 disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
             )
         ) {
-            Text("CLAIM DECK", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text("CLAIM DECK", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }
