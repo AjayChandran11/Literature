@@ -1,6 +1,6 @@
 # Literature — Card Game
 
-A fully playable **Literature** card game for Android, built with Kotlin Multiplatform + Compose Multiplatform. Play against bots in 4, 6, or 8-player modes with full game rules enforcement.
+A fully playable **Literature** card game for Android, built with Kotlin Multiplatform + Compose Multiplatform. Play against bots in 4, 6, or 8-player modes with full game rules enforcement. This game is currently in development and it is getting created using Claude. 
 
 ---
 
@@ -42,37 +42,6 @@ Teams compete to **claim all 8 half-suits** by correctly declaring which player 
 - **Deck tracker** — 8 tiles showing unclaimed (yellow), your team (green), opponent (red) half-suits
 - **Game log** — collapsible live event feed with color coding
 - **Dark green felt theme** with gold accents
-
----
-
-## Architecture
-
-**Kotlin Multiplatform (KMP) + Compose Multiplatform** — Android fully implemented, iOS-ready structure.
-
-```
-composeApp/src/
-├── commonMain/kotlin/com/cards/game/literature/
-│   ├── model/          # Card, Player, Team, GameState, GameEvent, ClaimDeclaration
-│   ├── logic/          # GameEngine, MoveValidator, ClaimEvaluator, DeckUtils, CardDealer, CardTracker
-│   ├── bot/            # BotStrategy (Level 1), BotPlayer
-│   ├── repository/     # GameRepository (interface), LocalGameRepository
-│   ├── di/             # Koin AppModule
-│   ├── viewmodel/      # GameViewModel, ResultViewModel
-│   └── ui/
-│       ├── theme/      # LiteratureTheme (dark green felt)
-│       ├── navigation/ # AppNavigation (Home → Game → Result)
-│       ├── home/       # HomeScreen, GameSetupDialog
-│       ├── game/       # GameBoardScreen, ScoreBar, DeckTracker, CardHand,
-│       │               # OpponentRow, TeammateRow, GameLogPanel,
-│       │               # ActionButtons, AskBottomSheet, ClaimBottomSheet
-│       └── result/     # ResultScreen
-├── androidMain/        # MainActivity, platform actuals
-└── iosMain/            # MainViewController, platform actuals
-```
-
-### Key Design Decision — `GameRepository` abstraction
-
-All ViewModels depend only on the `GameRepository` interface. Today it is `LocalGameRepository` (runs `GameEngine` on-device with bot coroutines). When multiplayer is added, only `RemoteGameRepository` needs to be created — no UI changes.
 
 ---
 
@@ -121,7 +90,3 @@ The architecture is designed for a server upgrade with minimal changes:
 See `literature game.md` for the full multiplayer API spec (WebSocket messages, room management, session handling).
 
 ---
-
-## Known Issues
-
-- The KMP + AGP setup in a single module is deprecated and will break with AGP 9.0. Future fix: split into a KMP library module + a standalone Android app module.
