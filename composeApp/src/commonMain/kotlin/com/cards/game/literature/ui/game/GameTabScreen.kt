@@ -120,18 +120,6 @@ fun LogTab(events: List<GameEvent>) {
             color = GoldAccent,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(bottom = 8.dp)
-        ) {
-            items(LogFilter.entries) { f ->
-                FilterChip(
-                    selected = filter == f,
-                    onClick = { filter = f },
-                    label = { Text(f.name.lowercase().replaceFirstChar { it.uppercase() }) }
-                )
-            }
-        }
         if (filteredEvents.isEmpty()) {
             Text(
                 "No events yet.",
