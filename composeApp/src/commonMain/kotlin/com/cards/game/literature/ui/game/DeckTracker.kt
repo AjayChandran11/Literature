@@ -53,12 +53,13 @@ fun DeckTracker(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = status.halfSuit.displayName,
+                    text = status.halfSuit.displayName.replace(" ", "\n"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2
+                    minLines = 2,
+                    maxLines = 2,
                 )
                 if (status.claimedByTeamId != null) {
                     val label = if (status.claimedByTeamId == myTeamId) "Ours" else "Theirs"
