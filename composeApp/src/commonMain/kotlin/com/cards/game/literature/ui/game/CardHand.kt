@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,57 +31,52 @@ fun CardHand(
     onCardSelected: (Card) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            "Your Cards",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = GoldAccent,
-            modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.Start
-        ) {
-            handByHalfSuit.entries
-                .sortedBy { it.key.ordinal }
-                .forEach { (halfSuit, cards) ->
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Column {
-                        Text(
-                            halfSuit.displayName,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 2.dp, bottom = 2.dp)
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
-                            cards.forEach { card ->
-                                CardView(
-                                    card = card,
-                                    isSelected = card == selectedCard,
-                                    onClick = { onCardSelected(card) }
-                                )
-                            }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        handByHalfSuit.entries
+            .sortedBy { it.key.ordinal }
+            .forEach { (halfSuit, cards) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        halfSuit.displayName,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(72.dp)
+                    )
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        cards.forEach { card ->
+                            CardView(
+                                card = card,
+                                isSelected = card == selectedCard,
+                                onClick = { onCardSelected(card) }
+                            )
                         }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
                 }
-        }
+            }
     }
 }
 
 @Composable
 fun CardView(card: Card, isSelected: Boolean, onClick: () -> Unit) {
-    val cardColor = if (card.suit.isRed) CardRed else Color.White
-    val bgColor = if (isSelected) GoldAccent.copy(alpha = 0.3f) else Color(0xFF1A1A2E)
-    val borderColor = if (isSelected) GoldAccent else Color(0xFF4A4A6A)
+    val cardColor = if (card.suit.isRed) CardRed else Color.Black
+    val bgColor = if (isSelected) GoldAccent.copy(alpha = 0.3f) else Color.White
+    val borderColor = if (isSelected) GoldAccent else Color.LightGray
 
     Box(
         modifier = Modifier
-            .width(72.dp)
-            .height(100.dp)
+            .width(60.dp)
+            .height(80.dp)
             .background(bgColor, RoundedCornerShape(8.dp))
             .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)

@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.Card
+import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.GamePhase
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.GameUiState
@@ -95,6 +96,9 @@ fun GameBoardScreen(
                 }
             }
 
+            // Last event strip
+            LastEventStrip(events = gameLog)
+
             // Bottom NavigationBar
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                 GameTab.entries.forEach { tab ->
@@ -150,6 +154,30 @@ fun GameBoardScreen(
             },
             onDismiss = { showClaimSheet = false }
         )
+    }
+}
+
+@Composable
+private fun LastEventStrip(events: List<GameEvent>) {
+    val lastEvent = events.lastOrNull { it !is GameEvent.TurnChanged && it !is GameEvent.GameStarted }
+        ?: return
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Last: ",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            GameLogEntry(event = lastEvent)
+        }
     }
 }
 
