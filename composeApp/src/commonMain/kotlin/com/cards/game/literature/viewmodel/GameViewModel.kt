@@ -38,7 +38,8 @@ data class GameUiState(
 )
 
 class GameViewModel(
-    private val repository: GameRepository
+    private val repository: GameRepository,
+    private val overridePlayerId: String? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GameUiState())
@@ -51,7 +52,11 @@ class GameViewModel(
     val trackerState: StateFlow<CardTrackerState> = _trackerState.asStateFlow()
 
     private val cardTracker = CardTracker()
-    private val myPlayerId = "player_0"
+    private var myPlayerId = overridePlayerId ?: "player_0"
+
+    fun setPlayerId(playerId: String) {
+        myPlayerId = playerId
+    }
 
     init {
         viewModelScope.launch {

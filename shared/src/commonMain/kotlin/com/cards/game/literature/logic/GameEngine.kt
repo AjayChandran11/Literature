@@ -7,6 +7,13 @@ data class GameResult(
     val events: List<GameEvent>
 )
 
+data class PlayerSetupInfo(
+    val id: String,
+    val name: String,
+    val teamId: String,
+    val isBot: Boolean = false
+)
+
 class GameEngine {
 
     fun createGame(
@@ -16,7 +23,6 @@ class GameEngine {
     ): GameState {
         require(playerCount in listOf(4, 6, 8)) { "Player count must be 4, 6, or 8" }
 
-        val teamSize = playerCount / 2
         val humanPlayer = Player(id = "player_0", name = playerName, teamId = "team_1")
         val botPlayers = (1 until playerCount).map { i ->
             val teamId = if (i % 2 == 0) "team_1" else "team_2"
@@ -39,6 +45,46 @@ class GameEngine {
         )
 
         // Deal cards
+        val hands = CardDealer.dealCards(playerCount)
+        val playersWithCards = allPlayers.mapIndexed { index, player ->
+            player.copy(hand = hands[index].sortedWith(compareBy({ it.suit }, { it.value.rank })))
+        }
+
+        return GameState(
+            gameId = gameId,
+            players = playersWithCards,
+            teams = teams,
+            currentPlayerIndex = 0,
+            phase = GamePhase.IN_PROGRESS,
+            playerCount = playerCount,
+            events = listOf(GameEvent.GameStarted(playerCount))
+        )
+    }
+
+    fun createMultiplayerGame(
+        gameId: String,
+        players: List<PlayerSetupInfo>
+    ): GameState {
+        val playerCount = players.size
+        require(playerCount in listOf(4, 6, 8)) { "Player count must be 4, 6, or 8" }
+
+        val allPlayers = players.map { setup ->
+            Player(
+                id = setup.id,
+                name = setup.name,
+                teamId = setup.teamId,
+                isBot = setup.isBot
+            )
+        }
+
+        val team1Ids = allPlayers.filter { it.teamId == "team_1" }.map { it.id }
+        val team2Ids = allPlayers.filter { it.teamId == "team_2" }.map { it.id }
+
+        val teams = listOf(
+            Team(id = "team_1", name = "Team 1", playerIds = team1Ids),
+            Team(id = "team_2", name = "Team 2", playerIds = team2Ids)
+        )
+
         val hands = CardDealer.dealCards(playerCount)
         val playersWithCards = allPlayers.mapIndexed { index, player ->
             player.copy(hand = hands[index].sortedWith(compareBy({ it.suit }, { it.value.rank })))

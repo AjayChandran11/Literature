@@ -61,4 +61,23 @@ class GameEngineTest {
             assertEquals(target.id, result.newState.currentPlayer.id)
         }
     }
+
+    @Test
+    fun createMultiplayerGameWith6Players() {
+        val players = listOf(
+            PlayerSetupInfo("p1", "Alice", "team_1"),
+            PlayerSetupInfo("p2", "Bob", "team_2"),
+            PlayerSetupInfo("p3", "Charlie", "team_1"),
+            PlayerSetupInfo("p4", "Diana", "team_2"),
+            PlayerSetupInfo("p5", "Eve", "team_1"),
+            PlayerSetupInfo("p6", "Frank", "team_2")
+        )
+        val state = engine.createMultiplayerGame("test-mp", players)
+        assertEquals(6, state.players.size)
+        assertEquals(2, state.teams.size)
+        assertEquals(GamePhase.IN_PROGRESS, state.phase)
+        state.players.forEach { assertEquals(8, it.hand.size) }
+        assertEquals("p1", state.players[0].id)
+        assertEquals("Alice", state.players[0].name)
+    }
 }

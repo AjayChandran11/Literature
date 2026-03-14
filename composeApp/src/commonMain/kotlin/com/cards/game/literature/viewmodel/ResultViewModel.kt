@@ -19,7 +19,8 @@ data class ResultUiState(
 )
 
 class ResultViewModel(
-    private val repository: GameRepository
+    private val repository: GameRepository,
+    private val myPlayerId: String = "player_0"
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ResultUiState())
@@ -28,7 +29,7 @@ class ResultViewModel(
     init {
         val state = repository.gameState.value
         if (state != null && state.phase == GamePhase.FINISHED) {
-            val myTeam = state.getTeamForPlayer("player_0")
+            val myTeam = state.getTeamForPlayer(myPlayerId)
             val opponentTeam = state.teams.firstOrNull { it.id != myTeam?.id }
             val myScore = myTeam?.score ?: 0
             val oppScore = opponentTeam?.score ?: 0

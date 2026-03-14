@@ -34,7 +34,6 @@ class BotStrategy(private val cardTracker: CardTracker = CardTracker()) {
         trackerState: CardTrackerState
     ): BotAction.Claim? {
         val team = state.getTeamForPlayer(bot.id) ?: return null
-        val teammates = state.players.filter { it.id in team.playerIds }
 
         for (halfSuit in HalfSuit.entries) {
             val status = state.halfSuitStatuses.find { it.halfSuit == halfSuit }

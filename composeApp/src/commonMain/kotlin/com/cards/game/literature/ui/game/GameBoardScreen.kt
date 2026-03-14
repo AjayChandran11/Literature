@@ -28,15 +28,6 @@ fun GameBoardScreen(
     viewModel: GameViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val gameLog by viewModel.gameLog.collectAsState()
-
-    var showAskSheet by remember { mutableStateOf(false) }
-    var showClaimSheet by remember { mutableStateOf(false) }
-    var askSuit by remember { mutableStateOf<Suit?>(null) }
-    var askIsLow by remember { mutableStateOf<Boolean?>(null) }
-    var selectedCard by remember { mutableStateOf<Card?>(null) }
-    var selectedTab by remember { mutableStateOf(GameTab.TABLE) }
-    var previouslyMyTurn by remember { mutableStateOf(false) }
 
     // Start game on first composition
     LaunchedEffect(Unit) {
@@ -49,6 +40,24 @@ fun GameBoardScreen(
             onGameEnd()
         }
     }
+
+    GameBoardContent(viewModel = viewModel)
+}
+
+@Composable
+fun GameBoardContent(
+    viewModel: GameViewModel
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val gameLog by viewModel.gameLog.collectAsState()
+
+    var showAskSheet by remember { mutableStateOf(false) }
+    var showClaimSheet by remember { mutableStateOf(false) }
+    var askSuit by remember { mutableStateOf<Suit?>(null) }
+    var askIsLow by remember { mutableStateOf<Boolean?>(null) }
+    var selectedCard by remember { mutableStateOf<Card?>(null) }
+    var selectedTab by remember { mutableStateOf(GameTab.TABLE) }
+    var previouslyMyTurn by remember { mutableStateOf(false) }
 
     // Auto-switch to Hand tab when it becomes the player's turn
     LaunchedEffect(uiState.isMyTurn) {

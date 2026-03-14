@@ -1,4 +1,4 @@
-package com.cards.game.literature.ui.home
+package com.cards.game.literature.ui.lobby
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,15 +11,26 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.ui.theme.GoldAccent
+import com.cards.game.literature.viewmodel.LobbyViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    onStartGame: (playerName: String, playerCount: Int) -> Unit,
-    onPlayOnline: (playerName: String) -> Unit = {}
+fun LobbyScreen(
+    playerName: String,
+    onNavigateToWaitingRoom: (roomCode: String) -> Unit,
+    onBack: () -> Unit,
+    viewModel: LobbyViewModel = koinViewModel()
 ) {
-    var playerName by remember { mutableStateOf("") }
-    var showSetupDialog by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var joinRoomCode by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        viewModel.navigateToWaitingRoom.collect { roomCode ->
+            onNavigateToWaitingRoom(roomCode)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -29,30 +40,46 @@ fun HomeScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "\u2660 \u2665 \u2666 \u2663",
-            fontSize = 48.sp,
-            textAlign = TextAlign.Center,
-            color = GoldAccent
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Literature",
-            fontSize = 42.sp,
+            text = "Play Online",
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = GoldAccent
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "The Classic Card Game",
+            text = "Playing as $playerName",
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(48.dp))
 
+        // Create Room
+        Button(
+            onClick = { showCreateDialog = true },
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            enabled = !uiState.isLoading
+        ) {
+            Text("Create Room", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Join Room
+        Text(
+            text = "or join with a code",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
         OutlinedTextField(
-            value = playerName,
-            onValueChange = { playerName = it },
-            label = { Text("Your Name") },
+            value = joinRoomCode,
+            onValueChange = { joinRoomCode = it.uppercase().take(6) },
+            label = { Text("Room Code") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(0.8f),
             colors = OutlinedTextFieldDefaults.colors(
@@ -62,53 +89,60 @@ fun HomeScreen(
             )
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = { showSetupDialog = true },
-            enabled = playerName.isNotBlank(),
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                disabledContainerColor = MaterialTheme.colorScheme.outline
-            )
-        ) {
-            Text("New Game", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedButton(
-            onClick = { onPlayOnline(playerName.trim()) },
-            enabled = playerName.isNotBlank(),
+        Button(
+            onClick = { viewModel.joinRoom(joinRoomCode, playerName) },
+            enabled = joinRoomCode.length == 6 && !uiState.isLoading,
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = GoldAccent
-            )
+            shape = RoundedCornerShape(12.dp)
         ) {
-            Text("Play Online", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text("Join Room", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        TextButton(onClick = onBack) {
+            Text("Back", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        uiState.errorMessage?.let { error ->
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+            LaunchedEffect(error) {
+                kotlinx.coroutines.delay(3000)
+                viewModel.clearError()
+            }
         }
     }
 
-    if (showSetupDialog) {
-        GameSetupDialog(
-            onDismiss = { showSetupDialog = false },
+    if (showCreateDialog) {
+        CreateRoomDialog(
+            onDismiss = { showCreateDialog = false },
             onConfirm = { playerCount ->
-                showSetupDialog = false
-                onStartGame(playerName.trim(), playerCount)
+                showCreateDialog = false
+                viewModel.createRoom(playerName, playerCount)
             }
         )
     }
 }
 
 @Composable
-fun GameSetupDialog(
+fun CreateRoomDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
@@ -116,7 +150,7 @@ fun GameSetupDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Game Setup", fontWeight = FontWeight.Bold) },
+        title = { Text("Create Room", fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 Text("Select number of players:", color = MaterialTheme.colorScheme.onSurface)
@@ -144,7 +178,7 @@ fun GameSetupDialog(
         },
         confirmButton = {
             Button(onClick = { onConfirm(selectedCount) }) {
-                Text("Start Game")
+                Text("Create")
             }
         },
         dismissButton = {
