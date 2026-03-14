@@ -49,6 +49,22 @@ class LocalGameRepository(
         triggerBotTurnIfNeeded()
     }
 
+    override suspend fun submitMultiAsk(askerId: String, targetId: String, cards: List<Card>) {
+        mutex.withLock {
+            var currentState = _gameState.value ?: return
+            for (card in cards) {
+                if (currentState.phase != GamePhase.IN_PROGRESS) break
+                val result = gameEngine.processAsk(currentState, askerId, targetId, card)
+                currentState = result.newState
+                _gameState.value = currentState
+                result.events.forEach { _gameEvents.emit(it) }
+                // Stop if the turn passed away from the asker
+                if (currentState.currentPlayer.id != askerId) break
+            }
+        }
+        triggerBotTurnIfNeeded()
+    }
+
     override suspend fun submitClaim(declaration: ClaimDeclaration) {
         mutex.withLock {
             val currentState = _gameState.value ?: return

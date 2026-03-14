@@ -87,6 +87,16 @@ class GameViewModel(
         }
     }
 
+    fun askCards(targetId: String, cards: List<Card>) {
+        viewModelScope.launch {
+            try {
+                repository.submitMultiAsk(myPlayerId, targetId, cards)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+        }
+    }
+
     fun claimDeck(declaration: ClaimDeclaration) {
         viewModelScope.launch {
             try {

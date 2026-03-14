@@ -139,9 +139,9 @@ fun GameBoardScreen(
             initialIsLow = askIsLow,
             onSuitSelected = { askSuit = it },
             onIsLowSelected = { askIsLow = it },
-            onConfirm = { targetId, card ->
+            onConfirm = { targetId, cards ->
                 showAskSheet = false
-                viewModel.askCard(targetId, card)
+                viewModel.askCards(targetId, cards)
             },
             onDismiss = { showAskSheet = false }
         )

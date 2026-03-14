@@ -10,5 +10,6 @@ interface GameRepository {
 
     suspend fun createGame(playerName: String, playerCount: Int): GameState
     suspend fun submitAsk(askerId: String, targetId: String, card: Card)
+    suspend fun submitMultiAsk(askerId: String, targetId: String, cards: List<Card>)
     suspend fun submitClaim(declaration: ClaimDeclaration)
 }

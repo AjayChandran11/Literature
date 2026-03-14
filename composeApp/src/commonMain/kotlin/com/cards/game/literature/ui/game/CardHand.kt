@@ -7,6 +7,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -68,7 +69,13 @@ fun CardHand(
 }
 
 @Composable
-fun CardView(card: Card, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun CardView(
+    card: Card,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    badgeNumber: Int? = null
+) {
     val cardColor = if (card.suit.isRed) CardRed else Color.Black
     val bgColor = if (isSelected) GoldAccent.copy(alpha = 0.3f) else Color.White
     val borderColor = if (isSelected) GoldAccent else Color.LightGray
@@ -102,6 +109,22 @@ fun CardView(card: Card, isSelected: Boolean, onClick: () -> Unit, modifier: Mod
                 fontSize = 20.sp,
                 color = cardColor
             )
+        }
+        if (badgeNumber != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(18.dp)
+                    .background(GoldAccent, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "$badgeNumber",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
         }
     }
 }
