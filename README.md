@@ -54,6 +54,12 @@ Teams compete to **claim half-suits** by correctly declaring which player holds 
 
 ---
 
+<p align="center">
+<img src="screenshots/homescreen.jpg" width="300"/>
+<img src="screenshots/handscreen.jpg" width="300"/>
+<img src="screenshots/askscreen.jpg" width="300"/>
+</p>
+
 ## Tech Stack
 
 | Concern | Technology |
