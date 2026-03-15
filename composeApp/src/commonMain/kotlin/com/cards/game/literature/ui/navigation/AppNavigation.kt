@@ -9,12 +9,15 @@ import com.cards.game.literature.ui.game.GameBoardScreen
 import com.cards.game.literature.ui.home.HomeScreen
 import com.cards.game.literature.ui.lobby.LobbyScreen
 import com.cards.game.literature.ui.lobby.WaitingRoomScreen
+import com.cards.game.literature.preferences.OnboardingPrefs
+import com.cards.game.literature.ui.onboarding.OnboardingScreen
 import com.cards.game.literature.ui.result.ResultScreen
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.qualifier.named
 
 object Routes {
+    const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val GAME = "game/{playerName}/{playerCount}"
     const val ONLINE_GAME = "online_game"
@@ -31,8 +34,19 @@ object Routes {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val startDestination = if (OnboardingPrefs.isCompleted()) Routes.HOME else Routes.ONBOARDING
 
-    NavHost(navController = navController, startDestination = Routes.HOME) {
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable(Routes.ONBOARDING) {
+            OnboardingScreen(
+                onFinish = {
+                    OnboardingPrefs.markCompleted()
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.ONBOARDING) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Routes.HOME) {
             HomeScreen(
                 onStartGame = { playerName, playerCount ->
