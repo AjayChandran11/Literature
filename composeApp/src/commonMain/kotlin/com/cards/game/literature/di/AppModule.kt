@@ -38,6 +38,10 @@ val appModule = module {
         GameViewModel(onlineRepo, overridePlayerId = onlineRepo.myPlayerId)
     }
     viewModel { ResultViewModel(get()) }
+    viewModel(qualifier = named("online")) {
+        val onlineRepo = get<OnlineGameRepository>()
+        ResultViewModel(onlineRepo, onlineRepo.myPlayerId)
+    }
     viewModel { LobbyViewModel(get()) }
     viewModel { WaitingRoomViewModel(get()) }
 }

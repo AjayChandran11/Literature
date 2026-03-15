@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.GameEvent
+import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.Suit
 import com.cards.game.literature.model.GamePhase
 import com.cards.game.literature.ui.theme.GoldAccent
@@ -58,6 +59,25 @@ fun GameBoardContent(
     var selectedCard by remember { mutableStateOf<Card?>(null) }
     var selectedTab by remember { mutableStateOf(GameTab.TABLE) }
     var previouslyMyTurn by remember { mutableStateOf(false) }
+
+    // Clear suit selection if the selected half suit gets claimed
+    LaunchedEffect(uiState.halfSuitStatuses) {
+        val suit = askSuit
+        val isLow = askIsLow
+        if (suit != null && isLow != null) {
+            val selectedHalfSuit = when (suit) {
+                Suit.SPADES -> if (isLow) HalfSuit.SPADES_LOW else HalfSuit.SPADES_HIGH
+                Suit.HEARTS -> if (isLow) HalfSuit.HEARTS_LOW else HalfSuit.HEARTS_HIGH
+                Suit.DIAMONDS -> if (isLow) HalfSuit.DIAMONDS_LOW else HalfSuit.DIAMONDS_HIGH
+                Suit.CLUBS -> if (isLow) HalfSuit.CLUBS_LOW else HalfSuit.CLUBS_HIGH
+            }
+            val isClaimed = uiState.halfSuitStatuses.any { it.halfSuit == selectedHalfSuit && it.claimedByTeamId != null }
+            if (isClaimed) {
+                askSuit = null
+                askIsLow = null
+            }
+        }
+    }
 
     // Auto-switch to Hand tab when it becomes the player's turn
     LaunchedEffect(uiState.isMyTurn) {

@@ -32,10 +32,9 @@ class LobbyViewModel(
         }
 
         viewModelScope.launch {
-            onlineRepository.roomState.filterNotNull().collect {
-                _uiState.update { it.copy(isLoading = false) }
-                _navigateToWaitingRoom.emit(onlineRepository.roomCode)
-            }
+            onlineRepository.roomState.filterNotNull().first()
+            _uiState.update { it.copy(isLoading = false) }
+            _navigateToWaitingRoom.emit(onlineRepository.roomCode)
         }
     }
 

@@ -1,7 +1,6 @@
 package com.cards.game.literature.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -12,12 +11,15 @@ import com.cards.game.literature.ui.lobby.LobbyScreen
 import com.cards.game.literature.ui.lobby.WaitingRoomScreen
 import com.cards.game.literature.ui.result.ResultScreen
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.qualifier.named
 
 object Routes {
     const val HOME = "home"
     const val GAME = "game/{playerName}/{playerCount}"
     const val ONLINE_GAME = "online_game"
     const val RESULT = "result"
+    const val RESULT_ONLINE = "result_online"
     const val LOBBY = "lobby/{playerName}"
     const val WAITING_ROOM = "waiting_room/{roomCode}"
 
@@ -86,7 +88,7 @@ fun AppNavigation() {
             OnlineGameScreen(
                 onlineRepository = onlineRepo,
                 onGameEnd = {
-                    navController.navigate(Routes.RESULT) {
+                    navController.navigate(Routes.RESULT_ONLINE) {
                         popUpTo(Routes.HOME)
                     }
                 }
@@ -94,6 +96,17 @@ fun AppNavigation() {
         }
         composable(Routes.RESULT) {
             ResultScreen(
+                onPlayAgain = {
+                    navController.popBackStack(Routes.HOME, inclusive = false)
+                },
+                onGoHome = {
+                    navController.popBackStack(Routes.HOME, inclusive = false)
+                }
+            )
+        }
+        composable(Routes.RESULT_ONLINE) {
+            ResultScreen(
+                viewModel = koinViewModel(qualifier = named("online")),
                 onPlayAgain = {
                     navController.popBackStack(Routes.HOME, inclusive = false)
                 },
