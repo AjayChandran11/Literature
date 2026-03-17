@@ -30,7 +30,7 @@ val appModule = module {
             install(WebSockets)
         }
     }
-    single { OnlineGameRepository(serverUrl = "192.168.29.206:8080", client = get()) }
+    single { OnlineGameRepository(serverUrl = serverUrl, client = get()) }
 
     viewModel { GameViewModel(get()) }
     viewModel(qualifier = named("online")) {

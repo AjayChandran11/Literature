@@ -54,8 +54,7 @@ fun DeckTracker(
             ) {
                 Text(
                     text = status.halfSuit.displayName.replace(" ", "\n"),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.labelMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurface,
                     minLines = 2,
@@ -66,14 +65,14 @@ fun DeckTracker(
                     val labelColor = if (status.claimedByTeamId == myTeamId) LightGreen else CardRed
                     Text(
                         text = label,
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = labelColor,
                         fontWeight = FontWeight.Bold
                     )
                 } else {
                     Text(
                         text = "Open",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray
                     )
                 }

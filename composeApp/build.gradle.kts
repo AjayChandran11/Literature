@@ -31,6 +31,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.androidx.core.splashscreen)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -40,6 +41,7 @@ kotlin {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
+            implementation(compose.materialIconsExtended)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
@@ -72,14 +74,26 @@ android {
         versionCode = 1
         versionName = "1.0"
     }
+    buildFeatures {
+        buildConfig = true
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
     buildTypes {
+        getByName("debug") {
+            buildConfigField("String", "SERVER_URL", "\"ws://192.168.29.206:8080\"")
+        }
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            buildConfigField("String", "SERVER_URL", "\"wss://TODO_SET_PRODUCTION_SERVER\"")
         }
     }
     compileOptions {

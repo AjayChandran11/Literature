@@ -14,6 +14,7 @@ sealed class GameEvent {
         val targetName: String,
         val card: Card,
         val success: Boolean,
+        val batchId: String? = null,
         override val timestamp: Long = currentTimeMillis()
     ) : GameEvent()
 

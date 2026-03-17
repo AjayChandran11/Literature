@@ -102,7 +102,7 @@ class OnlineGameRepository(
 
         connectionJob = scope.launch {
             try {
-                client.webSocket(urlString = "ws://$serverUrl/game") {
+                client.webSocket(urlString = "$serverUrl/game") {
                     webSocketSession = this
                     _connectionState.value = ConnectionState.CONNECTED
 

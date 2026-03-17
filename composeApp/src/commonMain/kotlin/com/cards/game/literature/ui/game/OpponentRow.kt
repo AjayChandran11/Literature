@@ -88,14 +88,14 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = player.name,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
             textAlign = TextAlign.Center,
             maxLines = 1
         )
         Text(
             text = "${player.cardCount} cards",
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)
         )
     }

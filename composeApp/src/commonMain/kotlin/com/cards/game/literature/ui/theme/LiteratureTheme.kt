@@ -4,6 +4,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
 // ─── Shared semantic tokens ────────────────────────────────────────────────
 // These are the named colours used throughout the UI. Edit here to retheme.
@@ -71,6 +74,25 @@ private val LightColorScheme = lightColorScheme(
     outline = Color(0xFF4CAF50),
 )
 
+// ─── Typography ──────────────────────────────────────────────────────────────
+val LiteratureTypography = Typography(
+    displayLarge = TextStyle(fontSize = 48.sp, fontWeight = FontWeight.ExtraBold),
+    displayMedium = TextStyle(fontSize = 42.sp, fontWeight = FontWeight.Bold),
+    displaySmall = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.Bold),
+    headlineLarge = TextStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold),
+    headlineMedium = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold),
+    headlineSmall = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
+    titleLarge = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Medium),
+    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium),
+    titleSmall = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium),
+    bodyLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Normal),
+    bodyMedium = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Normal),
+    bodySmall = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Normal),
+    labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium),
+    labelMedium = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
+    labelSmall = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+)
+
 // ─── Theme composable ──────────────────────────────────────────────────────
 /**
  * Apply the Literature theme.
@@ -93,7 +115,7 @@ fun LiteratureTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = MaterialTheme.typography,
+        typography = LiteratureTypography,
         content = content,
     )
 }

@@ -136,11 +136,12 @@ class GameRoom(
             if (state.phase != GamePhase.IN_PROGRESS) return
             if (state.currentPlayer.id != playerId) return
 
+            val batchId = System.currentTimeMillis().toString()
             for (card in cards) {
                 if (state.phase != GamePhase.IN_PROGRESS) break
                 if (state.currentPlayer.id != playerId) break
 
-                val result = engine.processAsk(state, playerId, targetId, card)
+                val result = engine.processAsk(state, playerId, targetId, card, batchId)
                 state = result.newState
                 gameState = state
 

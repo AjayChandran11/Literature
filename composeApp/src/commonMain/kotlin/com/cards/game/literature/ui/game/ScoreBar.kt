@@ -29,26 +29,24 @@ fun ScoreBar(myTeamScore: Int, opponentTeamScore: Int, modifier: Modifier = Modi
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Your Team", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Your Team", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 "$myTeamScore",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineLarge,
                 color = LightGreen
             )
         }
         Text(
             "VS",
-            fontSize = 16.sp,
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = GoldAccent
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Opponents", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Opponents", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 "$opponentTeamScore",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineLarge,
                 color = CardRed
             )
         }

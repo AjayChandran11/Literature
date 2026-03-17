@@ -1,6 +1,7 @@
 package com.cards.game.literature.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.GamePhase
 import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.repository.GameRepository
@@ -15,7 +16,8 @@ data class ResultUiState(
     val opponentTeamName: String = "Opponents",
     val isWinner: Boolean = false,
     val isDraw: Boolean = false,
-    val halfSuitBreakdown: List<HalfSuitStatus> = emptyList()
+    val halfSuitBreakdown: List<HalfSuitStatus> = emptyList(),
+    val gameLog: List<GameEvent> = emptyList()
 )
 
 class ResultViewModel(
@@ -40,7 +42,8 @@ class ResultViewModel(
                 opponentTeamName = opponentTeam?.name ?: "Opponents",
                 isWinner = myScore > oppScore,
                 isDraw = myScore == oppScore,
-                halfSuitBreakdown = state.halfSuitStatuses
+                halfSuitBreakdown = state.halfSuitStatuses,
+                gameLog = state.events
             )
         }
     }

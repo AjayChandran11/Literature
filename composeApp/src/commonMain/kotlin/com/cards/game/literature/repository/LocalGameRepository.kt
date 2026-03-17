@@ -52,9 +52,10 @@ class LocalGameRepository(
     override suspend fun submitMultiAsk(askerId: String, targetId: String, cards: List<Card>) {
         mutex.withLock {
             var currentState = _gameState.value ?: return
+            val batchId = currentTimeMillis().toString()
             for (card in cards) {
                 if (currentState.phase != GamePhase.IN_PROGRESS) break
-                val result = gameEngine.processAsk(currentState, askerId, targetId, card)
+                val result = gameEngine.processAsk(currentState, askerId, targetId, card, batchId)
                 currentState = result.newState
                 _gameState.value = currentState
                 result.events.forEach { _gameEvents.emit(it) }

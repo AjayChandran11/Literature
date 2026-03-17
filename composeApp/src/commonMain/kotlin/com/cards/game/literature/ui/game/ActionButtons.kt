@@ -34,7 +34,7 @@ fun ActionButtons(
                 disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
             )
         ) {
-            Text("ASK CARD", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("ASK CARD", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
         Button(
             onClick = onClaimDeck,
@@ -47,7 +47,7 @@ fun ActionButtons(
                 disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
             )
         ) {
-            Text("CLAIM DECK", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("CLAIM DECK", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
     }
 }

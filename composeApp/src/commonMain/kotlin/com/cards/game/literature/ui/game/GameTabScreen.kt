@@ -8,10 +8,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,47 +24,52 @@ import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.GameUiState
 
-enum class GameTab(val label: String, val symbol: String) {
-    TABLE("Table", "\u25A6"),
-    HAND("Hand", "\u2660"),
-    LOG("Log", "\u2630")
+enum class GameTab(val label: String, val icon: ImageVector) {
+    TABLE("Table", Icons.Filled.GridView),
+    HAND("Hand", Icons.Filled.PanTool),
 }
 
-enum class LogFilter { ALL, ASKS, CLAIMS }
+// enum class LogFilter { ALL, ASKS, CLAIMS }  // Only used by LogTab
 
 @Composable
 fun TableTab(uiState: GameUiState) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        SectionLabel("OPPONENTS")
-        OpponentRow(opponents = uiState.opponents)
-
-        if (uiState.teammates.isNotEmpty()) {
-            SectionLabel("TEAMMATES")
-            TeammateRow(teammates = uiState.teammates)
+        // Opponents section — takes equal space
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            SectionLabel("OPPONENTS")
+            OpponentRow(opponents = uiState.opponents)
         }
 
+        // Teammates section — takes equal space
+        if (uiState.teammates.isNotEmpty()) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                SectionLabel("TEAMMATES")
+                TeammateRow(teammates = uiState.teammates)
+            }
+        }
+
+        // Half-suits pinned at the bottom
         SectionLabel("HALF-SUITS")
         DeckTracker(
             statuses = uiState.halfSuitStatuses,
             myTeamId = uiState.myTeamId
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
     }
 }
 
 @Composable
-fun HandTab(
-    uiState: GameUiState,
-    selectedCard: Card?,
-    onCardSelected: (Card) -> Unit
-) {
+fun HandTab(uiState: GameUiState) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -68,30 +77,19 @@ fun HandTab(
     ) {
         Text(
             "YOUR HAND",
-            fontSize = 13.sp,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             color = GoldAccent,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         CardHand(
             handByHalfSuit = uiState.myHandByHalfSuit,
-            selectedCard = selectedCard,
-            onCardSelected = onCardSelected,
             modifier = Modifier.weight(1f)
         )
-        AnimatedVisibility(visible = selectedCard != null) {
-            selectedCard?.let { card ->
-                Text(
-                    text = "Selected: ${card.displayName}",
-                    fontSize = 13.sp,
-                    color = GoldAccent,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-        }
     }
 }
 
+/*
 @Composable
 fun LogTab(events: List<GameEvent>) {
     var filter by rememberSaveable { mutableStateOf(LogFilter.ALL) }
@@ -139,14 +137,15 @@ fun LogTab(events: List<GameEvent>) {
         }
     }
 }
+*/
 
 @Composable
 private fun SectionLabel(text: String) {
     Text(
         text = text,
-        fontSize = 11.sp,
+        style = MaterialTheme.typography.bodyLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+        modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
     )
 }

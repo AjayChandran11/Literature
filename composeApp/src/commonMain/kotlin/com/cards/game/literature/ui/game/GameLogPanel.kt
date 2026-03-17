@@ -47,13 +47,13 @@ fun GameLogPanel(events: List<GameEvent>, modifier: Modifier = Modifier) {
         ) {
             Text(
                 "Game Log",
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = GoldAccent
             )
             Text(
                 if (expanded) "Collapse" else "Expand",
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -63,7 +63,7 @@ fun GameLogPanel(events: List<GameEvent>, modifier: Modifier = Modifier) {
         if (recentEvents.isEmpty()) {
             Text(
                 "Game started!",
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {

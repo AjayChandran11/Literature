@@ -41,14 +41,13 @@ fun LobbyScreen(
     ) {
         Text(
             text = "Play Online",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge,
             color = GoldAccent
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Playing as $playerName",
-            fontSize = 16.sp,
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(48.dp))
@@ -63,7 +62,7 @@ fun LobbyScreen(
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             enabled = !uiState.isLoading
         ) {
-            Text("Create Room", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("Create Room", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -71,7 +70,7 @@ fun LobbyScreen(
         // Join Room
         Text(
             text = "or join with a code",
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -105,7 +104,7 @@ fun LobbyScreen(
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
-                Text("Join Room", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Join Room", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -120,7 +119,7 @@ fun LobbyScreen(
             Text(
                 text = error,
                 color = MaterialTheme.colorScheme.error,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )
             LaunchedEffect(error) {

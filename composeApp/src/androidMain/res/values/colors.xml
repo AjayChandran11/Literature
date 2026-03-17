@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light mode background matching LightColorScheme.background = #FAFAFA -->
+    <color name="background">#FAFAFA</color>
+</resources>

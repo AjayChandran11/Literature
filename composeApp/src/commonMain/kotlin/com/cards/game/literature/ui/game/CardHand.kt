@@ -28,8 +28,6 @@ import com.cards.game.literature.ui.theme.GoldAccent
 @Composable
 fun CardHand(
     handByHalfSuit: Map<HalfSuit, List<Card>>,
-    selectedCard: Card?,
-    onCardSelected: (Card) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -47,9 +45,9 @@ fun CardHand(
                 ) {
                     Text(
                         halfSuit.displayName,
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(72.dp)
+                        modifier = Modifier.width(72.dp).padding(end = 8.dp)
                     )
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -58,8 +56,8 @@ fun CardHand(
                         cards.forEach { card ->
                             CardView(
                                 card = card,
-                                isSelected = card == selectedCard,
-                                onClick = { onCardSelected(card) }
+                                isSelected = false,
+                                onClick = { }
                             )
                         }
                     }

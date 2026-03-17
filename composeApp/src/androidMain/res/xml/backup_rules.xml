@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Exclude game-session prefs; onboarding state should start fresh on new devices -->
+    <exclude domain="sharedpref" path="lit_prefs.xml" />
+</full-backup-content>

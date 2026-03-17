@@ -75,8 +75,7 @@ fun WaitingRoomScreen(
 
         Text(
             text = "Waiting Room",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineMedium,
             color = GoldAccent
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -93,19 +92,18 @@ fun WaitingRoomScreen(
             ) {
                 Text(
                     text = "Room Code",
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = uiState.roomCode,
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.displaySmall,
                     letterSpacing = 4.sp,
                     color = GoldAccent
                 )
                 Text(
                     text = "Share this code with friends",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -115,7 +113,7 @@ fun WaitingRoomScreen(
 
         Text(
             text = "Players (${uiState.players.size}/${uiState.targetPlayerCount})",
-            fontSize = 18.sp,
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -155,14 +153,13 @@ fun WaitingRoomScreen(
 
                         Text(
                             text = player.name,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.weight(1f)
                         )
 
                         Text(
                             text = if (player.teamId == "team_1") "Team 1" else "Team 2",
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
@@ -174,7 +171,7 @@ fun WaitingRoomScreen(
                             ) {
                                 Text(
                                     text = "HOST",
-                                    fontSize = 10.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = GoldAccent,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -202,7 +199,7 @@ fun WaitingRoomScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Fill empty slots with bots",
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -223,13 +220,13 @@ fun WaitingRoomScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Start Game", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Start Game", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
             }
         } else {
             Text(
                 text = "Waiting for host to start...",
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
@@ -249,7 +246,7 @@ fun WaitingRoomScreen(
             Text(
                 text = error,
                 color = MaterialTheme.colorScheme.error,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )
             LaunchedEffect(error) {

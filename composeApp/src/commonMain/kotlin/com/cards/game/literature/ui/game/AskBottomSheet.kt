@@ -85,7 +85,7 @@ fun AskBottomSheet(
         ) {
             Text(
                 text = "Ask a Card",
-                fontSize = 18.sp,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = GoldAccent
             )
@@ -104,7 +104,7 @@ fun AskBottomSheet(
                                 onIsLowSelected(null)
                             }
                         },
-                        label = { Text(suit.symbol, fontSize = 20.sp) }
+                        label = { Text(suit.symbol, style = MaterialTheme.typography.headlineSmall) }
                     )
                 }
             }
@@ -149,7 +149,7 @@ fun AskBottomSheet(
                         Text(
                             text = if (selectedSuit == null) "Select a suit to see cards"
                                    else "Select Low or High",
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
@@ -192,7 +192,7 @@ fun AskBottomSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         "Ask Queue:",
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Row(
@@ -214,7 +214,7 @@ fun AskBottomSheet(
 
             // Opponent chips
             if (activeOpponents.isNotEmpty()) {
-                Text("Ask:", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Ask:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()

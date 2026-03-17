@@ -101,13 +101,13 @@ fun OnlineGameScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Reconnecting...",
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     } else {
                         Text(
                             "Disconnected",
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onError
                         )
                     }

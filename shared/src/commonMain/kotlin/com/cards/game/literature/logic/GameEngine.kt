@@ -105,7 +105,8 @@ class GameEngine {
         state: GameState,
         askerId: String,
         targetId: String,
-        card: Card
+        card: Card,
+        batchId: String? = null
     ): GameResult {
         val validation = MoveValidator.validateAsk(state, askerId, targetId, card)
         require(validation.isValid) { validation.errorMessage ?: "Invalid ask" }
@@ -122,7 +123,8 @@ class GameEngine {
             targetId = targetId,
             targetName = target.name,
             card = card,
-            success = hasCard
+            success = hasCard,
+            batchId = batchId
         )
         newEvents.add(event)
 
