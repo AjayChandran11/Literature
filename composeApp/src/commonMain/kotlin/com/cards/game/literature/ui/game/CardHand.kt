@@ -49,7 +49,7 @@ fun CardHand(
                         halfSuit.displayName,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(72.dp)
+                        modifier = Modifier.width(72.dp).padding(end = 8.dp)
                     )
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),

@@ -163,7 +163,8 @@ fun GameBoardContent(
 
             // Bottom NavigationBar
             NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.surface,
+                windowInsets = WindowInsets()
             ) {
                 GameTab.entries.forEach { tab ->
                     NavigationBarItem(

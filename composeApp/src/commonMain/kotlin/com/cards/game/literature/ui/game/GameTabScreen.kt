@@ -162,6 +162,6 @@ private fun SectionLabel(text: String) {
         style = MaterialTheme.typography.bodyLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
     )
 }
