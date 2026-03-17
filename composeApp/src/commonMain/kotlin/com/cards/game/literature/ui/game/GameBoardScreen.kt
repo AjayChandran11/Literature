@@ -89,8 +89,8 @@ fun GameBoardContent(
     var selectedTab by remember { mutableStateOf(GameTab.TABLE) }
     var previouslyMyTurn by remember { mutableStateOf(false) }
 
-    // Clear suit selection if the selected half suit gets claimed
-    LaunchedEffect(uiState.halfSuitStatuses) {
+    // Clear suit selection if the selected half suit is claimed OR the player lost all its cards
+    LaunchedEffect(uiState.halfSuitStatuses, uiState.myHandByHalfSuit) {
         val suit = askSuit
         val isLow = askIsLow
         if (suit != null && isLow != null) {
@@ -101,7 +101,8 @@ fun GameBoardContent(
                 Suit.CLUBS -> if (isLow) HalfSuit.CLUBS_LOW else HalfSuit.CLUBS_HIGH
             }
             val isClaimed = uiState.halfSuitStatuses.any { it.halfSuit == selectedHalfSuit && it.claimedByTeamId != null }
-            if (isClaimed) {
+            val playerHasCards = uiState.myHandByHalfSuit.containsKey(selectedHalfSuit)
+            if (isClaimed || !playerHasCards) {
                 askSuit = null
                 askIsLow = null
             }
