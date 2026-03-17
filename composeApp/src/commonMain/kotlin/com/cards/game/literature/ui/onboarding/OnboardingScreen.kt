@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.TextStyle
@@ -71,7 +72,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             }
         }
 
-        // Bottom controls: indicator + Next button
+        // Bottom controls: hint + indicator + Next button
         if (pagerState.currentPage < 4) {
             Column(
                 modifier = Modifier
@@ -79,8 +80,19 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                     .navigationBarsPadding()
                     .padding(bottom = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Swipe hint — only on welcome page
+                if (pagerState.currentPage == 0) {
+                    var hintVisible by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { delay(2060); hintVisible = true }
+                    AnimatedVisibility(
+                        visible = hintVisible,
+                        enter = fadeIn(tween(500))
+                    ) {
+                        PulsingHint(color = onBackground)
+                    }
+                }
                 PagerIndicator(
                     pageCount = 5,
                     currentPage = pagerState.currentPage
@@ -150,46 +162,64 @@ private fun PagerIndicator(pageCount: Int, currentPage: Int) {
 
 // ─── Page 1: Welcome ────────────────────────────────────────────────────────
 
+// Isolated composable — shimmer state reads stay here, never recompose parent
 @Composable
-private fun WelcomePage() {
-    val suitVisible = remember { mutableStateListOf(false, false, false, false) }
-    var titleVisible by remember { mutableStateOf(false) }
-    var subtitleVisible by remember { mutableStateOf(false) }
-    var hintVisible by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        repeat(4) { i ->
-            delay(180L)
-            suitVisible[i] = true
-        }
-        delay(200); titleVisible = true
-        delay(400); subtitleVisible = true
-        delay(500); hintVisible = true
-    }
-
-    // Shimmer sweep on title
+private fun ShimmerTitle() {
     val shimmer = rememberInfiniteTransition(label = "shimmer")
     val shimmerOffset by shimmer.animateFloat(
         initialValue = 0f, targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            tween(2200, delayMillis = 0, easing = LinearEasing),
+            tween(2200, easing = LinearEasing),
             RepeatMode.Restart
         ), label = "shimmerX"
     )
-    // Sweep the highlight from before the text to beyond it so restart is invisible
     val shimmerBrush = Brush.linearGradient(
         colors = listOf(GoldAccent, Color(0xFFFFF9E6), GoldAccent),
         start = Offset((shimmerOffset - 0.15f) * 900f, 0f),
         end   = Offset((shimmerOffset + 0.15f) * 900f, 0f)
     )
+    Text(
+        "Literature",
+        style = TextStyle(
+            brush = shimmerBrush,
+            fontSize = 56.sp,
+            fontWeight = FontWeight.ExtraBold
+        )
+    )
+}
 
-    // Hint pulse
+// Isolated composable — pulse alpha reads stay here, never recompose parent
+@Composable
+private fun PulsingHint(color: Color) {
     val hintAlpha by rememberInfiniteTransition(label = "hint")
         .animateFloat(
             initialValue = 0.35f, targetValue = 0.85f,
             animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
             label = "hintAlpha"
         )
+    Text(
+        "Swipe to learn how to play →",
+        fontSize = 13.sp,
+        color = color,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.graphicsLayer { alpha = hintAlpha }
+    )
+}
+
+@Composable
+private fun WelcomePage() {
+    // Individual states instead of mutableStateListOf — avoids over-notification
+    val suitVisible = remember { Array(4) { mutableStateOf(false) } }
+    var titleVisible by remember { mutableStateOf(false) }
+    var subtitleVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        repeat(4) { i ->
+            delay(180L)
+            suitVisible[i].value = true
+        }
+        delay(200); titleVisible = true
+        delay(400); subtitleVisible = true
+    }
 
     val surface = MaterialTheme.colorScheme.surface
     val background = MaterialTheme.colorScheme.background
@@ -215,7 +245,7 @@ private fun WelcomePage() {
         )
         cornerSuits.forEachIndexed { i, suit ->
             AnimatedVisibility(
-                visible = suitVisible[i],
+                visible = suitVisible[i].value,
                 modifier = Modifier
                     .align(cornerAlignments[i])
                     .padding(40.dp),
@@ -234,17 +264,17 @@ private fun WelcomePage() {
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(bottom = 100.dp)
         ) {
-            // Suits row — each symbol fades + scales in individually
+            // Suits row — alpha + scale in graphicsLayer to avoid recomposition
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 listOf("♠" to onBackground, "♥" to CardRed, "♦" to CardRed, "♣" to onBackground)
                     .forEachIndexed { i, (s, c) ->
                         val symAlpha by animateFloatAsState(
-                            targetValue = if (suitVisible[i]) 0.75f else 0f,
+                            targetValue = if (suitVisible[i].value) 0.75f else 0f,
                             animationSpec = tween(300),
                             label = "symAlpha$i"
                         )
                         val symScale by animateFloatAsState(
-                            targetValue = if (suitVisible[i]) 1f else 0.4f,
+                            targetValue = if (suitVisible[i].value) 1f else 0.4f,
                             animationSpec = spring(
                                 dampingRatio = Spring.DampingRatioLowBouncy,
                                 stiffness = Spring.StiffnessMedium
@@ -254,29 +284,24 @@ private fun WelcomePage() {
                         Text(
                             s,
                             fontSize = 32.sp,
-                            color = c.copy(alpha = symAlpha),
-                            modifier = Modifier.graphicsLayer { scaleX = symScale; scaleY = symScale }
+                            color = c,
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = symScale; scaleY = symScale; alpha = symAlpha
+                            }
                         )
                     }
             }
 
             Spacer(Modifier.height(4.dp))
 
-            // Shimmer title
+            // Shimmer title — isolated so infinite animation doesn't recompose parent
             AnimatedVisibility(
                 visible = titleVisible,
                 enter = slideInVertically(
                     spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
                 ) { it / 4 } + fadeIn(tween(500))
             ) {
-                Text(
-                    "Literature",
-                    style = TextStyle(
-                        brush = shimmerBrush,
-                        fontSize = 56.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                )
+                ShimmerTitle()
             }
 
             AnimatedVisibility(
@@ -315,21 +340,6 @@ private fun WelcomePage() {
             }
         }
 
-        // Swipe hint
-        AnimatedVisibility(
-            visible = hintVisible,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 120.dp),
-            enter = fadeIn(tween(500))
-        ) {
-            Text(
-                "Swipe to learn how to play →",
-                fontSize = 13.sp,
-                color = onBackground.copy(alpha = hintAlpha),
-                textAlign = TextAlign.Center
-            )
-        }
     }
 }
 
@@ -357,17 +367,17 @@ private val halfSuits = listOf(
 
 @Composable
 private fun DeckPage(isActive: Boolean) {
-    val tileVisible = remember { mutableStateListOf(*Array(8) { false }) }
+    val tileVisible = remember { Array(8) { mutableStateOf(false) } }
     var headerVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(isActive) {
         if (!isActive) {
             headerVisible = false
-            repeat(8) { tileVisible[it] = false }
+            repeat(8) { tileVisible[it].value = false }
             return@LaunchedEffect
         }
         delay(100); headerVisible = true
-        repeat(8) { i -> delay(100L); tileVisible[i] = true }
+        repeat(8) { i -> delay(100L); tileVisible[i].value = true }
     }
 
     val onBackground = MaterialTheme.colorScheme.onBackground
@@ -412,12 +422,12 @@ private fun DeckPage(isActive: Boolean) {
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(0, 2, 4, 6).forEach { i ->
-                    HalfSuitTile(visible = tileVisible[i], info = halfSuits[i])
+                    HalfSuitTile(visible = tileVisible[i].value, info = halfSuits[i])
                 }
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(1, 3, 5, 7).forEach { i ->
-                    HalfSuitTile(visible = tileVisible[i], info = halfSuits[i])
+                    HalfSuitTile(visible = tileVisible[i].value, info = halfSuits[i])
                 }
             }
         }
@@ -468,19 +478,19 @@ private fun HalfSuitTile(visible: Boolean, info: HalfSuitInfo) {
 @Composable
 private fun TeamsPage(isActive: Boolean) {
     var teamsVisible by remember { mutableStateOf(false) }
-    val playerVisible = remember { mutableStateListOf(*Array(6) { false }) }
+    val playerVisible = remember { Array(6) { mutableStateOf(false) } }
     var tipVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(isActive) {
         if (!isActive) {
             teamsVisible = false
-            repeat(6) { playerVisible[it] = false }
+            repeat(6) { playerVisible[it].value = false }
             tipVisible = false
             return@LaunchedEffect
         }
         delay(150); teamsVisible = true
         delay(500)
-        repeat(6) { i -> delay(130L); playerVisible[i] = true }
+        repeat(6) { i -> delay(130L); playerVisible[i].value = true }
         delay(300); tipVisible = true
     }
 
@@ -523,7 +533,7 @@ private fun TeamsPage(isActive: Boolean) {
                 teamName = "Team A",
                 teamColor = LightGreen,
                 players = listOf("You", "Alice", "Bob"),
-                playerVisible = playerVisible.subList(0, 3),
+                playerVisible = playerVisible.slice(0..2).map { it.value },
                 onBackground = onBackground,
                 modifier = Modifier
                     .weight(1f)
@@ -536,7 +546,7 @@ private fun TeamsPage(isActive: Boolean) {
                 teamName = "Team B",
                 teamColor = CardRed,
                 players = listOf("Charlie", "Diana", "Eve"),
-                playerVisible = playerVisible.subList(3, 6),
+                playerVisible = playerVisible.slice(3..5).map { it.value },
                 onBackground = onBackground,
                 modifier = Modifier
                     .weight(1f)
@@ -743,15 +753,17 @@ private fun AskPage() {
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp)
             )
 
-            // Animated card token
+            // Animated card token — offset + scale in graphicsLayer to avoid recomposition
             Box(
                 modifier = Modifier
-                    .offset { IntOffset(0, (cardFraction * travelRange).toInt().let { it * -1 }) }
-                    .graphicsLayer { scaleX = cardScale; scaleY = cardScale }
+                    .align(Alignment.Center)
+                    .graphicsLayer {
+                        translationY = -cardFraction * travelRange
+                        scaleX = cardScale; scaleY = cardScale
+                    }
                     .size(36.dp, 48.dp)
                     .clip(RoundedCornerShape(5.dp))
-                    .background(cardColor)
-                    .align(Alignment.Center),
+                    .drawBehind { drawRect(cardColor) },
                 contentAlignment = Alignment.Center
             ) {
                 val cardLabel = when (phase) {
@@ -921,19 +933,22 @@ private fun ClaimPage(onFinish: () -> Unit, isActive: Boolean) {
                 .height(160.dp),
             contentAlignment = Alignment.Center
         ) {
+            // Use derivedStateOf for color threshold — emits only when crossing 0.85
+            val cardsReady by remember { derivedStateOf { cardProgress > 0.85f } }
             scatterOffsets.forEachIndexed { i, offset ->
-                val x = (offset.x * (1f - cardProgress))
-                val y = (offset.y * (1f - cardProgress))
-                val rotation = offset.x * 0.12f * (1f - cardProgress)
-
                 Box(
                     modifier = Modifier
-                        .offset(x = x.dp, y = y.dp)
-                        .graphicsLayer { rotationZ = rotation; alpha = 0.6f + 0.4f * cardProgress }
+                        .graphicsLayer {
+                            val progress = 1f - cardProgress
+                            translationX = offset.x * progress * density
+                            translationY = offset.y * progress * density
+                            rotationZ = offset.x * 0.12f * progress
+                            alpha = 0.6f + 0.4f * cardProgress
+                        }
                         .size(34.dp, 46.dp)
                         .clip(RoundedCornerShape(5.dp))
                         .background(
-                            if (cardProgress > 0.85f) FeltGreen.copy(alpha = 0.9f)
+                            if (cardsReady) FeltGreen.copy(alpha = 0.9f)
                             else Color(0xFFEEEEEE)
                         ),
                     contentAlignment = Alignment.Center
@@ -942,7 +957,7 @@ private fun ClaimPage(onFinish: () -> Unit, isActive: Boolean) {
                         cardValues[i],
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = if (cardProgress > 0.85f) GoldAccent else Color(0xFF222222)
+                        color = if (cardsReady) GoldAccent else Color(0xFF222222)
                     )
                 }
             }
