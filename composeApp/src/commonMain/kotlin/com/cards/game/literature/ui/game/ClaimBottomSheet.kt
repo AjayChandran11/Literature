@@ -4,7 +4,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,14 +36,17 @@ fun ClaimBottomSheet(
     var step by remember { mutableStateOf(ClaimStep.SELECT_HALF_SUIT) }
     var selectedHalfSuit by remember { mutableStateOf<HalfSuit?>(null) }
     var assignments by remember { mutableStateOf<MutableMap<Card, String>>(mutableMapOf()) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
+        sheetState = sheetState,
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Text(
@@ -90,7 +95,7 @@ fun ClaimBottomSheet(
 
                     Text(
                         "Assign each card to the teammate who holds it:",
-                        fontSize = 13.sp,
+                        fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -113,22 +118,52 @@ fun ClaimBottomSheet(
                         ) {
                             Text(
                                 card.displayName,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.width(60.dp)
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
                             )
+                            // Both locked and dropdown use an identical-sized chip surface
                             if (isMyCard) {
-                                Text(
-                                    "You (locked)",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.padding(horizontal = 14.dp)
+                                    ) {
+                                        Text(
+                                            "You \u2713",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
                             } else {
-                                // Dropdown to pick a teammate
                                 var expanded by remember { mutableStateOf(false) }
                                 Box {
-                                    TextButton(onClick = { expanded = true }) {
-                                        Text(assignedName, fontSize = 12.sp)
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier
+                                            .height(36.dp)
+                                            .clickable { expanded = true }
+                                    ) {
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier.padding(horizontal = 14.dp)
+                                        ) {
+                                            Text(
+                                                "$assignedName \u25be",
+                                                fontSize = 14.sp,
+                                                color = if (currentAssignment == null)
+                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                else
+                                                    MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
                                     }
                                     DropdownMenu(
                                         expanded = expanded,
@@ -136,7 +171,7 @@ fun ClaimBottomSheet(
                                     ) {
                                         allTeamPlayers.forEach { player ->
                                             DropdownMenuItem(
-                                                text = { Text(player.name) },
+                                                text = { Text(player.name, fontSize = 15.sp) },
                                                 onClick = {
                                                     val newMap = assignments.toMutableMap()
                                                     newMap[card] = player.id
@@ -177,25 +212,39 @@ fun ClaimBottomSheet(
 
                     Text(
                         "Claiming ${hs.displayName}",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "WARNING: If any assignment is wrong, the opponent gets the point!",
-                        fontSize = 12.sp,
+                        "\u26a0\ufe0f If any assignment is wrong, the opponent gets the point!",
+                        fontSize = 14.sp,
                         color = CardRed
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     assignments.entries.groupBy { it.value }.forEach { (playerId, cards) ->
                         val name = if (playerId == myPlayerId) "You"
                         else teammates.find { it.id == playerId }?.name ?: "?"
-                        Text(
-                            "$name: ${cards.joinToString(", ") { it.key.displayName }}",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                "$name:",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.width(72.dp)
+                            )
+                            Text(
+                                cards.joinToString(", ") { it.key.displayName },
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -211,7 +260,6 @@ fun ClaimBottomSheet(
                         }
                         Button(
                             onClick = {
-                                // Convert assignments to declaration format
                                 val cardAssignments = mutableMapOf<String, MutableList<Card>>()
                                 assignments.forEach { (card, playerId) ->
                                     cardAssignments.getOrPut(playerId) { mutableListOf() }.add(card)
