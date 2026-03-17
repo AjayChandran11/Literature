@@ -435,7 +435,7 @@ private fun TurnIndicatorBanner(uiState: GameUiState) {
             if (uiState.isMyTurn) {
                 Text(
                     "\u2726 Your Turn!",
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = GoldAccent
                 )
@@ -452,14 +452,14 @@ private fun TurnIndicatorBanner(uiState: GameUiState) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "${uiState.activePlayerName} is thinking...",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
                 Text(
                     "${uiState.activePlayerName}'s turn",
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

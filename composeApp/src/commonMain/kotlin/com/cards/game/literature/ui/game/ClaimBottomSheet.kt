@@ -69,7 +69,8 @@ fun ClaimBottomSheet(
                     }
                     availableHalfSuits.sortedBy { it.ordinal }.forEach { hs ->
                         ListItem(
-                            headlineContent = { Text(hs.displayName) },
+                            headlineContent = { Text(hs.displayName,
+                                style = MaterialTheme.typography.titleMedium) },
                             modifier = Modifier.clickable {
                                 selectedHalfSuit = hs
                                 // Auto-assign my own cards
