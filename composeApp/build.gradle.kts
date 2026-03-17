@@ -84,7 +84,7 @@ android {
     }
     buildTypes {
         getByName("debug") {
-            buildConfigField("String", "SERVER_URL", "\"192.168.29.206:8080\"")
+            buildConfigField("String", "SERVER_URL", "\"ws://192.168.29.206:8080\"")
         }
         getByName("release") {
             isMinifyEnabled = true
@@ -93,7 +93,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "SERVER_URL", "\"TODO_SET_PRODUCTION_SERVER\"")
+            buildConfigField("String", "SERVER_URL", "\"wss://TODO_SET_PRODUCTION_SERVER\"")
         }
     }
     compileOptions {
