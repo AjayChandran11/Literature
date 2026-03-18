@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.ui.game.GameLogEntry
 import com.cards.game.literature.ui.theme.CardRed
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
 import com.cards.game.literature.viewmodel.ResultViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -54,7 +53,7 @@ fun ResultScreen(
             },
             style = MaterialTheme.typography.displaySmall,
             color = when {
-                uiState.isDraw -> GoldAccent
+                uiState.isDraw -> MaterialTheme.colorScheme.secondary
                 uiState.isWinner -> LightGreen
                 else -> CardRed
             }
@@ -101,7 +100,7 @@ fun ResultScreen(
             "Half-Suit Breakdown",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = GoldAccent
+            color = MaterialTheme.colorScheme.secondary
         )
         Spacer(modifier = Modifier.height(8.dp))
 

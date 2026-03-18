@@ -16,7 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.WaitingRoomViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -89,7 +88,7 @@ fun WaitingRoomScreen(
         Text(
             text = "Waiting Room",
             style = MaterialTheme.typography.headlineMedium,
-            color = GoldAccent
+            color = MaterialTheme.colorScheme.secondary
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -112,7 +111,7 @@ fun WaitingRoomScreen(
                     text = uiState.roomCode,
                     style = MaterialTheme.typography.displaySmall,
                     letterSpacing = 4.sp,
-                    color = GoldAccent
+                    color = MaterialTheme.colorScheme.secondary
                 )
                 Text(
                     text = "Share this code with friends",
@@ -180,13 +179,13 @@ fun WaitingRoomScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = GoldAccent.copy(alpha = 0.2f)
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                             ) {
                                 Text(
                                     text = "HOST",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = GoldAccent,
+                                    color = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
@@ -207,7 +206,7 @@ fun WaitingRoomScreen(
                 Checkbox(
                     checked = fillWithBots,
                     onCheckedChange = { fillWithBots = it },
-                    colors = CheckboxDefaults.colors(checkedColor = GoldAccent)
+                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(

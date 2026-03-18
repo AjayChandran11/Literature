@@ -23,7 +23,6 @@ import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.Suit
 import com.cards.game.literature.model.isRed
 import com.cards.game.literature.ui.theme.CardRed
-import com.cards.game.literature.ui.theme.GoldAccent
 
 @Composable
 fun CardHand(
@@ -75,8 +74,8 @@ fun CardView(
     badgeNumber: Int? = null
 ) {
     val cardColor = if (card.suit.isRed) CardRed else Color.Black
-    val bgColor = if (isSelected) GoldAccent.copy(alpha = 0.3f) else Color.White
-    val borderColor = if (isSelected) GoldAccent else Color.LightGray
+    val bgColor = if (isSelected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f) else Color.White
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.LightGray
 
     Box(
         modifier = modifier
@@ -113,7 +112,7 @@ fun CardView(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .size(18.dp)
-                    .background(GoldAccent, CircleShape),
+                    .background(MaterialTheme.colorScheme.secondary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

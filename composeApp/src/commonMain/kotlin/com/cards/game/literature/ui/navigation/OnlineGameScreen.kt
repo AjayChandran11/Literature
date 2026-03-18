@@ -21,7 +21,6 @@ import com.cards.game.literature.repository.ConnectionState
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.repository.ReconnectInfo
 import com.cards.game.literature.ui.game.GameBoardContent
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -164,14 +163,14 @@ private fun ReconnectCountdownBanners(countdowns: Map<String, ReconnectInfo>) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GoldAccent.copy(alpha = 0.15f))
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
                 .padding(6.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 "Waiting for ${info.playerName} to reconnect... (${secondsLeft}s)",
                 style = MaterialTheme.typography.bodyMedium,
-                color = GoldAccent
+                color = MaterialTheme.colorScheme.secondary
             )
         }
     }

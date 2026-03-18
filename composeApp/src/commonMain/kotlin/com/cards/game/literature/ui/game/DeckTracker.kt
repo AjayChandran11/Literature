@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.ui.theme.CardRed
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
 
 @Composable
@@ -34,12 +33,12 @@ fun DeckTracker(
     ) {
         items(statuses) { status ->
             val bgColor = when {
-                status.claimedByTeamId == null -> GoldAccent.copy(alpha = 0.2f)
+                status.claimedByTeamId == null -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                 status.claimedByTeamId == myTeamId -> LightGreen.copy(alpha = 0.3f)
                 else -> CardRed.copy(alpha = 0.3f)
             }
             val borderColor = when {
-                status.claimedByTeamId == null -> GoldAccent.copy(alpha = 0.5f)
+                status.claimedByTeamId == null -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
                 status.claimedByTeamId == myTeamId -> LightGreen
                 else -> CardRed
             }

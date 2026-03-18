@@ -104,7 +104,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                         }
                     },
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = GoldAccent),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                     modifier = Modifier
                         .width(160.dp)
                         .height(48.dp)
@@ -153,7 +153,7 @@ private fun PagerIndicator(pageCount: Int, currentPage: Int) {
                     .width(width)
                     .clip(CircleShape)
                     .background(
-                        if (isSelected) GoldAccent else onBackground.copy(alpha = 0.25f)
+                        if (isSelected) MaterialTheme.colorScheme.secondary else onBackground.copy(alpha = 0.25f)
                     )
             )
         }
@@ -174,7 +174,7 @@ private fun ShimmerTitle() {
         ), label = "shimmerX"
     )
     val shimmerBrush = Brush.linearGradient(
-        colors = listOf(GoldAccent, Color(0xFFFFF9E6), GoldAccent),
+        colors = listOf(MaterialTheme.colorScheme.secondary, Color(0xFFFFF9E6), MaterialTheme.colorScheme.secondary),
         start = Offset((shimmerOffset - 0.15f) * 900f, 0f),
         end   = Offset((shimmerOffset + 0.15f) * 900f, 0f)
     )
@@ -392,7 +392,7 @@ private fun DeckPage(isActive: Boolean) {
     ) {
         AnimatedVisibility(visible = headerVisible, enter = fadeIn(tween(400)) + slideInVertically { -it }) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("The Deck", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = GoldAccent)
+                Text("The Deck", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.secondary)
                 Text(
                     "48 cards — split into 8 Half Suits of 6 cards each",
                     fontSize = 13.sp,
@@ -516,7 +516,7 @@ private fun TeamsPage(isActive: Boolean) {
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Two Teams", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = GoldAccent)
+            Text("Two Teams", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.secondary)
             Text(
                 "Collaborate with your teammates to claim the most half suits",
                 fontSize = 13.sp,
@@ -563,8 +563,8 @@ private fun TeamsPage(isActive: Boolean) {
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = GoldAccent.copy(alpha = 0.08f),
-                border = BorderStroke(1.dp, GoldAccent.copy(alpha = 0.2f))
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f))
             ) {
                 Text(
                     "💡  Your asks reveal info to your whole team — think strategically before asking!",
@@ -678,7 +678,7 @@ private fun AskPage() {
         targetValue = when (phase) {
             2    -> LightGreen
             5    -> CardRed
-            else -> GoldAccent
+            else -> MaterialTheme.colorScheme.secondary
         },
         animationSpec = tween(300),
         label = "cardColor"
@@ -714,7 +714,7 @@ private fun AskPage() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("The Ask", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = GoldAccent)
+            Text("The Ask", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.secondary)
             Text(
                 "On your turn, ask an opponent for a card — you must already hold one from that half suit",
                 fontSize = 13.sp,
@@ -799,7 +799,7 @@ private fun AskPage() {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             RuleRow(icon = "✓", text = "Success → take the card and ask again", color = LightGreen, onBackground = onBackground)
             RuleRow(icon = "✗", text = "Denied → turn passes to that opponent", color = CardRed, onBackground = onBackground)
-            RuleRow(icon = "⚠", text = "You must hold a card from that half suit", color = GoldAccent, onBackground = onBackground)
+            RuleRow(icon = "⚠", text = "You must hold a card from that half suit", color = MaterialTheme.colorScheme.secondary, onBackground = onBackground)
         }
     }
 }
@@ -846,7 +846,7 @@ private fun ClaimBadge(visible: Boolean) {
             spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium)
         ) + fadeIn()
     ) {
-        Surface(shape = RoundedCornerShape(8.dp), color = GoldAccent) {
+        Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.secondary) {
             Text(
                 "  ♠ Low Spades — CLAIMED!  ",
                 fontSize = 13.sp,
@@ -916,7 +916,7 @@ private fun ClaimPage(onFinish: () -> Unit, isActive: Boolean) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Claim & Win", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = GoldAccent)
+            Text("Claim & Win", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.secondary)
             Text(
                 "When your team holds all 6 cards of a half suit — claim it for a point!",
                 fontSize = 13.sp,
@@ -957,7 +957,7 @@ private fun ClaimPage(onFinish: () -> Unit, isActive: Boolean) {
                         cardValues[i],
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = if (cardsReady) GoldAccent else Color(0xFF222222)
+                        color = if (cardsReady) MaterialTheme.colorScheme.secondary else Color(0xFF222222)
                     )
                 }
             }
@@ -988,7 +988,7 @@ private fun ClaimPage(onFinish: () -> Unit, isActive: Boolean) {
                     "Most half suits wins!",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = GoldAccent
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -1008,7 +1008,7 @@ private fun ClaimPage(onFinish: () -> Unit, isActive: Boolean) {
                     .height(56.dp)
                     .graphicsLayer { scaleX = buttonScale; scaleY = buttonScale },
                 shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = GoldAccent),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
             ) {
                 Text(

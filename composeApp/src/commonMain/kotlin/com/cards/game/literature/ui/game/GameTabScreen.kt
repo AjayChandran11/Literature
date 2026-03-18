@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.GameEvent
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.GameUiState
 
 enum class GameTab(val label: String, val icon: ImageVector) {
@@ -79,7 +78,7 @@ fun HandTab(uiState: GameUiState) {
             "YOUR HAND",
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            color = GoldAccent,
+            color = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         CardHand(

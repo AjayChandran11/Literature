@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.sp
 import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.*
 import com.cards.game.literature.ui.theme.CardRed
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.PlayerInfo
 
 enum class ClaimStep { SELECT_HALF_SUIT, ASSIGN_CARDS, CONFIRM }
@@ -57,7 +56,7 @@ fun ClaimBottomSheet(
                 },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = GoldAccent
+                color = MaterialTheme.colorScheme.secondary
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -273,7 +272,7 @@ fun ClaimBottomSheet(
                                 )
                             },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = GoldAccent)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
                             Text("CLAIM!", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondary)
                         }

@@ -22,7 +22,6 @@ import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.Suit
 import com.cards.game.literature.model.symbol
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.PlayerInfo
 
 private fun suitFor(hs: HalfSuit): Suit = when (hs) {
@@ -87,7 +86,7 @@ fun AskBottomSheet(
                 text = "Ask a Card",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = GoldAccent
+                color = MaterialTheme.colorScheme.secondary
             )
 
             // Suit chips

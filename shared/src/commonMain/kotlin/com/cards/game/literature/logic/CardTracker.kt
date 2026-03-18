@@ -49,6 +49,33 @@ class CardTracker {
             playerId == myId && card !in myCurrentCards
         }
 
+        // Infer: if a player has no cards left, they can't hold anything
+        val inactivePlayers = players.filter { !it.isActive }.map { it.id }.toSet()
+        for ((card, _) in known.toMap()) {
+            if (known[card] in inactivePlayers) {
+                known.remove(card)
+            }
+        }
+
+        // Infer: if we know where 5 of 6 cards in a half-suit are, deduce the 6th
+        val claimedHalfSuits = events.filterIsInstance<GameEvent.DeckClaimed>()
+            .map { it.halfSuit }.toSet()
+        for (halfSuit in HalfSuit.entries) {
+            if (halfSuit in claimedHalfSuits) continue
+            val cards = DeckUtils.getAllCardsForHalfSuit(halfSuit)
+            val unknownCards = cards.filter { it !in known }
+            if (unknownCards.size == 1) {
+                val unknownCard = unknownCards.first()
+                // All active players who aren't ruled out
+                val impossibleFor = impossible[unknownCard] ?: emptySet()
+                val activePlayers = players.filter { it.isActive }.map { it.id }
+                val candidates = activePlayers.filter { it !in impossibleFor }
+                if (candidates.size == 1) {
+                    known[unknownCard] = candidates.first()
+                }
+            }
+        }
+
         return CardTrackerState(
             knownLocations = known,
             impossibleLocations = impossible.mapValues { it.value.toSet() }

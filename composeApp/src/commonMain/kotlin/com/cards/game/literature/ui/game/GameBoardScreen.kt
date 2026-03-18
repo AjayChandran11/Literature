@@ -178,9 +178,9 @@ fun GameBoardContent(
                         selected = selectedTab == tab,
                         onClick = { selectedTab = tab },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = GoldAccent,
-                            selectedTextColor = GoldAccent,
-                            indicatorColor = GoldAccent.copy(alpha = 0.15f),
+                            selectedIconColor = MaterialTheme.colorScheme.secondary,
+                            selectedTextColor = MaterialTheme.colorScheme.secondary,
+                            indicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
@@ -446,7 +446,7 @@ private fun TurnIndicatorBanner(uiState: GameUiState) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    if (uiState.isMyTurn) GoldAccent.copy(alpha = 0.2f)
+                    if (uiState.isMyTurn) MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                     else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
                 )
                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -461,7 +461,7 @@ private fun TurnIndicatorBanner(uiState: GameUiState) {
                         "\u2726 Your Turn!",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = GoldAccent
+                        color = MaterialTheme.colorScheme.secondary
                     )
                     if (secondsRemaining <= 15) {
                         Spacer(modifier = Modifier.width(8.dp))
@@ -469,7 +469,7 @@ private fun TurnIndicatorBanner(uiState: GameUiState) {
                             "${secondsRemaining}s",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (secondsRemaining <= 10) CardRed else GoldAccent
+                            color = if (secondsRemaining <= 10) CardRed else MaterialTheme.colorScheme.secondary
                         )
                     }
                 }

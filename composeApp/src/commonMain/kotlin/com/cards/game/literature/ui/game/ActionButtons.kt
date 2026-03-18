@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.cards.game.literature.ui.theme.GoldAccent
 
 @Composable
 fun ActionButtons(
@@ -42,7 +41,7 @@ fun ActionButtons(
             modifier = Modifier.weight(1f).height(56.dp),
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = GoldAccent,
+                containerColor = MaterialTheme.colorScheme.secondary,
                 contentColor = MaterialTheme.colorScheme.onSecondary,
                 disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
             )

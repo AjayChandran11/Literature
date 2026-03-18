@@ -12,7 +12,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.ui.theme.CardRed
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
 
 @Composable
@@ -40,7 +39,7 @@ fun ScoreBar(myTeamScore: Int, opponentTeamScore: Int, modifier: Modifier = Modi
             "VS",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = GoldAccent
+            color = MaterialTheme.colorScheme.secondary
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Opponents", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)

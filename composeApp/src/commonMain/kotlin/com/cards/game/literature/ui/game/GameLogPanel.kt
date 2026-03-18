@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.ui.theme.CardRed
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
 
 @Composable
@@ -49,7 +48,7 @@ fun GameLogPanel(events: List<GameEvent>, modifier: Modifier = Modifier) {
                 "Game Log",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = GoldAccent
+                color = MaterialTheme.colorScheme.secondary
             )
             Text(
                 if (expanded) "Collapse" else "Expand",
@@ -98,7 +97,7 @@ fun GameLogEntry(event: GameEvent, fontSize: TextUnit = 14.sp) {
             }
         }
         is GameEvent.GameEnded -> {
-            "Game Over!" to GoldAccent
+            "Game Over!" to MaterialTheme.colorScheme.secondary
         }
         else -> "" to Color.Gray
     }

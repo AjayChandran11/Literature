@@ -11,7 +11,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.network.NetworkMonitor
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.LobbyViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -44,7 +43,7 @@ fun LobbyScreen(
         Text(
             text = "Play Online",
             style = MaterialTheme.typography.headlineLarge,
-            color = GoldAccent
+            color = MaterialTheme.colorScheme.secondary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -84,9 +83,9 @@ fun LobbyScreen(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(0.8f),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GoldAccent,
-                focusedLabelColor = GoldAccent,
-                cursorColor = GoldAccent
+                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                cursorColor = MaterialTheme.colorScheme.secondary
             )
         )
 
@@ -166,7 +165,7 @@ fun CreateRoomDialog(
                         RadioButton(
                             selected = selectedCount == count,
                             onClick = { selectedCount = count },
-                            colors = RadioButtonDefaults.colors(selectedColor = GoldAccent)
+                            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.secondary)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(

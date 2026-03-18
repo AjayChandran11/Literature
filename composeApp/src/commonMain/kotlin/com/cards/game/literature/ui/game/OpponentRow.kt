@@ -20,7 +20,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.ui.theme.CardRed
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.PlayerInfo
 
 @Composable
@@ -50,7 +49,7 @@ fun TeammateRow(teammates: List<PlayerInfo>, modifier: Modifier = Modifier) {
 @Composable
 fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
     val borderColor by animateColorAsState(
-        targetValue = if (player.isCurrentTurn) GoldAccent else Color.Transparent,
+        targetValue = if (player.isCurrentTurn) MaterialTheme.colorScheme.secondary else Color.Transparent,
         animationSpec = if (player.isCurrentTurn) {
             infiniteRepeatable(
                 animation = tween(800),
