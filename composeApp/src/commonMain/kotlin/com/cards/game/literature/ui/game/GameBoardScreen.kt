@@ -296,6 +296,9 @@ private fun consolidateEvents(events: List<GameEvent>, limit: Int = 5): List<Str
             is GameEvent.GameEnded -> {
                 messages.add(StripMessage("★", GoldAccent, "Game Over!"))
             }
+            is GameEvent.TurnTimedOut -> {
+                messages.add(StripMessage("⏱", CardRed, "${event.playerName} ran out of time"))
+            }
             else -> {}
         }
         i++

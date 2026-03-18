@@ -48,6 +48,13 @@ sealed class GameEvent {
     ) : GameEvent()
 
     @Serializable
+    data class TurnTimedOut(
+        val playerId: String,
+        val playerName: String,
+        override val timestamp: Long = currentTimeMillis()
+    ) : GameEvent()
+
+    @Serializable
     data class PlayerDisconnected(
         val playerId: String,
         val playerName: String,

@@ -27,6 +27,8 @@ class GameRoom(
     private var turnTimeoutJob: Job? = null
     private val disconnectJobs = ConcurrentHashMap<String, Job>()
     private val pendingReclaims = ConcurrentHashMap<String, Boolean>()
+    // Tracks the player who gave the current player their turn (via a failed ask)
+    private var lastAskerId: String? = null
 
     var phase: RoomPhase = RoomPhase.WAITING
         private set
@@ -163,6 +165,12 @@ class GameRoom(
                 broadcastGameViews()
                 broadcastEvents(result.events)
             }
+
+            // If the turn moved to a different player (failed ask), the asker
+            // becomes the "previous player" for timeout fallback
+            if (state.currentPlayer.id != playerId) {
+                lastAskerId = playerId
+            }
         }
         checkNextTurn()
     }
@@ -181,6 +189,9 @@ class GameRoom(
                 phase = RoomPhase.FINISHED
                 finishedAt = System.currentTimeMillis()
             }
+
+            // After a claim, there's no meaningful "previous asker" context
+            lastAskerId = null
 
             broadcastGameViews()
             broadcastEvents(result.events)
@@ -206,11 +217,11 @@ class GameRoom(
 
             broadcastGameViews()
 
-            // If it's the disconnected player's turn, auto-play for them
+            // If it's the disconnected player's turn, skip it
             val state = gameState
             if (state != null && state.currentPlayer.id == playerId && !state.currentPlayer.isBot) {
                 turnTimeoutJob?.cancel()
-                botScope?.launch { autoPlayTurn(playerId) }
+                botScope?.launch { skipTurn(playerId) }
             }
 
             // Start 2-min disconnect timeout
@@ -335,47 +346,48 @@ class GameRoom(
         }
     }
 
-    private suspend fun autoPlayTurn(playerId: String) {
-        val state = gameState ?: return
-        if (state.phase != GamePhase.IN_PROGRESS) return
-        if (state.currentPlayer.id != playerId) return
+    private suspend fun skipTurn(playerId: String) {
+        mutex.withLock {
+            val state = gameState ?: return
+            if (state.phase != GamePhase.IN_PROGRESS) return
+            if (state.currentPlayer.id != playerId) return
 
-        val action = botPlayer.decideMove(state, playerId)
-        when (action) {
-            is BotAction.Ask -> {
-                mutex.withLock {
-                    val freshState = gameState ?: return
-                    if (freshState.phase != GamePhase.IN_PROGRESS) return
-                    if (freshState.currentPlayer.id != playerId) return
-                    val result = engine.processAsk(freshState, playerId, action.targetId, action.card)
-                    gameState = result.newState
+            val timedOutPlayer = state.currentPlayer
+            val newEvents = mutableListOf<GameEvent>()
 
-                    if (result.newState.phase == GamePhase.FINISHED) {
-                        phase = RoomPhase.FINISHED
-                        finishedAt = System.currentTimeMillis()
-                    }
+            newEvents.add(GameEvent.TurnTimedOut(playerId, timedOutPlayer.name))
 
-                    broadcastGameViews()
-                    broadcastEvents(result.events)
-                }
+            // Determine who gets the turn:
+            // 1. The player who last asked this player (gave them the turn)
+            // 2. Otherwise, a random active opponent
+            val nextPlayerId = lastAskerId?.let { askerId ->
+                val asker = state.getPlayer(askerId)
+                if (asker != null && asker.isActive) askerId else null
+            } ?: run {
+                // Pick a random active opponent
+                val opponents = state.getOpponents(playerId).filter { it.isActive }
+                opponents.randomOrNull()?.id
+            } ?: run {
+                // Fallback: any other active player
+                val nextIdx = engine.findNextActivePlayer(state.players, state.currentPlayerIndex)
+                state.players[nextIdx].id
             }
-            is BotAction.Claim -> {
-                mutex.withLock {
-                    val freshState = gameState ?: return
-                    if (freshState.phase != GamePhase.IN_PROGRESS) return
-                    if (freshState.currentPlayer.id != playerId) return
-                    val result = engine.processClaim(freshState, action.declaration)
-                    gameState = result.newState
 
-                    if (result.newState.phase == GamePhase.FINISHED) {
-                        phase = RoomPhase.FINISHED
-                        finishedAt = System.currentTimeMillis()
-                    }
+            val nextPlayerIndex = state.players.indexOfFirst { it.id == nextPlayerId }
+                .coerceAtLeast(0)
+            val nextPlayer = state.players[nextPlayerIndex]
 
-                    broadcastGameViews()
-                    broadcastEvents(result.events)
-                }
-            }
+            newEvents.add(GameEvent.TurnChanged(nextPlayer.id, nextPlayer.name))
+
+            lastAskerId = null
+
+            gameState = state.copy(
+                currentPlayerIndex = nextPlayerIndex,
+                events = state.events + newEvents
+            )
+
+            broadcastGameViews()
+            broadcastEvents(newEvents)
         }
         checkNextTurn()
     }
@@ -389,7 +401,7 @@ class GameRoom(
 
         turnTimeoutJob = botScope?.launch {
             delay(TURN_TIMEOUT_MS)
-            autoPlayTurn(currentId)
+            skipTurn(currentId)
         }
     }
 
