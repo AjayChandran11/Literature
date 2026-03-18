@@ -148,6 +148,17 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                             currentPlayerId = message.playerId
                             room.handleReconnect(message.playerId)
                         }
+
+                        is ClientMessage.LeaveGame -> {
+                            val room = currentRoom
+                            val playerId = currentPlayerId
+                            if (room != null && playerId != null) {
+                                room.handleIntentionalLeave(playerId)
+                            }
+                            currentRoom = null
+                            currentPlayerId = null
+                            close(CloseReason(CloseReason.Codes.NORMAL, "Player left game"))
+                        }
                     }
                 }
             }
@@ -157,7 +168,9 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
             val playerId = currentPlayerId
             if (room != null && playerId != null) {
                 room.handleDisconnect(playerId)
-                room.broadcastRoomUpdate()
+                if (room.phase == com.cards.game.literature.protocol.RoomPhase.WAITING) {
+                    room.broadcastRoomUpdate()
+                }
             }
         }
     }

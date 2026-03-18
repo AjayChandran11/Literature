@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.viewmodel.LobbyViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -23,6 +24,7 @@ fun LobbyScreen(
     viewModel: LobbyViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isNetworkAvailable by NetworkMonitor.isNetworkAvailable.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var joinRoomCode by remember { mutableStateOf("") }
 
@@ -60,7 +62,7 @@ fun LobbyScreen(
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            enabled = !uiState.isLoading
+            enabled = !uiState.isLoading && isNetworkAvailable
         ) {
             Text("Create Room", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
@@ -92,7 +94,7 @@ fun LobbyScreen(
 
         Button(
             onClick = { viewModel.joinRoom(joinRoomCode, playerName) },
-            enabled = joinRoomCode.length == 6 && !uiState.isLoading,
+            enabled = joinRoomCode.length == 6 && !uiState.isLoading && isNetworkAvailable,
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .height(56.dp),

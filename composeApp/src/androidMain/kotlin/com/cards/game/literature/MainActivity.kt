@@ -7,12 +7,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.preferences.OnboardingPrefs
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         OnboardingPrefs.init(this)
+        NetworkMonitor.init(this)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 

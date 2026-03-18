@@ -25,4 +25,7 @@ sealed class ServerMessage {
 
     @Serializable
     data object RoomClosed : ServerMessage()
+
+    @Serializable
+    data class HostTransferred(val newHostId: String, val newHostName: String) : ServerMessage()
 }

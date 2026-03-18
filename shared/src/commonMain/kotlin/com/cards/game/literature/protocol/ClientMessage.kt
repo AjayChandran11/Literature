@@ -26,4 +26,7 @@ sealed class ClientMessage {
 
     @Serializable
     data class Reconnect(val roomCode: String, val playerId: String) : ClientMessage()
+
+    @Serializable
+    data object LeaveGame : ClientMessage()
 }

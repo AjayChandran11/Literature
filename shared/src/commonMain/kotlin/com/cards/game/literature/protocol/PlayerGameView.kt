@@ -22,22 +22,31 @@ data class PublicPlayerInfo(
     val teamId: String,
     val cardCount: Int,
     val isBot: Boolean,
-    val isConnected: Boolean = true
+    val isConnected: Boolean = true,
+    val isPendingReconnect: Boolean = false,
+    val reconnectDeadlineMs: Long? = null
 )
 
-fun GameState.toPlayerView(playerId: String, connectionStatus: Map<String, Boolean> = emptyMap()): PlayerGameView {
+fun GameState.toPlayerView(
+    playerId: String,
+    connectionStatus: Map<String, Boolean> = emptyMap(),
+    disconnectDeadlines: Map<String, Long?> = emptyMap()
+): PlayerGameView {
     val myPlayer = getPlayer(playerId)
     return PlayerGameView(
         myPlayerId = playerId,
         myHand = myPlayer?.hand ?: emptyList(),
         players = players.map { player ->
+            val deadline = disconnectDeadlines[player.id]
             PublicPlayerInfo(
                 id = player.id,
                 name = player.name,
                 teamId = player.teamId,
                 cardCount = player.cardCount,
                 isBot = player.isBot,
-                isConnected = connectionStatus[player.id] ?: !player.isBot
+                isConnected = connectionStatus[player.id] ?: !player.isBot,
+                isPendingReconnect = deadline != null,
+                reconnectDeadlineMs = deadline
             )
         },
         teams = teams,

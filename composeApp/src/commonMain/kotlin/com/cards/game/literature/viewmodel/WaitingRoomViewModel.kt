@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cards.game.literature.protocol.RoomPhase
 import com.cards.game.literature.protocol.RoomState
 import com.cards.game.literature.repository.OnlineGameRepository
+import com.cards.game.literature.repository.PlayerConnectionEvent
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -35,6 +36,9 @@ class WaitingRoomViewModel(
     private val _navigateToGame = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navigateToGame: Flow<Unit> = _navigateToGame.asSharedFlow()
 
+    private val _snackbarEvents = MutableSharedFlow<String>(extraBufferCapacity = 16)
+    val snackbarEvents: Flow<String> = _snackbarEvents.asSharedFlow()
+
     init {
         viewModelScope.launch {
             onlineRepository.roomState.filterNotNull().collect { room ->
@@ -50,6 +54,18 @@ class WaitingRoomViewModel(
         viewModelScope.launch {
             onlineRepository.errors.collect { error ->
                 _uiState.update { it.copy(errorMessage = error, isStarting = false) }
+            }
+        }
+
+        viewModelScope.launch {
+            onlineRepository.playerEvents.collect { event ->
+                val message = when (event) {
+                    is PlayerConnectionEvent.Disconnected -> "${event.playerName} disconnected"
+                    is PlayerConnectionEvent.Reconnected -> "${event.playerName} reconnected"
+                    is PlayerConnectionEvent.HostChanged -> "${event.newHostName} is now the host"
+                    is PlayerConnectionEvent.ReplacedByBot -> "${event.playerName} replaced by bot"
+                }
+                _snackbarEvents.emit(message)
             }
         }
     }

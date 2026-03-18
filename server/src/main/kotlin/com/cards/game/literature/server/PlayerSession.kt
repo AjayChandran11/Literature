@@ -10,7 +10,9 @@ data class PlayerSession(
     val playerName: String,
     var session: WebSocketSession?,
     var isConnected: Boolean = true,
-    var lastSeen: Long = System.currentTimeMillis()
+    var lastSeen: Long = System.currentTimeMillis(),
+    var disconnectDeadline: Long? = null,
+    var intentionalLeave: Boolean = false
 ) {
     suspend fun send(message: ServerMessage) {
         val text = Json.encodeToString(message)
