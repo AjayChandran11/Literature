@@ -67,9 +67,12 @@ fun GameBoardScreen(
         )
     }
 
-    // Start game on first composition
+    // Start game only if it hasn't started yet. Using Unit as key would re-run
+    // on every Activity recreation (e.g. theme change), reshuffling the cards.
     LaunchedEffect(Unit) {
-        viewModel.startGame(playerName, playerCount)
+        if (uiState.phase == GamePhase.WAITING) {
+            viewModel.startGame(playerName, playerCount)
+        }
     }
 
     // Navigate to result when game ends
