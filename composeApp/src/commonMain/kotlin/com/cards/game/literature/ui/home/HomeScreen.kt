@@ -135,7 +135,8 @@ fun HomeScreen(
 @Composable
 fun GameSetupDialog(
     onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit
+    onConfirm: (Int) -> Unit,
+    confirmLabel: String = "Start Game"
 ) {
     var selectedCount by remember { mutableIntStateOf(6) }
     val primary = MaterialTheme.colorScheme.primary
@@ -237,7 +238,7 @@ fun GameSetupDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = primary)
                 ) {
                     Text(
-                        "Start Game",
+                        confirmLabel,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )

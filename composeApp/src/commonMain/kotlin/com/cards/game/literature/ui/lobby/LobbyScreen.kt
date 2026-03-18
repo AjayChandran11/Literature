@@ -11,6 +11,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.network.NetworkMonitor
+import com.cards.game.literature.ui.home.GameSetupDialog
 import com.cards.game.literature.viewmodel.LobbyViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -131,60 +132,14 @@ fun LobbyScreen(
     }
 
     if (showCreateDialog) {
-        CreateRoomDialog(
+        GameSetupDialog(
             onDismiss = { showCreateDialog = false },
             onConfirm = { playerCount ->
                 showCreateDialog = false
                 viewModel.createRoom(playerName, playerCount)
-            }
+            },
+            confirmLabel = "Create Room"
         )
     }
 }
 
-@Composable
-fun CreateRoomDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit
-) {
-    var selectedCount by remember { mutableIntStateOf(6) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Create Room", fontWeight = FontWeight.Bold) },
-        text = {
-            Column {
-                Text("Select number of players:", color = MaterialTheme.colorScheme.onSurface)
-                Spacer(modifier = Modifier.height(16.dp))
-                listOf(4, 6, 8).forEach { count ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedCount == count,
-                            onClick = { selectedCount = count },
-                            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.secondary)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "$count Players (${count / 2}v${count / 2})",
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm(selectedCount) }) {
-                Text("Create")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
