@@ -93,7 +93,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "SERVER_URL", "\"wss://TODO_SET_PRODUCTION_SERVER\"")
+            buildConfigField("String", "SERVER_URL", "\"wss://literature-production.up.railway.app\"")
         }
     }
     compileOptions {
