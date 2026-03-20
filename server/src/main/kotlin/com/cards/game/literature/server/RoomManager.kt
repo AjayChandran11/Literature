@@ -2,9 +2,11 @@ package com.cards.game.literature.server
 
 import com.cards.game.literature.protocol.RoomPhase
 import kotlinx.coroutines.*
+import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 class RoomManager {
+    private val log = LoggerFactory.getLogger("RoomManager")
     private val rooms = ConcurrentHashMap<String, GameRoom>()
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -22,6 +24,7 @@ class RoomManager {
         val room = GameRoom(roomCode, playerCount)
         rooms[roomCode] = room
         val playerId = room.addPlayer(hostName, isHost = true)
+        log.info("Room {} created by '{}' for {} players", roomCode, hostName, playerCount)
         return Pair(room, playerId)
     }
 
@@ -29,6 +32,7 @@ class RoomManager {
 
     fun removeRoom(roomCode: String) {
         rooms.remove(roomCode)?.cleanup()
+        log.info("Room {} removed", roomCode)
     }
 
     private fun generateRoomCode(): String {
@@ -46,6 +50,9 @@ class RoomManager {
             (room.phase == RoomPhase.FINISHED && now - room.finishedAt > 5 * 60_000) ||
                 (room.phase == RoomPhase.WAITING && now - room.createdAt > 30 * 60_000) ||
                 room.allDisconnected()
+        }
+        if (staleRooms.isNotEmpty()) {
+            log.info("Cleaning up {} stale room(s): {}", staleRooms.size, staleRooms.keys)
         }
         staleRooms.forEach { (code, _) -> removeRoom(code) }
     }

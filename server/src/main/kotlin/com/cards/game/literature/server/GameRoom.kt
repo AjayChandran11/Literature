@@ -9,12 +9,14 @@ import com.cards.game.literature.protocol.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 class GameRoom(
     val roomCode: String,
     val targetPlayerCount: Int
 ) {
+    private val log = LoggerFactory.getLogger("GameRoom")
     private val engine = GameEngine()
     private val botPlayer = BotPlayer()
     private val players = ConcurrentHashMap<String, PlayerSession>()
@@ -136,6 +138,9 @@ class GameRoom(
         phase = RoomPhase.IN_PROGRESS
 
         botScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        log.info("[{}] Game started with {} players ({} human, {} bots)",
+            roomCode, setupPlayers.size,
+            humanPlayers.size, setupPlayers.size - humanPlayers.size)
 
         // Send game started to all connected players
         broadcastGameViews()
@@ -188,6 +193,12 @@ class GameRoom(
             if (result.newState.phase == GamePhase.FINISHED) {
                 phase = RoomPhase.FINISHED
                 finishedAt = System.currentTimeMillis()
+                val t1 = result.newState.teams.firstOrNull()
+                val t2 = result.newState.teams.getOrNull(1)
+                log.info("[{}] Game finished — {} {} : {} {}",
+                    roomCode,
+                    t1?.name ?: "Team1", t1?.score ?: 0,
+                    t2?.score ?: 0, t2?.name ?: "Team2")
             }
 
             // After a claim, there's no meaningful "previous asker" context
@@ -201,6 +212,7 @@ class GameRoom(
 
     suspend fun handleDisconnect(playerId: String) {
         val playerSession = players[playerId] ?: return
+        log.info("[{}] Player '{}' ({}) disconnected", roomCode, playerSession.playerName, playerId)
         playerSession.isConnected = false
         playerSession.session = null
         playerSession.lastSeen = System.currentTimeMillis()
@@ -271,6 +283,7 @@ class GameRoom(
             val state = gameState ?: return
             val player = state.getPlayer(playerId) ?: return
             if (player.isBot) return // Already a bot
+            log.info("[{}] Replacing '{}' ({}) with bot", roomCode, player.name, playerId)
 
             // Mark player as bot in game state
             val updatedPlayers = state.players.map {
@@ -293,6 +306,7 @@ class GameRoom(
 
     suspend fun handleReconnect(playerId: String): Boolean {
         val session = players[playerId] ?: return false
+        log.info("[{}] Player '{}' ({}) reconnected", roomCode, session.playerName, playerId)
         session.isConnected = true
         session.lastSeen = System.currentTimeMillis()
         session.intentionalLeave = false

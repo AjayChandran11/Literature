@@ -7,6 +7,9 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("GameWebSocket")
 
 private val json = Json {
     ignoreUnknownKeys = true
@@ -25,6 +28,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                     val message = try {
                         json.decodeFromString<ClientMessage>(text)
                     } catch (e: Exception) {
+                        log.warn("Invalid message from {}: {}", currentPlayerId ?: "unknown", e.message)
                         sendError("Invalid message format: ${e.message}")
                         continue
                     }
@@ -114,6 +118,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                             try {
                                 room.processAsk(playerId, message.targetId, message.cards)
                             } catch (e: Exception) {
+                                log.warn("[{}] Ask failed for {}: {}", room.roomCode, playerId, e.message)
                                 sendError(e.message ?: "Ask failed")
                             }
                         }
@@ -128,6 +133,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                             try {
                                 room.processClaim(playerId, message.declaration)
                             } catch (e: Exception) {
+                                log.warn("[{}] Claim failed for {}: {}", room.roomCode, playerId, e.message)
                                 sendError(e.message ?: "Claim failed")
                             }
                         }
@@ -180,6 +186,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
             // Connection closed
             val room = currentRoom
             val playerId = currentPlayerId
+            log.info("WebSocket closed for player {}", playerId ?: "unknown")
             if (room != null && playerId != null) {
                 room.handleDisconnect(playerId)
                 if (room.phase == com.cards.game.literature.protocol.RoomPhase.WAITING) {
