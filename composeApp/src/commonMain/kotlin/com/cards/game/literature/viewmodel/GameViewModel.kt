@@ -7,6 +7,8 @@ import com.cards.game.literature.logic.CardTrackerState
 import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.*
 import com.cards.game.literature.repository.GameRepository
+import com.cards.game.literature.repository.LocalGameRepository
+import com.cards.game.literature.repository.OnlineGameRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -41,6 +43,14 @@ class GameViewModel(
     private val repository: GameRepository,
     private val overridePlayerId: String? = null
 ) : ViewModel() {
+
+    override fun onCleared() {
+        super.onCleared()
+        when (repository) {
+            is LocalGameRepository -> repository.cleanup()
+            is OnlineGameRepository -> repository.cleanup()
+        }
+    }
 
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()

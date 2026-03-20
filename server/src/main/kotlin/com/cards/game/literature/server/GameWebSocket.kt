@@ -35,8 +35,17 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                                 sendError("Already in a room")
                                 continue
                             }
+                            val name = message.playerName.trim().take(20)
+                            if (name.isBlank()) {
+                                sendError("Player name cannot be empty")
+                                continue
+                            }
+                            if (message.playerCount !in listOf(4, 6, 8)) {
+                                sendError("Invalid player count")
+                                continue
+                            }
                             val (room, playerId) = roomManager.createRoom(
-                                message.playerName,
+                                name,
                                 message.playerCount
                             )
                             currentRoom = room
@@ -53,6 +62,11 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                                 sendError("Already in a room")
                                 continue
                             }
+                            val joinName = message.playerName.trim().take(20)
+                            if (joinName.isBlank()) {
+                                sendError("Player name cannot be empty")
+                                continue
+                            }
                             val room = roomManager.getRoom(message.roomCode)
                             if (room == null) {
                                 sendError("Room not found")
@@ -63,7 +77,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                                 continue
                             }
 
-                            val playerId = room.addPlayer(message.playerName)
+                            val playerId = room.addPlayer(joinName)
                             currentRoom = room
                             currentPlayerId = playerId
 

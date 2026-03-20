@@ -15,13 +15,15 @@ import com.cards.game.literature.preferences.OnboardingPrefs
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
-        FirebaseApp.initializeApp(this)
-        FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = true
-        OnboardingPrefs.init(this)
-        NetworkMonitor.init(this)
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        // Initialise singletons BEFORE setContent so composables can read them
+        OnboardingPrefs.init(this)
+        NetworkMonitor.init(this)
+        FirebaseApp.initializeApp(this)
+        FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = true
+
+        enableEdgeToEdge()
         setContent {
             App()
         }

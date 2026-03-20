@@ -21,7 +21,7 @@ fun Application.configureServer() {
     install(WebSockets) {
         pingPeriod = 15.seconds
         timeout = 15.seconds
-        maxFrameSize = Long.MAX_VALUE
+        maxFrameSize = 65536L // 64 KB — game messages are small
         masking = false
     }
     install(ContentNegotiation) {
