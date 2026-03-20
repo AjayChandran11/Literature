@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.googleServices)
+    alias(libs.plugins.firebaseCrashlytics)
 }
 
 kotlin {
@@ -84,10 +86,16 @@ android {
     }
     buildTypes {
         getByName("debug") {
+            firebaseCrashlytics {
+                mappingFileUploadEnabled = false
+            }
             buildConfigField("String", "SERVER_URL", "\"ws://192.168.29.206:8080\"")
         }
         getByName("release") {
             isMinifyEnabled = true
+            firebaseCrashlytics {
+                mappingFileUploadEnabled = true
+            }
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -112,5 +120,8 @@ android {
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.analytics)
 }
 
