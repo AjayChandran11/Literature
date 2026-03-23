@@ -21,6 +21,9 @@
     <string name="label_your_team">Your Team</string>
     <string name="label_opponents">Opponents</string>
     <string name="player_card_count">%1$d cards</string>
+    <string name="player_out_of_cards">Out of cards</string>
+    <string name="hand_empty_title">You\'re out of cards</string>
+    <string name="hand_empty_subtitle">Your team continues to play on your behalf</string>
 
     <!-- Suit symbols -->
     <string name="suit_spades">♠</string>

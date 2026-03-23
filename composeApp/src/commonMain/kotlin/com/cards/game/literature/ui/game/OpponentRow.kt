@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,9 +18,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.ui.theme.CardRed
+import com.cards.game.literature.ui.theme.LiteratureTheme
 import com.cards.game.literature.viewmodel.PlayerInfo
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
@@ -95,10 +98,76 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
             textAlign = TextAlign.Center,
             maxLines = 1
         )
-        Text(
-            text = stringResource(Res.string.player_card_count, player.cardCount),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)
-        )
+        if (player.cardCount == 0) {
+            Text(
+                text = stringResource(Res.string.player_out_of_cards),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.tertiary.copy(alpha = alpha),
+                textAlign = TextAlign.Center
+            )
+        } else {
+            Text(
+                text = stringResource(Res.string.player_card_count, player.cardCount),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)
+            )
+        }
+    }
+}
+
+// ─── Previews ────────────────────────────────────────────────────────────────
+
+@Preview(name = "Avatar — with cards, active")
+@Composable
+private fun PreviewPlayerAvatarWithCards() {
+    LiteratureTheme {
+        Surface {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(16.dp)) {
+                PlayerAvatar(
+                    player = PlayerInfo("1", "Rahul", cardCount = 8, isActive = true, isCurrentTurn = false),
+                    isOpponent = true
+                )
+                PlayerAvatar(
+                    player = PlayerInfo("2", "Priya", cardCount = 5, isActive = true, isCurrentTurn = true),
+                    isOpponent = false
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Avatar — out of cards")
+@Composable
+private fun PreviewPlayerAvatarOutOfCards() {
+    LiteratureTheme {
+        Surface {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(16.dp)) {
+                PlayerAvatar(
+                    player = PlayerInfo("3", "Amit", cardCount = 0, isActive = false, isCurrentTurn = false),
+                    isOpponent = true
+                )
+                PlayerAvatar(
+                    player = PlayerInfo("4", "Sneha", cardCount = 0, isActive = false, isCurrentTurn = false),
+                    isOpponent = false
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "OpponentRow — mixed")
+@Composable
+private fun PreviewOpponentRow() {
+    LiteratureTheme {
+        Surface {
+            OpponentRow(
+                opponents = listOf(
+                    PlayerInfo("1", "Rahul", cardCount = 8, isActive = true, isCurrentTurn = true),
+                    PlayerInfo("2", "Priya", cardCount = 0, isActive = false, isCurrentTurn = false),
+                    PlayerInfo("3", "Amit", cardCount = 4, isActive = true, isCurrentTurn = false),
+                ),
+                modifier = Modifier.padding(16.dp)
+            )
+        }
     }
 }
