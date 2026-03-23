@@ -15,10 +15,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.ui.theme.CardRed
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,7 +28,8 @@ fun HomeScreen(
     onStartGame: (playerName: String, playerCount: Int) -> Unit,
     onPlayOnline: (playerName: String) -> Unit = {}
 ) {
-    var playerName by remember { mutableStateOf("") }
+    val session = koinInject<SessionStore>()
+    var playerName by remember { mutableStateOf(session.playerName) }
     var showSetupDialog by remember { mutableStateOf(false) }
     val onBackground = MaterialTheme.colorScheme.onBackground
 
@@ -83,7 +86,7 @@ fun HomeScreen(
 
             OutlinedTextField(
                 value = playerName,
-                onValueChange = { playerName = it },
+                onValueChange = { playerName = it; session.playerName = it },
                 label = { Text(stringResource(Res.string.home_player_name_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(0.8f),
