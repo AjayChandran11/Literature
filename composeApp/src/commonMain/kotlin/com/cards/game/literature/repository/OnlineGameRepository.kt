@@ -403,7 +403,8 @@ class OnlineGameRepository(
 
     fun cleanup() {
         disconnect()
-        scope.cancel()
+        // Do NOT cancel scope — it is application-lifetime (singleton). Cancelling it
+        // permanently breaks connectAndSend for any subsequent online session.
     }
 }
 

@@ -129,5 +129,7 @@ class LocalGameRepository(
     fun cleanup() {
         botScope?.cancel()
         botScope = null
+        botJobRunning = false
+        _gameState.value = null
     }
 }
