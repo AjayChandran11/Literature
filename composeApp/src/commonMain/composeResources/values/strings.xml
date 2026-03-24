@@ -22,7 +22,7 @@
     <string name="label_opponents">Opponents</string>
     <string name="player_card_count">%1$d cards</string>
     <string name="player_out_of_cards">Out of cards</string>
-    <string name="hand_empty_title">You\'re out of cards</string>
+    <string name="hand_empty_title">You're out of cards</string>
     <string name="hand_empty_subtitle">Your team continues to play on your behalf</string>
 
     <!-- Suit symbols -->
@@ -80,7 +80,7 @@
     <string name="game_your_turn">✦ Your Turn!</string>
     <string name="game_timer_seconds">%1$ds</string>
     <string name="game_bot_thinking">%1$s is thinking…</string>
-    <string name="game_player_turn">%1$s\'s turn</string>
+    <string name="game_player_turn">%1$s's turn</string>
 
     <!-- Score Bar -->
     <string name="score_vs">VS</string>
@@ -186,7 +186,7 @@
     <string name="onboarding_your_team">Your Team</string>
     <string name="onboarding_half_suits_claimed">half suits claimed</string>
     <string name="onboarding_most_wins">Most half suits wins!</string>
-    <string name="onboarding_lets_play">Let\'s Play!  ♠♥♦♣</string>
+    <string name="onboarding_lets_play">Let's Play!  ♠♥♦♣</string>
 
     <!-- Onboarding card demo labels -->
     <string name="onboarding_card_spade7">♠7</string>
