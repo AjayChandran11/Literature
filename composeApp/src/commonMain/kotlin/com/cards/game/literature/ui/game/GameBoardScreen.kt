@@ -4,7 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -98,6 +101,7 @@ fun GameBoardContent(
 
     var showAskSheet by remember { mutableStateOf(false) }
     var showClaimSheet by remember { mutableStateOf(false) }
+    var showHelpSheet by remember { mutableStateOf(false) }
     var askSuit by remember { mutableStateOf<Suit?>(null) }
     var askIsLow by remember { mutableStateOf<Boolean?>(null) }
     // var selectedCard by remember { mutableStateOf<Card?>(null) } // TODO: future use
@@ -149,7 +153,11 @@ fun GameBoardContent(
                 .padding(padding)
         ) {
             // Persistent header: ScoreBar + [banners] + TurnIndicatorBanner
-            PersistentHeader(uiState = uiState, headerOverlay = headerOverlay)
+            PersistentHeader(
+                uiState = uiState,
+                headerOverlay = headerOverlay,
+                onHelpClick = { showHelpSheet = true }
+            )
 
             // Tab content area
             AnimatedContent(
@@ -219,6 +227,11 @@ fun GameBoardContent(
             },
             onDismiss = { showAskSheet = false }
         )
+    }
+
+    // How to Play bottom sheet
+    if (showHelpSheet) {
+        HowToPlaySheet(onDismiss = { showHelpSheet = false })
     }
 
     // Claim bottom sheet
@@ -442,19 +455,23 @@ private fun LastEventStrip(events: List<GameEvent>) {
 }
 
 @Composable
-private fun PersistentHeader(uiState: GameUiState, headerOverlay: @Composable () -> Unit = {}) {
+private fun PersistentHeader(
+    uiState: GameUiState,
+    headerOverlay: @Composable () -> Unit = {},
+    onHelpClick: () -> Unit = {}
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         ScoreBar(
             myTeamScore = uiState.myTeamScore,
             opponentTeamScore = uiState.opponentTeamScore
         )
         headerOverlay()
-        TurnIndicatorBanner(uiState = uiState)
+        TurnIndicatorBanner(uiState = uiState, onHelpClick = onHelpClick)
     }
 }
 
 @Composable
-private fun TurnIndicatorBanner(uiState: GameUiState) {
+private fun TurnIndicatorBanner(uiState: GameUiState, onHelpClick: () -> Unit = {}) {
     // Local 60s countdown, reset on every game state change (ask, claim, turn change)
     var secondsRemaining by remember { mutableStateOf(60) }
 
@@ -539,6 +556,28 @@ private fun TurnIndicatorBanner(uiState: GameUiState) {
                         )
                     }
                 }
+            }
+
+            // Help icon
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(22.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                        shape = CircleShape
+                    )
+                    .clickable(onClick = onHelpClick,
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "?",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

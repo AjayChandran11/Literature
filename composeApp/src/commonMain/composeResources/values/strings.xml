@@ -206,4 +206,24 @@
     <!-- Card ranges (DeckPage) -->
     <string name="card_range_low">2  3  4  5  6  7</string>
     <string name="card_range_high">9  10  J  Q  K  A</string>
+
+    <!-- How to Play -->
+    <string name="help_button_description">How to play</string>
+    <string name="help_title">How to Play</string>
+    <string name="help_objective_title">Objective</string>
+    <string name="help_objective_body">Claim 5 of 8 half-suits before the other team to win.</string>
+    <string name="help_deck_title">The Deck</string>
+    <string name="help_deck_body">48 cards across 4 suits (♠ ♥ ♦ ♣). No 8s.\n\nEach suit splits into two half-suits:\n• Low: 2, 3, 4, 5, 6, 7\n• High: 9, 10, J, Q, K, A\n\nThat\'s 8 half-suits of 6 cards each.</string>
+    <string name="help_teams_title">Teams</string>
+    <string name="help_teams_body">Two equal teams (2v2 or 3v3). You can only ask opponents for cards — never your teammates.</string>
+    <string name="help_asking_title">Asking for Cards</string>
+    <string name="help_asking_body">On your turn, choose a suit, pick the cards you want, and ask an opponent.\n\nGot the card? Go again.\nDenied? Their turn now.\n\nYou must hold at least one card from that half-suit to ask.</string>
+    <string name="help_claiming_title">Claiming a Half-Suit</string>
+    <string name="help_claiming_body">Think your team holds a full half-suit? Claim it — assign each card to the right teammate.\n\nGet it right and your team scores.\nGet it wrong and the other team scores.</string>
+    <string name="help_no_cards_title">Out of Cards</string>
+    <string name="help_no_cards_body">Ran out of cards? No worries — your teammates keep playing. You can still be part of claims.</string>
+    <string name="help_winning_title">Winning</string>
+    <string name="help_winning_body">The team that claims more half-suits wins the game. If it's 4–4, it's a draw.</string>
+    <string name="help_tip_title">Strategy Tip</string>
+    <string name="help_tip_body">Every ask is public info. Think about what your moves reveal — to your teammates and your opponents.</string>
 </resources>
