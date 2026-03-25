@@ -228,13 +228,15 @@
     <string name="help_tip_body">Every ask is public info. Think about what your moves reveal — to your teammates and your opponents.</string>
 
     <!-- Tutorial tooltips -->
-    <string name="tutorial_score_bar">This shows the score. Your team vs opponents.</string>
-    <string name="tutorial_turn_banner">This shows whose turn it is and the time remaining.</string>
-    <string name="tutorial_players">Here you can see all players and how many cards they hold.</string>
+    <string name="tutorial_score_bar">See how your team is performing against the opponent.</string>
+    <string name="tutorial_turn_banner">Shows the current turn and time remaining.\n You will see the timer for the last 15 seconds.</string>
+    <string name="tutorial_players">View all players and their card counts.</string>
     <string name="tutorial_half_suits">Track which half-suits are claimed or taken.</string>
-    <string name="tutorial_hand_tab">Tap here to see your cards, grouped by half-suit.</string>
+    <string name="tutorial_hand_tab">Tap here to view the cards in your hand.</string>
+    <string name="tutorial_your_hand">Here are your cards, grouped by half-suit. Use them to ask and claim!</string>
     <string name="tutorial_action_buttons">On your turn, use these to ask for cards or claim a half-suit.</string>
     <string name="tutorial_tap_continue">Tap anywhere to continue</string>
+    <string name="tutorial_tap_hand_tab">↓  Tap the Hand tab below  ↓</string>
 
     <!-- Online gate dialog -->
     <string name="dialog_online_gate_title">Play offline first?</string>

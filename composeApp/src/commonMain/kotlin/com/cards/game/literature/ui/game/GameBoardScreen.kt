@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import kotlinx.coroutines.delay
@@ -197,7 +198,10 @@ fun GameBoardContent(
                             uiState = uiState,
                             tutorialState = tutorialState
                         )
-                        GameTab.HAND -> HandTab(uiState = uiState)
+                        GameTab.HAND -> HandTab(
+                            uiState = uiState,
+                            tutorialState = tutorialState
+                        )
                     }
                 }
 
@@ -206,19 +210,29 @@ fun GameBoardContent(
 
                 // Bottom NavigationBar
                 NavigationBar(
-                    modifier = Modifier.onGloballyPositioned { coords ->
-                        tutorialState?.reportBounds(TutorialStep.HAND_TAB, coords.boundsInRoot())
-                    },
                     containerColor = MaterialTheme.colorScheme.surface,
                     windowInsets = WindowInsets()
                 ) {
                     GameTab.entries.forEach { tab ->
                         val tabLabel = stringResource(tab.labelRes)
                         NavigationBarItem(
+                            modifier = if (tab == GameTab.HAND) {
+                                Modifier.onGloballyPositioned { coords ->
+                                    val rect = coords.boundsInRoot()
+                                    tutorialState?.reportBounds(TutorialStep.HAND_TAB, rect)
+                                }
+                            } else Modifier,
                             icon = { Icon(tab.icon, contentDescription = tabLabel) },
                             label = { Text(tabLabel, style = MaterialTheme.typography.bodyLarge) },
                             selected = selectedTab == tab,
-                            onClick = { selectedTab = tab },
+                            onClick = {
+                                selectedTab = tab
+                                if (tab == GameTab.HAND
+                                    && tutorialState?.currentStep == TutorialStep.HAND_TAB
+                                ) {
+                                    tutorialState.advance()
+                                }
+                            },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.secondary,
                                 selectedTextColor = MaterialTheme.colorScheme.secondary,

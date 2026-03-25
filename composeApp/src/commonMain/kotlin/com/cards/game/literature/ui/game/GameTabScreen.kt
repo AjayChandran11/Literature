@@ -93,7 +93,7 @@ fun TableTab(uiState: GameUiState, tutorialState: TutorialState? = null) {
 }
 
 @Composable
-fun HandTab(uiState: GameUiState) {
+fun HandTab(uiState: GameUiState, tutorialState: TutorialState? = null) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -133,7 +133,11 @@ fun HandTab(uiState: GameUiState) {
         } else {
             CardHand(
                 handByHalfSuit = uiState.myHandByHalfSuit,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .onGloballyPositioned { coords ->
+                        tutorialState?.reportBounds(TutorialStep.YOUR_HAND, coords.boundsInRoot())
+                    }
             )
         }
     }

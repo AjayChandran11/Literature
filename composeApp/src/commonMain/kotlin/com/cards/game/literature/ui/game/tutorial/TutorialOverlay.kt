@@ -37,10 +37,14 @@ enum class TutorialStep {
     TURN_BANNER,
     PLAYERS,
     HALF_SUITS,
-    HAND_TAB,
+    HAND_TAB,       // Waits for user to tap the Hand tab
+    YOUR_HAND,      // Shows on Hand tab, highlighting the cards
     ACTION_BUTTONS;
 
     fun next(): TutorialStep? = entries.getOrNull(ordinal + 1)
+
+    /** True if this step requires a user action (not just a tap anywhere). */
+    val requiresUserAction: Boolean get() = this == HAND_TAB
 }
 
 private fun TutorialStep.emoji(): String = when (this) {
@@ -48,8 +52,9 @@ private fun TutorialStep.emoji(): String = when (this) {
     TutorialStep.TURN_BANNER -> "⏱"
     TutorialStep.PLAYERS -> "👥"
     TutorialStep.HALF_SUITS -> "🃏"
-    TutorialStep.HAND_TAB -> "🎴"
-    TutorialStep.ACTION_BUTTONS -> "👆"
+    TutorialStep.HAND_TAB -> "👆"
+    TutorialStep.YOUR_HAND -> "🎴"
+    TutorialStep.ACTION_BUTTONS -> "✨"
 }
 
 // ─── Tutorial State ─────────────────────────────────────────────────────────
@@ -103,13 +108,20 @@ fun TutorialOverlay(state: TutorialState) {
         label = "pulseAlpha"
     )
 
+    // On HAND_TAB step, don't consume taps — let the nav bar handle them
+    val consumesTaps = !state.currentStep.requiresUserAction
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = { state.advance() }
+            .then(
+                if (consumesTaps) {
+                    Modifier.clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                        onClick = { state.advance() }
+                    )
+                } else Modifier
             )
     ) {
         // Semi-transparent scrim with spotlight cutout
@@ -145,6 +157,16 @@ fun TutorialOverlay(state: TutorialState) {
                     cornerRadius = corner,
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx())
                 )
+
+                // Pulsing fill glow on steps that require user action (e.g. HAND_TAB)
+                if (state.currentStep.requiresUserAction) {
+                    drawRoundRect(
+                        color = Color(accentColor.red, accentColor.green, accentColor.blue, pulseAlpha * 0.25f),
+                        topLeft = androidx.compose.ui.geometry.Offset(spotlightLeft, spotlightTop),
+                        size = androidx.compose.ui.geometry.Size(spotlightWidth, spotlightHeight),
+                        cornerRadius = corner,
+                    )
+                }
             }
         }
 
@@ -153,6 +175,7 @@ fun TutorialOverlay(state: TutorialState) {
             val showAbove = state.currentStep == TutorialStep.ACTION_BUTTONS
                     || state.currentStep == TutorialStep.HAND_TAB
                     || state.currentStep == TutorialStep.HALF_SUITS
+                    || state.currentStep == TutorialStep.YOUR_HAND
 
             val spotlightPad = with(density) { 10.dp.toPx() }
             val triangleH = with(density) { 10.dp.toPx() }
@@ -215,9 +238,16 @@ fun TutorialOverlay(state: TutorialState) {
 
 @Composable
 private fun TooltipCard(state: TutorialState, accentColor: Color) {
+    val hintText = if (state.currentStep.requiresUserAction) {
+        stringResource(Res.string.tutorial_tap_hand_tab)
+    } else {
+        stringResource(Res.string.tutorial_tap_continue)
+    }
+
     Column(
         modifier = Modifier
             .padding(horizontal = 24.dp)
+            .widthIn(max = 400.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
@@ -256,7 +286,7 @@ private fun TooltipCard(state: TutorialState, accentColor: Color) {
 
         // Tap hint
         Text(
-            text = stringResource(Res.string.tutorial_tap_continue),
+            text = hintText,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
             color = Color(accentColor.red, accentColor.green, accentColor.blue),
@@ -272,5 +302,6 @@ private fun tooltipTextForStep(step: TutorialStep): String = when (step) {
     TutorialStep.PLAYERS -> stringResource(Res.string.tutorial_players)
     TutorialStep.HALF_SUITS -> stringResource(Res.string.tutorial_half_suits)
     TutorialStep.HAND_TAB -> stringResource(Res.string.tutorial_hand_tab)
+    TutorialStep.YOUR_HAND -> stringResource(Res.string.tutorial_your_hand)
     TutorialStep.ACTION_BUTTONS -> stringResource(Res.string.tutorial_action_buttons)
 }
