@@ -83,7 +83,7 @@ fun AppNavigation() {
                     }
                 },
                 onBack = {
-                    navController.popBackStack()
+                    navController.popBackStack(Routes.HOME, inclusive = false)
                 }
             )
         }

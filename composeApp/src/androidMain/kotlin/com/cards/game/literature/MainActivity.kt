@@ -11,6 +11,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.preferences.OnboardingPrefs
+import com.cards.game.literature.preferences.TutorialPrefs
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,6 +20,7 @@ class MainActivity : ComponentActivity() {
 
         // Initialise singletons BEFORE setContent so composables can read them
         OnboardingPrefs.init(this)
+        TutorialPrefs.init(this)
         NetworkMonitor.init(this)
         FirebaseApp.initializeApp(this)
         FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = true

@@ -15,6 +15,7 @@ data class WaitingRoomUiState(
     val roomCode: String = "",
     val players: List<WaitingRoomPlayer> = emptyList(),
     val isHost: Boolean = false,
+    val myPlayerId: String = "",
     val targetPlayerCount: Int = 6,
     val errorMessage: String? = null,
     val isStarting: Boolean = false,
@@ -82,6 +83,12 @@ class WaitingRoomViewModel(
         }
     }
 
+    fun switchTeam() {
+        viewModelScope.launch {
+            onlineRepository.switchTeam()
+        }
+    }
+
     fun leaveRoom() {
         viewModelScope.launch {
             onlineRepository.leaveRoom()
@@ -105,6 +112,7 @@ class WaitingRoomViewModel(
                 )
             },
             isHost = onlineRepository.myPlayerId == room.hostPlayerId,
+            myPlayerId = onlineRepository.myPlayerId,
             targetPlayerCount = room.targetPlayerCount
         )
     }

@@ -169,6 +169,21 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                             room.handleReconnect(message.playerId)
                         }
 
+                        is ClientMessage.SwitchTeam -> {
+                            val room = currentRoom
+                            val playerId = currentPlayerId
+                            if (room == null || playerId == null) {
+                                sendError("Not in a room")
+                                continue
+                            }
+                            if (room.phase != com.cards.game.literature.protocol.RoomPhase.WAITING) {
+                                sendError("Cannot switch teams after game has started")
+                                continue
+                            }
+                            room.switchTeam(playerId)
+                            room.broadcastRoomUpdate()
+                        }
+
                         is ClientMessage.LeaveGame -> {
                             val room = currentRoom
                             val playerId = currentPlayerId

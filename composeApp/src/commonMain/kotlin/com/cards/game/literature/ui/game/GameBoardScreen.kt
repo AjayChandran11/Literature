@@ -4,7 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,12 +20,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import kotlinx.coroutines.delay
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.Suit
 import com.cards.game.literature.model.GamePhase
+import com.cards.game.literature.preferences.TutorialPrefs
+import com.cards.game.literature.ui.game.tutorial.TutorialOverlay
+import com.cards.game.literature.ui.game.tutorial.TutorialState
+import com.cards.game.literature.ui.game.tutorial.TutorialStep
+import com.cards.game.literature.ui.game.tutorial.rememberTutorialState
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
@@ -85,19 +96,31 @@ fun GameBoardScreen(
         }
     }
 
-    GameBoardContent(viewModel = viewModel)
+    val isFirstGame = remember { !TutorialPrefs.isFirstGameCompleted() }
+    val tutorialState = rememberTutorialState(isFirstGame)
+
+    // Mark tutorial complete when it finishes
+    LaunchedEffect(tutorialState.isActive) {
+        if (isFirstGame && !tutorialState.isActive) {
+            TutorialPrefs.markFirstGameCompleted()
+        }
+    }
+
+    GameBoardContent(viewModel = viewModel, tutorialState = tutorialState)
 }
 
 @Composable
 fun GameBoardContent(
     viewModel: GameViewModel,
-    headerOverlay: @Composable () -> Unit = {}
+    headerOverlay: @Composable () -> Unit = {},
+    tutorialState: TutorialState? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val gameLog by viewModel.gameLog.collectAsState()
 
     var showAskSheet by remember { mutableStateOf(false) }
     var showClaimSheet by remember { mutableStateOf(false) }
+    var showHelpSheet by remember { mutableStateOf(false) }
     var askSuit by remember { mutableStateOf<Suit?>(null) }
     var askIsLow by remember { mutableStateOf<Boolean?>(null) }
     // var selectedCard by remember { mutableStateOf<Card?>(null) } // TODO: future use
@@ -124,9 +147,11 @@ fun GameBoardContent(
         }
     }
 
-    // Auto-switch to Hand tab when it becomes the player's turn
-    LaunchedEffect(uiState.isMyTurn) {
-        if (uiState.isMyTurn && !previouslyMyTurn) selectedTab = GameTab.HAND
+    // Auto-switch to Hand tab when it becomes the player's turn (suppressed during tutorial)
+    LaunchedEffect(uiState.isMyTurn, tutorialState?.isActive) {
+        if (uiState.isMyTurn && !previouslyMyTurn && tutorialState?.isActive != true) {
+            selectedTab = GameTab.HAND
+        }
         previouslyMyTurn = uiState.isMyTurn
     }
 
@@ -139,68 +164,102 @@ fun GameBoardContent(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Persistent header: ScoreBar + [banners] + TurnIndicatorBanner
-            PersistentHeader(uiState = uiState, headerOverlay = headerOverlay)
-
-            // Tab content area
-            AnimatedContent(
-                targetState = selectedTab,
-                modifier = Modifier.weight(1f),
-                transitionSpec = {
-                    val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
-                    (slideInHorizontally { it * dir } + fadeIn(tween(180))) togetherWith
-                            (slideOutHorizontally { -it * dir } + fadeOut(tween(180)))
-                },
-                label = "TabContent"
-            ) { tab ->
-                when (tab) {
-                    GameTab.TABLE -> TableTab(uiState = uiState)
-                    GameTab.HAND -> HandTab(uiState = uiState)
-                    // GameTab.LOG -> LogTab(events = gameLog)
-                }
-            }
-
-            // Last event strip
-            LastEventStrip(events = gameLog)
-
-            // Bottom NavigationBar
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                windowInsets = WindowInsets()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
             ) {
-                GameTab.entries.forEach { tab ->
-                    val tabLabel = stringResource(tab.labelRes)
-                    NavigationBarItem(
-                        icon = { Icon(tab.icon, contentDescription = tabLabel) },
-                        label = { Text(tabLabel, style = MaterialTheme.typography.bodyLarge) },
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.secondary,
-                            selectedTextColor = MaterialTheme.colorScheme.secondary,
-                            indicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                }
-            }
+                // Persistent header: ScoreBar + [banners] + TurnIndicatorBanner
+                PersistentHeader(
+                    uiState = uiState,
+                    headerOverlay = headerOverlay,
+                    onHelpClick = { showHelpSheet = true },
+                    tutorialState = tutorialState
+                )
 
-            // Pinned action buttons
-            ActionButtons(
-                isMyTurn = uiState.isMyTurn,
-                onAskCard = { showAskSheet = true },
-                onClaimDeck = { showClaimSheet = true },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-            )
+                // Tab content area
+                AnimatedContent(
+                    targetState = selectedTab,
+                    modifier = Modifier.weight(1f),
+                    transitionSpec = {
+                        val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                        (slideInHorizontally { it * dir } + fadeIn(tween(180))) togetherWith
+                                (slideOutHorizontally { -it * dir } + fadeOut(tween(180)))
+                    },
+                    label = "TabContent"
+                ) { tab ->
+                    when (tab) {
+                        GameTab.TABLE -> TableTab(
+                            uiState = uiState,
+                            tutorialState = tutorialState
+                        )
+                        GameTab.HAND -> HandTab(
+                            uiState = uiState,
+                            tutorialState = tutorialState
+                        )
+                    }
+                }
+
+                // Last event strip
+                LastEventStrip(events = gameLog)
+
+                // Bottom NavigationBar
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    windowInsets = WindowInsets()
+                ) {
+                    GameTab.entries.forEach { tab ->
+                        val tabLabel = stringResource(tab.labelRes)
+                        NavigationBarItem(
+                            modifier = if (tab == GameTab.HAND) {
+                                Modifier.onGloballyPositioned { coords ->
+                                    val rect = coords.boundsInRoot()
+                                    tutorialState?.reportBounds(TutorialStep.HAND_TAB, rect)
+                                }
+                            } else Modifier,
+                            icon = { Icon(tab.icon, contentDescription = tabLabel) },
+                            label = { Text(tabLabel, style = MaterialTheme.typography.bodyLarge) },
+                            selected = selectedTab == tab,
+                            onClick = {
+                                selectedTab = tab
+                                if (tab == GameTab.HAND
+                                    && tutorialState?.currentStep == TutorialStep.HAND_TAB
+                                ) {
+                                    tutorialState.advance()
+                                }
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.secondary,
+                                selectedTextColor = MaterialTheme.colorScheme.secondary,
+                                indicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+                }
+
+                // Pinned action buttons
+                ActionButtons(
+                    isMyTurn = uiState.isMyTurn,
+                    onAskCard = { showAskSheet = true },
+                    onClaimDeck = { showClaimSheet = true },
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .onGloballyPositioned { coords ->
+                            tutorialState?.reportBounds(TutorialStep.ACTION_BUTTONS, coords.boundsInRoot())
+                        }
+                )
+            }
+        }
+
+        // Tutorial overlay on top of everything
+        if (tutorialState?.isActive == true) {
+            TutorialOverlay(state = tutorialState)
         }
     }
 
@@ -219,6 +278,11 @@ fun GameBoardContent(
             },
             onDismiss = { showAskSheet = false }
         )
+    }
+
+    // How to Play bottom sheet
+    if (showHelpSheet) {
+        HowToPlaySheet(onDismiss = { showHelpSheet = false })
     }
 
     // Claim bottom sheet
@@ -442,28 +506,49 @@ private fun LastEventStrip(events: List<GameEvent>) {
 }
 
 @Composable
-private fun PersistentHeader(uiState: GameUiState, headerOverlay: @Composable () -> Unit = {}) {
+private fun PersistentHeader(
+    uiState: GameUiState,
+    headerOverlay: @Composable () -> Unit = {},
+    onHelpClick: () -> Unit = {},
+    tutorialState: TutorialState? = null
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        ScoreBar(
-            myTeamScore = uiState.myTeamScore,
-            opponentTeamScore = uiState.opponentTeamScore
-        )
+        Box(modifier = Modifier.onGloballyPositioned { coords ->
+            tutorialState?.reportBounds(TutorialStep.SCORE_BAR, coords.boundsInRoot())
+        }) {
+            ScoreBar(
+                myTeamScore = uiState.myTeamScore,
+                opponentTeamScore = uiState.opponentTeamScore
+            )
+        }
         headerOverlay()
-        TurnIndicatorBanner(uiState = uiState)
+        Box(modifier = Modifier.onGloballyPositioned { coords ->
+            tutorialState?.reportBounds(TutorialStep.TURN_BANNER, coords.boundsInRoot())
+        }) {
+            TurnIndicatorBanner(
+                uiState = uiState,
+                onHelpClick = onHelpClick,
+                timerPaused = tutorialState?.isActive == true
+            )
+        }
     }
 }
 
 @Composable
-private fun TurnIndicatorBanner(uiState: GameUiState) {
+private fun TurnIndicatorBanner(
+    uiState: GameUiState,
+    onHelpClick: () -> Unit = {},
+    timerPaused: Boolean = false
+) {
     // Local 60s countdown, reset on every game state change (ask, claim, turn change)
     var secondsRemaining by remember { mutableStateOf(60) }
 
     // Use activePlayerId + myHand size + scores as a composite key that changes on every action
     val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
 
-    LaunchedEffect(timerKey) {
+    LaunchedEffect(timerKey, timerPaused) {
         secondsRemaining = 60
-        while (secondsRemaining > 0) {
+        while (secondsRemaining > 0 && !timerPaused) {
             delay(1000L)
             secondsRemaining--
         }
@@ -539,6 +624,28 @@ private fun TurnIndicatorBanner(uiState: GameUiState) {
                         )
                     }
                 }
+            }
+
+            // Help icon
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(22.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                        shape = CircleShape
+                    )
+                    .clickable(onClick = onHelpClick,
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "?",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

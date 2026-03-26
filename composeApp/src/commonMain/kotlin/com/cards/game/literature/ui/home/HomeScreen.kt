@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.cards.game.literature.preferences.SessionStore
+import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.ui.theme.CardRed
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
@@ -31,6 +32,7 @@ fun HomeScreen(
     val session = koinInject<SessionStore>()
     var playerName by remember { mutableStateOf(session.playerName) }
     var showSetupDialog by remember { mutableStateOf(false) }
+    var showOnlineGateDialog by remember { mutableStateOf(false) }
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -117,7 +119,13 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedButton(
-                onClick = { onPlayOnline(playerName.trim()) },
+                onClick = {
+                    if (!TutorialPrefs.isFirstGameCompleted()) {
+                        showOnlineGateDialog = true
+                    } else {
+                        onPlayOnline(playerName.trim())
+                    }
+                },
                 enabled = playerName.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
@@ -138,6 +146,39 @@ fun HomeScreen(
             onConfirm = { playerCount ->
                 showSetupDialog = false
                 onStartGame(playerName.trim(), playerCount)
+            }
+        )
+    }
+
+    if (showOnlineGateDialog) {
+        AlertDialog(
+            onDismissRequest = { showOnlineGateDialog = false },
+            title = {
+                Text(
+                    stringResource(Res.string.dialog_online_gate_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = { Text(stringResource(Res.string.dialog_online_gate_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showOnlineGateDialog = false
+                        showSetupDialog = true
+                    }
+                ) {
+                    Text(stringResource(Res.string.dialog_online_gate_play_offline))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showOnlineGateDialog = false
+                        onPlayOnline(playerName.trim())
+                    }
+                ) {
+                    Text(stringResource(Res.string.dialog_online_gate_continue))
+                }
             }
         )
     }

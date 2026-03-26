@@ -101,6 +101,10 @@ class OnlineGameRepository(
         sendMessage(ClientMessage.StartGame(fillWithBots))
     }
 
+    suspend fun switchTeam() {
+        sendMessage(ClientMessage.SwitchTeam)
+    }
+
     override suspend fun createGame(playerName: String, playerCount: Int): GameState {
         // Not used for online mode
         throw UnsupportedOperationException("Use createRoom/joinRoom for online play")

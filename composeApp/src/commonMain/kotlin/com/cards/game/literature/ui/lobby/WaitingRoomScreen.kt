@@ -33,6 +33,7 @@ fun WaitingRoomScreen(
     val uiState by viewModel.uiState.collectAsState()
     var fillWithBots by remember { mutableStateOf(true) }
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var isLeaving by remember { mutableStateOf(false) }
 
     BackHandler {
         showLeaveDialog = true
@@ -46,6 +47,8 @@ fun WaitingRoomScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        if (isLeaving) return@Button
+                        isLeaving = true
                         showLeaveDialog = false
                         viewModel.leaveRoom()
                         onLeave()
@@ -204,6 +207,20 @@ fun WaitingRoomScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
+                        if (player.id == uiState.myPlayerId) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            TextButton(
+                                onClick = { viewModel.switchTeam() },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.waiting_room_switch_team),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
                         if (player.isHost) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
@@ -228,6 +245,10 @@ fun WaitingRoomScreen(
 
         // Host controls
         if (uiState.isHost) {
+            val team1Count = uiState.players.count { it.teamId == "team_1" }
+            val team2Count = uiState.players.count { it.teamId == "team_2" }
+            val teamsUneven = !fillWithBots && team1Count != team2Count
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(0.8f)
@@ -245,6 +266,17 @@ fun WaitingRoomScreen(
                 )
             }
 
+            if (teamsUneven) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(Res.string.waiting_room_teams_uneven_warning),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(
@@ -253,7 +285,7 @@ fun WaitingRoomScreen(
                     .fillMaxWidth(0.8f)
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
-                enabled = !uiState.isStarting && (fillWithBots || uiState.players.size == uiState.targetPlayerCount)
+                enabled = !uiState.isStarting && !teamsUneven && (fillWithBots || uiState.players.size == uiState.targetPlayerCount)
             ) {
                 if (uiState.isStarting) {
                     CircularProgressIndicator(
@@ -275,10 +307,14 @@ fun WaitingRoomScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        TextButton(onClick = {
-            viewModel.leaveRoom()
-            onLeave()
-        }) {
+        TextButton(
+            onClick = {
+                if (isLeaving) return@TextButton
+                isLeaving = true
+                viewModel.leaveRoom()
+                onLeave()
+            }
+        ) {
             Text(stringResource(Res.string.button_leave_room), color = MaterialTheme.colorScheme.error)
         }
 

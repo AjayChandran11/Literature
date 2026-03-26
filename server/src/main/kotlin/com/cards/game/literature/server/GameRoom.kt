@@ -20,6 +20,7 @@ class GameRoom(
     private val engine = GameEngine()
     private val botPlayer = BotPlayer()
     private val players = ConcurrentHashMap<String, PlayerSession>()
+    private val playerTeams = ConcurrentHashMap<String, String>()
     private val mutex = Mutex()
     private var gameState: GameState? = null
     private var hostPlayerId: String? = null
@@ -51,8 +52,14 @@ class GameRoom(
             session = null
         )
         players[playerId] = session
+        playerTeams[playerId] = if (playerTeams.size % 2 == 0) "team_1" else "team_2"
         if (isHost) hostPlayerId = playerId
         return playerId
+    }
+
+    fun switchTeam(playerId: String) {
+        val current = playerTeams[playerId] ?: return
+        playerTeams[playerId] = if (current == "team_1") "team_2" else "team_1"
     }
 
     fun getPlayerSession(playerId: String): PlayerSession? = players[playerId]
@@ -74,7 +81,7 @@ class GameRoom(
 
     fun toRoomState(): RoomState {
         val roomPlayers = players.values.map { session ->
-            val teamId = if (players.keys.toList().indexOf(session.playerId) % 2 == 0) "team_1" else "team_2"
+            val teamId = playerTeams[session.playerId] ?: "team_1"
             RoomPlayerInfo(
                 id = session.playerId,
                 name = session.playerName,
@@ -99,9 +106,9 @@ class GameRoom(
         val humanPlayers = players.values.toList()
         val setupPlayers = mutableListOf<PlayerSetupInfo>()
 
-        // Assign teams alternating
+        // Use stored team assignments chosen in the waiting room
         humanPlayers.forEachIndexed { index, session ->
-            val teamId = if (index % 2 == 0) "team_1" else "team_2"
+            val teamId = playerTeams[session.playerId] ?: if (index % 2 == 0) "team_1" else "team_2"
             setupPlayers.add(
                 PlayerSetupInfo(
                     id = session.playerId,
@@ -112,16 +119,17 @@ class GameRoom(
             )
         }
 
-        // Fill remaining slots with bots
+        // Fill remaining slots with bots, always adding to the smaller team to balance
         if (fillWithBots) {
             val botNames = listOf("Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace")
             var botIndex = 0
             while (setupPlayers.size < targetPlayerCount) {
-                val botId = "bot_${botIndex}"
-                val teamId = if (setupPlayers.size % 2 == 0) "team_1" else "team_2"
+                val t1Count = setupPlayers.count { it.teamId == "team_1" }
+                val t2Count = setupPlayers.count { it.teamId == "team_2" }
+                val teamId = if (t1Count <= t2Count) "team_1" else "team_2"
                 setupPlayers.add(
                     PlayerSetupInfo(
-                        id = botId,
+                        id = "bot_$botIndex",
                         name = botNames.getOrElse(botIndex) { "Bot ${botIndex + 1}" },
                         teamId = teamId,
                         isBot = true
@@ -442,6 +450,7 @@ class GameRoom(
 
     fun removePlayer(playerId: String) {
         players.remove(playerId)
+        playerTeams.remove(playerId)
         if (playerId == hostPlayerId && players.isNotEmpty()) {
             hostPlayerId = players.keys.first()
         }

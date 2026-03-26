@@ -80,9 +80,12 @@ fun ClaimBottomSheet(
                                 // Auto-assign my own cards
                                 val cards = DeckUtils.getAllCardsForHalfSuit(hs)
                                 val newAssignments = mutableMapOf<Card, String>()
+                                val soloTeammate = teammates.singleOrNull()
                                 cards.forEach { card ->
                                     if (card in myHand) {
                                         newAssignments[card] = myPlayerId
+                                    } else if (soloTeammate != null) {
+                                        newAssignments[card] = soloTeammate.id
                                     }
                                 }
                                 assignments = newAssignments
@@ -173,7 +176,7 @@ fun ClaimBottomSheet(
                                         expanded = expanded,
                                         onDismissRequest = { expanded = false }
                                     ) {
-                                        allTeamPlayers.forEach { player ->
+                                        teammates.forEach { player ->
                                             DropdownMenuItem(
                                                 text = { Text(player.name, style = MaterialTheme.typography.titleMedium) },
                                                 onClick = {

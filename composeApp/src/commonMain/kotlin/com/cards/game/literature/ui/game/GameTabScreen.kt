@@ -17,6 +17,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -25,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.*
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.GameEvent
+import com.cards.game.literature.ui.game.tutorial.TutorialState
+import com.cards.game.literature.ui.game.tutorial.TutorialStep
 import com.cards.game.literature.ui.theme.LiteratureTheme
 import com.cards.game.literature.viewmodel.GameUiState
 import com.cards.game.literature.viewmodel.PlayerInfo
@@ -41,7 +45,7 @@ enum class GameTab(val labelRes: StringResource, val icon: ImageVector) {
 // enum class LogFilter { ALL, ASKS, CLAIMS }  // Only used by LogTab
 
 @Composable
-fun TableTab(uiState: GameUiState) {
+fun TableTab(uiState: GameUiState, tutorialState: TutorialState? = null) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -53,7 +57,12 @@ fun TableTab(uiState: GameUiState) {
             verticalArrangement = Arrangement.Center
         ) {
             SectionLabel(stringResource(Res.string.label_opponents_section))
-            OpponentRow(opponents = uiState.opponents)
+            OpponentRow(
+                opponents = uiState.opponents,
+                modifier = Modifier.onGloballyPositioned { coords ->
+                    tutorialState?.reportBounds(TutorialStep.PLAYERS, coords.boundsInRoot())
+                }
+            )
         }
 
         // Teammates section — takes equal space
@@ -68,17 +77,23 @@ fun TableTab(uiState: GameUiState) {
         }
 
         // Half-suits pinned at the bottom
-        SectionLabel(stringResource(Res.string.label_half_suits_section))
-        DeckTracker(
-            statuses = uiState.halfSuitStatuses,
-            myTeamId = uiState.myTeamId
-        )
-        Spacer(modifier = Modifier.height(4.dp))
+        Column(
+            modifier = Modifier.onGloballyPositioned { coords ->
+                tutorialState?.reportBounds(TutorialStep.HALF_SUITS, coords.boundsInRoot())
+            }
+        ) {
+            SectionLabel(stringResource(Res.string.label_half_suits_section))
+            DeckTracker(
+                statuses = uiState.halfSuitStatuses,
+                myTeamId = uiState.myTeamId
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+        }
     }
 }
 
 @Composable
-fun HandTab(uiState: GameUiState) {
+fun HandTab(uiState: GameUiState, tutorialState: TutorialState? = null) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -118,7 +133,11 @@ fun HandTab(uiState: GameUiState) {
         } else {
             CardHand(
                 handByHalfSuit = uiState.myHandByHalfSuit,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .onGloballyPositioned { coords ->
+                        tutorialState?.reportBounds(TutorialStep.YOUR_HAND, coords.boundsInRoot())
+                    }
             )
         }
     }

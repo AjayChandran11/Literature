@@ -39,6 +39,7 @@ fun OnlineGameScreen(
     val connectionState by onlineRepository.connectionState.collectAsState()
     val reconnectCountdowns by onlineRepository.reconnectCountdowns.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
+    var isQuitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     // Reconnect on app resume
@@ -65,6 +66,8 @@ fun OnlineGameScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        if (isQuitting) return@Button
+                        isQuitting = true
                         showQuitDialog = false
                         scope.launch { onlineRepository.leaveGame() }
                         onQuit()

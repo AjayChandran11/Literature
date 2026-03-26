@@ -29,4 +29,7 @@ sealed class ClientMessage {
 
     @Serializable
     data object LeaveGame : ClientMessage()
+
+    @Serializable
+    data object SwitchTeam : ClientMessage()
 }
