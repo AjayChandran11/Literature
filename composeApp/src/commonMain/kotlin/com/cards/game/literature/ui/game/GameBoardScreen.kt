@@ -576,7 +576,7 @@ private fun TurnIndicatorBanner(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary
                     )
-                    if (secondsRemaining <= 15) {
+                    if (uiState.isOnline && secondsRemaining <= 15) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             stringResource(Res.string.game_timer_seconds, secondsRemaining),
@@ -613,7 +613,7 @@ private fun TurnIndicatorBanner(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (secondsRemaining <= 15) {
+                    if (uiState.isOnline && secondsRemaining <= 15) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             stringResource(Res.string.game_timer_seconds, secondsRemaining),

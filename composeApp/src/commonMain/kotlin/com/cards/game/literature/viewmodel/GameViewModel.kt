@@ -21,6 +21,7 @@ data class PlayerInfo(
 )
 
 data class GameUiState(
+    val isOnline: Boolean = false,
     val isMyTurn: Boolean = false,
     val myHand: List<Card> = emptyList(),
     val myHandByHalfSuit: Map<HalfSuit, List<Card>> = emptyMap(),
@@ -52,7 +53,8 @@ class GameViewModel(
         }
     }
 
-    private val _uiState = MutableStateFlow(GameUiState())
+    private val isOnline = repository is OnlineGameRepository
+    private val _uiState = MutableStateFlow(GameUiState(isOnline = isOnline))
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     private val _gameLog = MutableStateFlow<List<GameEvent>>(emptyList())
@@ -158,6 +160,7 @@ class GameViewModel(
         _trackerState.value = tracker
 
         _uiState.value = GameUiState(
+            isOnline = isOnline,
             isMyTurn = state.currentPlayer.id == myPlayerId,
             myHand = myHand,
             myHandByHalfSuit = handByHalfSuit,
