@@ -10,6 +10,7 @@
     <!-- Splash screen theme: transitions to Theme.Literature after launch -->
     <style name="Theme.Literature.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/app_icon</item>
         <item name="postSplashScreenTheme">@style/Theme.Literature</item>
     </style>
 </resources>
