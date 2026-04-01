@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,12 +47,18 @@ fun DeckTracker(
                 else -> CardRed
             }
 
+            val deckDesc = when {
+                status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.displayName)
+                status.claimedByTeamId == myTeamId -> stringResource(Res.string.cd_deck_ours, status.halfSuit.displayName)
+                else -> stringResource(Res.string.cd_deck_theirs, status.halfSuit.displayName)
+            }
             Column(
                 modifier = Modifier
                     .width(96.dp)
                     .background(bgColor, RoundedCornerShape(6.dp))
                     .border(1.dp, borderColor, RoundedCornerShape(6.dp))
-                    .padding(10.dp),
+                    .padding(10.dp)
+                    .semantics { contentDescription = deckDesc },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(

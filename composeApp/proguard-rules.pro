@@ -30,6 +30,10 @@
 -keep class okhttp3.** { *; }
 -keep class okio.** { *; }
 
+# Kermit logging
+-keep class co.touchlab.kermit.** { *; }
+-dontwarn co.touchlab.kermit.**
+
 # Firebase
 -keep class com.google.firebase.** { *; }
 -keep class com.google.android.gms.** { *; }

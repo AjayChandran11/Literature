@@ -1,5 +1,6 @@
 package com.cards.game.literature.repository
 
+import co.touchlab.kermit.Logger
 import com.cards.game.literature.bot.BotAction
 import com.cards.game.literature.bot.BotPlayer
 import com.cards.game.literature.logic.GameEngine
@@ -13,6 +14,8 @@ class LocalGameRepository(
     private val gameEngine: GameEngine = GameEngine(),
     private val botPlayer: BotPlayer = BotPlayer()
 ) : GameRepository {
+
+    private val log = Logger.withTag("LocalGameRepo")
 
     private val _gameState = MutableStateFlow<GameState?>(null)
     override val gameState: StateFlow<GameState?> = _gameState.asStateFlow()
@@ -30,6 +33,7 @@ class LocalGameRepository(
         botJobRunning = false
 
         val gameId = "game_${currentTimeMillis()}"
+        log.i { "Creating local game: player=$playerName, count=$playerCount" }
         val state = gameEngine.createGame(gameId, playerName, playerCount)
         _gameState.value = state
         _gameEvents.emit(GameEvent.GameStarted(playerCount))
@@ -101,6 +105,7 @@ class LocalGameRepository(
             if (!current.isBot) return
 
             val action = botPlayer.decideMove(state, current.id)
+            log.d { "Bot ${current.name} action: ${action::class.simpleName}" }
             when (action) {
                 is BotAction.Ask -> {
                     mutex.withLock {

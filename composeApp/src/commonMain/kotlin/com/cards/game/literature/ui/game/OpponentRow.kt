@@ -16,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -68,9 +70,15 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
 
     val alpha = if (player.isActive) 1f else 0.4f
 
+    val avatarDesc = when {
+        player.isCurrentTurn -> stringResource(Res.string.cd_player_active, player.name, player.cardCount)
+        player.cardCount == 0 -> stringResource(Res.string.cd_player_out, player.name)
+        else -> stringResource(Res.string.cd_player, player.name, player.cardCount)
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(88.dp)
+        modifier = Modifier.width(88.dp).semantics { contentDescription = avatarDesc }
     ) {
         Box(
             modifier = Modifier

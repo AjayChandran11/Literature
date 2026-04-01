@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +33,9 @@ import com.cards.game.literature.model.Suit
 import com.cards.game.literature.model.isRed
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.LiteratureTheme
+import literature.composeapp.generated.resources.Res
+import literature.composeapp.generated.resources.cd_card
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CardHand(
@@ -139,6 +144,7 @@ fun CardView(
     val bgColor = if (isSelected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f) else Color.White
     val borderColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.LightGray
 
+    val cardDesc = stringResource(Res.string.cd_card, card.value.displayName, card.suit.name.lowercase().replaceFirstChar { it.uppercase() })
     Box(
         modifier = modifier
             .width(60.dp)
@@ -146,6 +152,7 @@ fun CardView(
             .background(bgColor, RoundedCornerShape(8.dp))
             .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
+            .semantics { contentDescription = cardDesc }
             .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {

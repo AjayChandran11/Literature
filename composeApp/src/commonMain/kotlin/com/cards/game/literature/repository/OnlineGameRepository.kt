@@ -1,5 +1,6 @@
 package com.cards.game.literature.repository
 
+import co.touchlab.kermit.Logger
 import com.cards.game.literature.model.*
 import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.protocol.*
@@ -24,6 +25,8 @@ class OnlineGameRepository(
     private val serverUrl: String,
     private val client: HttpClient
 ) : GameRepository {
+
+    private val log = Logger.withTag("OnlineGameRepo")
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -89,11 +92,13 @@ class OnlineGameRepository(
     }
 
     suspend fun createRoom(playerName: String, playerCount: Int) {
+        log.i { "Creating room: player=$playerName, count=$playerCount" }
         connectAndSend(ClientMessage.CreateRoom(playerName, playerCount))
     }
 
     suspend fun joinRoom(code: String, playerName: String) {
         roomCode = code.uppercase()
+        log.i { "Joining room: code=$roomCode, player=$playerName" }
         connectAndSend(ClientMessage.JoinRoom(roomCode, playerName))
     }
 
@@ -163,6 +168,7 @@ class OnlineGameRepository(
     private suspend fun connectAndSend(firstMessage: ClientMessage) {
         // Pre-connection internet check
         if (!NetworkMonitor.isNetworkAvailable.value) {
+            log.w { "No internet connection — aborting connect" }
             _errors.emit("No internet connection")
             _connectionState.value = ConnectionState.DISCONNECTED
             return
@@ -171,12 +177,14 @@ class OnlineGameRepository(
         disconnect()
         shouldAutoReconnect = true
         _connectionState.value = ConnectionState.CONNECTING
+        log.i { "Connecting to $serverUrl" }
 
         connectionJob = scope.launch {
             try {
                 client.webSocket(urlString = "$serverUrl/game") {
                     webSocketSession = this
                     _connectionState.value = ConnectionState.CONNECTED
+                    log.i { "WebSocket connected" }
 
                     // Send the initial message
                     val text = json.encodeToString(firstMessage)
@@ -192,6 +200,7 @@ class OnlineGameRepository(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                log.e(e) { "Connection error" }
                 _errors.emit("Connection error: ${e.message}")
             } finally {
                 webSocketSession = null
@@ -234,6 +243,7 @@ class OnlineGameRepository(
                 }
             }
             _connectionState.value = ConnectionState.DISCONNECTED
+            log.e { "Failed to reconnect after $maxAttempts attempts" }
             _errors.emit("Failed to reconnect after $maxAttempts attempts")
         }
     }
@@ -257,6 +267,7 @@ class OnlineGameRepository(
         val message = try {
             json.decodeFromString<ServerMessage>(text)
         } catch (e: Exception) {
+            log.e(e) { "Failed to decode server message: $text" }
             _errors.emit("Invalid server message")
             return
         }
@@ -265,11 +276,13 @@ class OnlineGameRepository(
             is ServerMessage.RoomCreated -> {
                 roomCode = message.roomCode
                 myPlayerId = message.playerId
+                log.i { "Room created: code=$roomCode, playerId=$myPlayerId" }
             }
             is ServerMessage.RoomUpdate -> {
                 _roomState.value = message.room
             }
             is ServerMessage.GameStarted -> {
+                log.i { "Game started in room $roomCode" }
                 applyGameView(message.view)
             }
             is ServerMessage.GameUpdate -> {
@@ -313,9 +326,11 @@ class OnlineGameRepository(
                 }
             }
             is ServerMessage.Error -> {
+                log.w { "Server error: ${message.message}" }
                 _errors.emit(message.message)
             }
             is ServerMessage.RoomClosed -> {
+                log.i { "Room $roomCode closed" }
                 _errors.emit("Room was closed")
                 disconnect()
             }

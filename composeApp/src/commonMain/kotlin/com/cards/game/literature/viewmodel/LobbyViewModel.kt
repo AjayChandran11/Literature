@@ -2,6 +2,7 @@ package com.cards.game.literature.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import com.cards.game.literature.repository.ConnectionState
 import com.cards.game.literature.repository.OnlineGameRepository
 import kotlinx.coroutines.flow.*
@@ -15,6 +16,8 @@ data class LobbyUiState(
 class LobbyViewModel(
     private val onlineRepository: OnlineGameRepository
 ) : ViewModel() {
+
+    private val log = Logger.withTag("LobbyViewModel")
 
     private val _uiState = MutableStateFlow(LobbyUiState())
     val uiState: StateFlow<LobbyUiState> = _uiState.asStateFlow()
@@ -40,6 +43,7 @@ class LobbyViewModel(
 
     fun createRoom(playerName: String, playerCount: Int) {
         viewModelScope.launch {
+            log.i { "Creating room: player=$playerName, count=$playerCount" }
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             onlineRepository.createRoom(playerName, playerCount)
         }
@@ -47,6 +51,7 @@ class LobbyViewModel(
 
     fun joinRoom(roomCode: String, playerName: String) {
         viewModelScope.launch {
+            log.i { "Joining room: code=$roomCode, player=$playerName" }
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             onlineRepository.joinRoom(roomCode, playerName)
         }

@@ -27,6 +27,13 @@ import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
+private fun Suit.accessibleName(): String = when (this) {
+    Suit.SPADES -> "Spades"
+    Suit.HEARTS -> "Hearts"
+    Suit.DIAMONDS -> "Diamonds"
+    Suit.CLUBS -> "Clubs"
+}
+
 private fun suitFor(hs: HalfSuit): Suit = when (hs) {
     HalfSuit.SPADES_LOW, HalfSuit.SPADES_HIGH -> Suit.SPADES
     HalfSuit.HEARTS_LOW, HalfSuit.HEARTS_HIGH -> Suit.HEARTS

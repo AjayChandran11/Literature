@@ -19,6 +19,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -591,8 +594,9 @@ private fun TurnIndicatorBanner(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
+                    val botDesc = stringResource(Res.string.cd_bot_thinking)
                     CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(16.dp).semantics { contentDescription = botDesc },
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -627,6 +631,7 @@ private fun TurnIndicatorBanner(
             }
 
             // Help icon
+            val helpDesc = stringResource(Res.string.help_button_description)
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -637,7 +642,8 @@ private fun TurnIndicatorBanner(
                     )
                     .clickable(onClick = onHelpClick,
                         indication = null,
-                        interactionSource = remember { MutableInteractionSource() }),
+                        interactionSource = remember { MutableInteractionSource() })
+                    .semantics { contentDescription = helpDesc },
                 contentAlignment = Alignment.Center
             ) {
                 Text(

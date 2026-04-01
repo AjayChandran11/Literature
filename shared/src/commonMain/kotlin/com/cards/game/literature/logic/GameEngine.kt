@@ -220,13 +220,13 @@ class GameEngine {
             // Claimer keeps turn if they still have cards
             if (newPlayers[claimerIdx].isActive) claimerIdx
             else {
-                // Claimer is out of cards — pass to a random active teammate
+                // Claimer is out of cards — pass to the first active teammate (deterministic)
                 val claimerTeam = state.teams.first { it.playerIds.contains(declaration.claimerId) }
                 val activeTeammates = newPlayers.filter {
                     it.id in claimerTeam.playerIds && it.id != declaration.claimerId && it.isActive
                 }
                 if (activeTeammates.isNotEmpty()) {
-                    newPlayers.indexOf(activeTeammates.random())
+                    newPlayers.indexOf(activeTeammates.first())
                 } else {
                     findNextActivePlayer(newPlayers, claimerIdx)
                 }

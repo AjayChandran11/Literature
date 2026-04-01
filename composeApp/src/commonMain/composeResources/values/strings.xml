@@ -240,6 +240,25 @@
     <string name="tutorial_tap_continue">Tap anywhere to continue</string>
     <string name="tutorial_tap_hand_tab">↓  Tap the Hand tab below  ↓</string>
 
+    <!-- Accessibility content descriptions -->
+    <string name="cd_card">%1$s of %2$s</string>
+    <string name="cd_player_active">%1$s, %2$d cards, current turn</string>
+    <string name="cd_player">%1$s, %2$d cards</string>
+    <string name="cd_player_out">%1$s, out of cards</string>
+    <string name="cd_deck_open">%1$s, open</string>
+    <string name="cd_deck_ours">%1$s, claimed by your team</string>
+    <string name="cd_deck_theirs">%1$s, claimed by opponents</string>
+    <string name="cd_score">Score: Your team %1$d, Opponents %2$d</string>
+    <string name="cd_remove_card">Remove %1$s from selection</string>
+    <string name="cd_select_card">Select %1$s</string>
+    <string name="cd_assign_card">Assign %1$s to a teammate</string>
+    <string name="cd_connection_status">Connection status</string>
+    <string name="cd_bot_thinking">Bot is thinking</string>
+    <string name="cd_suit_spades">Spades</string>
+    <string name="cd_suit_hearts">Hearts</string>
+    <string name="cd_suit_diamonds">Diamonds</string>
+    <string name="cd_suit_clubs">Clubs</string>
+
     <!-- Online gate dialog -->
     <string name="dialog_online_gate_title">Play offline first?</string>
     <string name="dialog_online_gate_message">We recommend playing an offline game first to learn the basics.</string>

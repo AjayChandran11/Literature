@@ -2,6 +2,7 @@ package com.cards.game.literature.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import com.cards.game.literature.logic.CardTracker
 import com.cards.game.literature.logic.CardTrackerState
 import com.cards.game.literature.logic.DeckUtils
@@ -44,6 +45,8 @@ class GameViewModel(
     private val repository: GameRepository,
     private val overridePlayerId: String? = null
 ) : ViewModel() {
+
+    private val log = Logger.withTag("GameViewModel")
 
     override fun onCleared() {
         super.onCleared()
@@ -89,6 +92,7 @@ class GameViewModel(
             try {
                 repository.createGame(playerName, playerCount)
             } catch (e: Exception) {
+                log.e(e) { "Failed to start game" }
                 _uiState.update { it.copy(errorMessage = e.message, isLoading = false) }
             }
         }
@@ -107,8 +111,10 @@ class GameViewModel(
     fun askCards(targetId: String, cards: List<Card>) {
         viewModelScope.launch {
             try {
+                log.d { "Asking $targetId for ${cards.size} card(s)" }
                 repository.submitMultiAsk(myPlayerId, targetId, cards)
             } catch (e: Exception) {
+                log.e(e) { "Ask failed" }
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
         }
@@ -117,8 +123,10 @@ class GameViewModel(
     fun claimDeck(declaration: ClaimDeclaration) {
         viewModelScope.launch {
             try {
+                log.d { "Claiming ${declaration.halfSuit}" }
                 repository.submitClaim(declaration)
             } catch (e: Exception) {
+                log.e(e) { "Claim failed" }
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
         }

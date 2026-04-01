@@ -2,6 +2,7 @@ package com.cards.game.literature.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import com.cards.game.literature.protocol.RoomPhase
 import com.cards.game.literature.protocol.RoomState
 import com.cards.game.literature.repository.ConnectionState
@@ -33,6 +34,8 @@ data class WaitingRoomPlayer(
 class WaitingRoomViewModel(
     private val onlineRepository: OnlineGameRepository
 ) : ViewModel() {
+
+    private val log = Logger.withTag("WaitingRoomVM")
 
     private val _uiState = MutableStateFlow(WaitingRoomUiState())
     val uiState: StateFlow<WaitingRoomUiState> = _uiState.asStateFlow()
@@ -72,6 +75,7 @@ class WaitingRoomViewModel(
 
     fun startGame(fillWithBots: Boolean = true) {
         viewModelScope.launch {
+            log.i { "Starting game, fillWithBots=$fillWithBots" }
             _uiState.update { it.copy(isStarting = true) }
             onlineRepository.startGame(fillWithBots)
             // Reset after timeout so the button doesn't stay stuck if server doesn't respond
