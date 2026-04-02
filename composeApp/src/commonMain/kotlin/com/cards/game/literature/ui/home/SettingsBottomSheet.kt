@@ -20,8 +20,11 @@ import org.jetbrains.compose.resources.stringResource
 fun SettingsBottomSheet(onDismiss: () -> Unit) {
     var soundEnabled by remember { mutableStateOf(GamePrefs.isSoundEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(GamePrefs.isHapticsEnabled()) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
