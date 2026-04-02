@@ -20,11 +20,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.cards.game.literature.audio.SoundEvent
+import com.cards.game.literature.audio.SoundPlayer
+import com.cards.game.literature.preferences.GamePrefs
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -84,6 +91,29 @@ fun ResultScreenContent(
     onPlayAgain: () -> Unit,
     onGoHome: () -> Unit
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
+
+    LaunchedEffect(Unit) {
+        if (uiState.isDraw) return@LaunchedEffect
+        if (uiState.isWinner) {
+            SoundPlayer.play(SoundEvent.GAME_WIN)
+            if (GamePrefs.isHapticsEnabled()) {
+                repeat(3) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    delay(80)
+                }
+            }
+        } else {
+            SoundPlayer.play(SoundEvent.GAME_LOSE)
+            if (GamePrefs.isHapticsEnabled()) {
+                repeat(2) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    delay(80)
+                }
+            }
+        }
+    }
+
     val myTeamDisplayName = uiState.myTeamName.ifEmpty { stringResource(Res.string.label_your_team) }
     val opponentTeamDisplayName = uiState.opponentTeamName.ifEmpty { stringResource(Res.string.label_opponents) }
 
