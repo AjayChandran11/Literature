@@ -60,7 +60,7 @@ class OnlineGameRepository(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var shouldAutoReconnect = false
     private var lastSeenEventTimestamp: Long = 0L
-    private var needsEventReplay = false
+    private val needsEventReplay = MutableStateFlow(false)
 
     var myPlayerId: String = ""
         private set
@@ -144,7 +144,7 @@ class OnlineGameRepository(
         _roomState.value = null
         _reconnectCountdowns.value = emptyMap()
         lastSeenEventTimestamp = 0L
-        needsEventReplay = false
+        needsEventReplay.value = false
         myPlayerId = ""
         roomCode = ""
     }
@@ -152,13 +152,13 @@ class OnlineGameRepository(
     suspend fun reconnect(code: String, playerId: String) {
         roomCode = code
         myPlayerId = playerId
-        needsEventReplay = true
+        needsEventReplay.value = true
         connectAndSend(ClientMessage.Reconnect(code, playerId))
     }
 
     fun triggerReconnect() {
         if (roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
-            needsEventReplay = true
+            needsEventReplay.value = true
             scope.launch {
                 connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
             }
@@ -233,7 +233,7 @@ class OnlineGameRepository(
 
                 try {
                     _connectionState.value = ConnectionState.RECONNECTING
-                    needsEventReplay = true
+                    needsEventReplay.value = true
                     connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
                     return@launch // success
                 } catch (e: CancellationException) {
@@ -387,9 +387,9 @@ class OnlineGameRepository(
         // On reconnect, replay events we missed while disconnected into _gameEvents
         // so the ViewModel's gameLog catches up. Only do this once after reconnecting,
         // not on every GameUpdate (which would duplicate events already arriving via
-        // GameEventOccurred).
-        if (needsEventReplay) {
-            needsEventReplay = false
+        // GameEventOccurred). compareAndSet atomically reads and clears the flag,
+        // preventing a concurrent reconnect from being lost.
+        if (needsEventReplay.compareAndSet(expect = true, update = false)) {
             val missedEvents = view.recentEvents.filter { it.timestamp > lastSeenEventTimestamp }
             for (event in missedEvents) {
                 _gameEvents.emit(event)
