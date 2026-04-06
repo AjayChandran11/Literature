@@ -201,6 +201,9 @@ fun HomeScreen(
                 TextButton(
                     onClick = {
                         showOnlineGateDialog = false
+                        // Player chose to skip the offline tutorial — treat onboarding
+                        // as done so the gate dialog and in-game tooltips don't reappear.
+                        TutorialPrefs.markFirstGameCompleted()
                         onPlayOnline(playerName.trim())
                     }
                 ) {
