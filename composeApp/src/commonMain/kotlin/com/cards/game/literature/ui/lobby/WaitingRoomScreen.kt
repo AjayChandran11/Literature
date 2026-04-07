@@ -105,10 +105,12 @@ fun WaitingRoomScreen(
             .fillMaxSize()
             .padding(scaffoldPadding)
     ) {
-        ConnectionBanner(
-            connectionState = viewModel.connectionState,
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
+        if (!isLeaving) {
+            ConnectionBanner(
+                connectionState = viewModel.connectionState,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
+        }
 
     Column(
         modifier = Modifier
