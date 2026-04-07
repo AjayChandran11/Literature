@@ -95,10 +95,12 @@ fun OnlineGameScreen(
     GameBoardContent(
         viewModel = viewModel,
         headerOverlay = {
-            ConnectionBanner(connectionState = onlineRepository.connectionState)
+            if (!isQuitting) {
+                ConnectionBanner(connectionState = onlineRepository.connectionState)
 
-            // Reconnect countdown banners for disconnected players
-            ReconnectCountdownBanners(reconnectCountdowns)
+                // Reconnect countdown banners for disconnected players
+                ReconnectCountdownBanners(reconnectCountdowns)
+            }
         }
     )
 }

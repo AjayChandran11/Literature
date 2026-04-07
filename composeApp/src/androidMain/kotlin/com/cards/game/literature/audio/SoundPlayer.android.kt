@@ -2,6 +2,7 @@ package com.cards.game.literature.audio
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.SoundPool
 import com.cards.game.literature.preferences.GamePrefs
 
@@ -36,6 +37,9 @@ actual object SoundPlayer {
 
     actual fun play(event: SoundEvent) {
         if (!GamePrefs.isSoundEnabled()) return
+        val ctx = appContext ?: return
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (audioManager.ringerMode != AudioManager.RINGER_MODE_NORMAL) return
         val pool = soundPool ?: return
         val id = soundIds[event] ?: return
         if (id != 0) pool.play(id, 1f, 1f, 1, 0, 1f)

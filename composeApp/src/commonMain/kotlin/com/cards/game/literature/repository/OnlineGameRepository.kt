@@ -1,6 +1,7 @@
 package com.cards.game.literature.repository
 
 import co.touchlab.kermit.Logger
+import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.model.*
 import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.protocol.*
@@ -60,7 +61,7 @@ class OnlineGameRepository(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var shouldAutoReconnect = false
     private var lastSeenEventTimestamp: Long = 0L
-    private var needsEventReplay = false
+    private val needsEventReplay = MutableStateFlow(false)
 
     var myPlayerId: String = ""
         private set
@@ -84,6 +85,7 @@ class OnlineGameRepository(
                         && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()
                     ) {
                         autoReconnectJob?.cancel()
+                        needsEventReplay.value = true
                         connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
                     }
                 }
@@ -102,15 +104,15 @@ class OnlineGameRepository(
         connectAndSend(ClientMessage.JoinRoom(roomCode, playerName))
     }
 
-    suspend fun startGame(fillWithBots: Boolean = true) {
-        sendMessage(ClientMessage.StartGame(fillWithBots))
+    suspend fun startGame(fillWithBots: Boolean = true, botDifficulty: String = "MEDIUM") {
+        sendMessage(ClientMessage.StartGame(fillWithBots, botDifficulty))
     }
 
     suspend fun switchTeam() {
         sendMessage(ClientMessage.SwitchTeam)
     }
 
-    override suspend fun createGame(playerName: String, playerCount: Int): GameState {
+    override suspend fun createGame(playerName: String, playerCount: Int, difficulty: BotDifficulty): GameState {
         // Not used for online mode
         throw UnsupportedOperationException("Use createRoom/joinRoom for online play")
     }
@@ -144,7 +146,7 @@ class OnlineGameRepository(
         _roomState.value = null
         _reconnectCountdowns.value = emptyMap()
         lastSeenEventTimestamp = 0L
-        needsEventReplay = false
+        needsEventReplay.value = false
         myPlayerId = ""
         roomCode = ""
     }
@@ -152,13 +154,13 @@ class OnlineGameRepository(
     suspend fun reconnect(code: String, playerId: String) {
         roomCode = code
         myPlayerId = playerId
-        needsEventReplay = true
+        needsEventReplay.value = true
         connectAndSend(ClientMessage.Reconnect(code, playerId))
     }
 
     fun triggerReconnect() {
         if (roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
-            needsEventReplay = true
+            needsEventReplay.value = true
             scope.launch {
                 connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
             }
@@ -233,7 +235,7 @@ class OnlineGameRepository(
 
                 try {
                     _connectionState.value = ConnectionState.RECONNECTING
-                    needsEventReplay = true
+                    needsEventReplay.value = true
                     connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
                     return@launch // success
                 } catch (e: CancellationException) {
@@ -387,9 +389,9 @@ class OnlineGameRepository(
         // On reconnect, replay events we missed while disconnected into _gameEvents
         // so the ViewModel's gameLog catches up. Only do this once after reconnecting,
         // not on every GameUpdate (which would duplicate events already arriving via
-        // GameEventOccurred).
-        if (needsEventReplay) {
-            needsEventReplay = false
+        // GameEventOccurred). compareAndSet atomically reads and clears the flag,
+        // preventing a concurrent reconnect from being lost.
+        if (needsEventReplay.compareAndSet(expect = true, update = false)) {
             val missedEvents = view.recentEvents.filter { it.timestamp > lastSeenEventTimestamp }
             for (event in missedEvents) {
                 _gameEvents.emit(event)

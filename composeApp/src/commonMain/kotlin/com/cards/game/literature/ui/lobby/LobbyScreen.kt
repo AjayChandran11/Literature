@@ -136,12 +136,13 @@ fun LobbyScreen(
     if (showCreateDialog) {
         GameSetupDialog(
             onDismiss = { showCreateDialog = false },
-            onConfirm = { playerCount ->
+            onConfirm = { playerCount, _ ->
                 showCreateDialog = false
                 viewModel.createRoom(playerName, playerCount)
             },
             confirmLabel = stringResource(Res.string.lobby_create_room),
-            allowEightPlayers = true
+            allowEightPlayers = true,
+            showDifficulty = false
         )
     }
 }

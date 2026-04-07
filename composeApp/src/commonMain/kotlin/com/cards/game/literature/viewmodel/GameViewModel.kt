@@ -3,6 +3,7 @@ package com.cards.game.literature.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
+import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.logic.CardTracker
 import com.cards.game.literature.logic.CardTrackerState
 import com.cards.game.literature.logic.DeckUtils
@@ -86,11 +87,11 @@ class GameViewModel(
         }
     }
 
-    fun startGame(playerName: String, playerCount: Int) {
+    fun startGame(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                repository.createGame(playerName, playerCount)
+                repository.createGame(playerName, playerCount, difficulty)
             } catch (e: Exception) {
                 log.e(e) { "Failed to start game" }
                 _uiState.update { it.copy(errorMessage = e.message, isLoading = false) }

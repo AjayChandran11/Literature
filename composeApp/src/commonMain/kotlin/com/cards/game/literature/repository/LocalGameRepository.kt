@@ -2,6 +2,7 @@ package com.cards.game.literature.repository
 
 import co.touchlab.kermit.Logger
 import com.cards.game.literature.bot.BotAction
+import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.bot.BotPlayer
 import com.cards.game.literature.logic.GameEngine
 import com.cards.game.literature.model.*
@@ -11,8 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class LocalGameRepository(
-    private val gameEngine: GameEngine = GameEngine(),
-    private val botPlayer: BotPlayer = BotPlayer()
+    private val gameEngine: GameEngine = GameEngine()
 ) : GameRepository {
 
     private val log = Logger.withTag("LocalGameRepo")
@@ -23,14 +23,16 @@ class LocalGameRepository(
     private val _gameEvents = MutableSharedFlow<GameEvent>(replay = 0, extraBufferCapacity = 64)
     override val gameEvents: Flow<GameEvent> = _gameEvents.asSharedFlow()
 
+    private var botPlayer: BotPlayer = BotPlayer()
     private var botScope: CoroutineScope? = null
     private val mutex = Mutex()
     private var botJobRunning = false
 
-    override suspend fun createGame(playerName: String, playerCount: Int): GameState {
+    override suspend fun createGame(playerName: String, playerCount: Int, difficulty: BotDifficulty): GameState {
         botScope?.cancel()
         botScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         botJobRunning = false
+        botPlayer = BotPlayer(difficulty = difficulty)
 
         val gameId = "game_${currentTimeMillis()}"
         log.i { "Creating local game: player=$playerName, count=$playerCount" }

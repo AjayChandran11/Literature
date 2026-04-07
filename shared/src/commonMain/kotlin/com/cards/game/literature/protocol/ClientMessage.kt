@@ -13,7 +13,7 @@ sealed class ClientMessage {
     data class JoinRoom(val roomCode: String, val playerName: String) : ClientMessage()
 
     @Serializable
-    data class StartGame(val fillWithBots: Boolean = true) : ClientMessage()
+    data class StartGame(val fillWithBots: Boolean = true, val botDifficulty: String = "MEDIUM") : ClientMessage()
 
     @Serializable
     data class AskCards(val targetId: String, val cards: List<Card>) : ClientMessage()

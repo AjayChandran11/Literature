@@ -1,9 +1,6 @@
 package com.cards.game.literature.di
 
 import com.cards.game.literature.preferences.SessionStore
-import com.cards.game.literature.bot.BotPlayer
-import com.cards.game.literature.bot.BotStrategy
-import com.cards.game.literature.logic.CardTracker
 import com.cards.game.literature.logic.GameEngine
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.LocalGameRepository
@@ -21,10 +18,7 @@ import org.koin.dsl.module
 val appModule = module {
     single { SessionStore() }
     single { GameEngine() }
-    single { CardTracker() }
-    single { BotStrategy(get()) }
-    single { BotPlayer(get()) }
-    single<GameRepository> { LocalGameRepository(get(), get()) }
+    single<GameRepository> { LocalGameRepository(get()) }
 
     // Online dependencies
     single {

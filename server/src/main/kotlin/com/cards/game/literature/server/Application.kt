@@ -37,8 +37,9 @@ fun Application.configureServer() {
     }
 
     val roomManager = RoomManager()
+    val rateLimiter = RateLimiter()
 
     routing {
-        gameWebSocket(roomManager)
+        gameWebSocket(roomManager, rateLimiter)
     }
 }

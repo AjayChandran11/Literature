@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
 import com.cards.game.literature.audio.SoundEvent
 import com.cards.game.literature.audio.SoundPlayer
+import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.preferences.GamePrefs
@@ -56,6 +57,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun GameBoardScreen(
     playerName: String,
     playerCount: Int,
+    difficulty: BotDifficulty = BotDifficulty.MEDIUM,
     onGameEnd: () -> Unit,
     onQuit: () -> Unit,
     viewModel: GameViewModel = koinViewModel()
@@ -93,7 +95,7 @@ fun GameBoardScreen(
     // on every Activity recreation (e.g. theme change), reshuffling the cards.
     LaunchedEffect(Unit) {
         if (uiState.phase == GamePhase.WAITING) {
-            viewModel.startGame(playerName, playerCount)
+            viewModel.startGame(playerName, playerCount, difficulty)
         }
     }
 

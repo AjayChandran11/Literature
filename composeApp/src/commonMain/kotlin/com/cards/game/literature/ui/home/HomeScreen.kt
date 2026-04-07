@@ -19,6 +19,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.ui.theme.CardRed
@@ -30,7 +31,7 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onStartGame: (playerName: String, playerCount: Int) -> Unit,
+    onStartGame: (playerName: String, playerCount: Int, difficulty: BotDifficulty) -> Unit,
     onPlayOnline: (playerName: String) -> Unit = {}
 ) {
     val session = koinInject<SessionStore>()
@@ -170,9 +171,9 @@ fun HomeScreen(
     if (showSetupDialog) {
         GameSetupDialog(
             onDismiss = { showSetupDialog = false },
-            onConfirm = { playerCount ->
+            onConfirm = { playerCount, difficulty ->
                 showSetupDialog = false
-                onStartGame(playerName.trim(), playerCount)
+                onStartGame(playerName.trim(), playerCount, difficulty)
             }
         )
     }
@@ -201,6 +202,9 @@ fun HomeScreen(
                 TextButton(
                     onClick = {
                         showOnlineGateDialog = false
+                        // Player chose to skip the offline tutorial — treat onboarding
+                        // as done so the gate dialog and in-game tooltips don't reappear.
+                        TutorialPrefs.markFirstGameCompleted()
                         onPlayOnline(playerName.trim())
                     }
                 ) {
@@ -214,15 +218,23 @@ fun HomeScreen(
 @Composable
 fun GameSetupDialog(
     onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit,
+    onConfirm: (Int, BotDifficulty) -> Unit,
     confirmLabel: String = stringResource(Res.string.button_start_game),
-    allowEightPlayers: Boolean = false
+    allowEightPlayers: Boolean = false,
+    showDifficulty: Boolean = true
 ) {
     var selectedCount by remember { mutableIntStateOf(4) }
+    var selectedDifficulty by remember { mutableStateOf(BotDifficulty.MEDIUM) }
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
     val onSurface = MaterialTheme.colorScheme.onSurface
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+
+    val difficultyLabels = mapOf(
+        BotDifficulty.EASY to Pair(stringResource(Res.string.difficulty_easy), stringResource(Res.string.difficulty_easy_desc)),
+        BotDifficulty.MEDIUM to Pair(stringResource(Res.string.difficulty_medium), stringResource(Res.string.difficulty_medium_desc)),
+        BotDifficulty.HARD to Pair(stringResource(Res.string.difficulty_hard), stringResource(Res.string.difficulty_hard_desc))
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -306,11 +318,67 @@ fun GameSetupDialog(
                     }
                 }
 
+                // Bot difficulty selector
+                if (showDifficulty) {
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = stringResource(Res.string.game_setup_difficulty_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        BotDifficulty.entries.forEach { difficulty ->
+                            val isSelected = selectedDifficulty == difficulty
+                            val (label, desc) = difficultyLabels[difficulty] ?: Pair(difficulty.label, "")
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        if (isSelected) primary.copy(alpha = 0.12f)
+                                        else surfaceVariant
+                                    )
+                                    .border(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = if (isSelected) primary else primary.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clickable { selectedDifficulty = difficulty }
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) primary else onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = desc,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isSelected) secondary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(28.dp))
 
                 // Action buttons
                 Button(
-                    onClick = { onConfirm(selectedCount) },
+                    onClick = { onConfirm(selectedCount, selectedDifficulty) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),

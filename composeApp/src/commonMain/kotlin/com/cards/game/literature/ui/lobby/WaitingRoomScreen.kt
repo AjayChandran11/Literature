@@ -2,6 +2,8 @@ package com.cards.game.literature.ui.lobby
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.repository.PlayerConnectionEvent
 import com.cards.game.literature.ui.common.ConnectionBanner
 import com.cards.game.literature.viewmodel.WaitingRoomViewModel
@@ -32,6 +35,7 @@ fun WaitingRoomScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var fillWithBots by remember { mutableStateOf(true) }
+    var selectedDifficulty by remember { mutableStateOf(BotDifficulty.MEDIUM) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
 
@@ -101,10 +105,12 @@ fun WaitingRoomScreen(
             .fillMaxSize()
             .padding(scaffoldPadding)
     ) {
-        ConnectionBanner(
-            connectionState = viewModel.connectionState,
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
+        if (!isLeaving) {
+            ConnectionBanner(
+                connectionState = viewModel.connectionState,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
+        }
 
     Column(
         modifier = Modifier
@@ -266,6 +272,65 @@ fun WaitingRoomScreen(
                 )
             }
 
+            // Bot difficulty selector — shown when filling with bots
+            if (fillWithBots) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(Res.string.game_setup_difficulty_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(0.8f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val difficultyLabels = mapOf(
+                        BotDifficulty.EASY to Pair(stringResource(Res.string.difficulty_easy), stringResource(Res.string.difficulty_easy_desc)),
+                        BotDifficulty.MEDIUM to Pair(stringResource(Res.string.difficulty_medium), stringResource(Res.string.difficulty_medium_desc)),
+                        BotDifficulty.HARD to Pair(stringResource(Res.string.difficulty_hard), stringResource(Res.string.difficulty_hard_desc))
+                    )
+                    BotDifficulty.entries.forEach { difficulty ->
+                        val isSelected = selectedDifficulty == difficulty
+                        val (label, desc) = difficultyLabels[difficulty] ?: Pair(difficulty.label, "")
+                        val primary = MaterialTheme.colorScheme.primary
+                        val secondary = MaterialTheme.colorScheme.secondary
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isSelected) primary.copy(alpha = 0.12f)
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                .border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) primary else primary.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .clickable { selectedDifficulty = difficulty }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = label,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = desc,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isSelected) secondary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             if (teamsUneven) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -280,7 +345,7 @@ fun WaitingRoomScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(
-                onClick = { viewModel.startGame(fillWithBots) },
+                onClick = { viewModel.startGame(fillWithBots, selectedDifficulty) },
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
                     .height(56.dp),

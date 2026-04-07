@@ -16,8 +16,14 @@ private val json = Json {
     isLenient = false
 }
 
-fun Routing.gameWebSocket(roomManager: RoomManager) {
+fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
     webSocket("/game") {
+        val ip = call.request.local.remoteAddress
+        if (!rateLimiter.tryAcquire(ip)) {
+            close(CloseReason(CloseReason.Codes.TRY_AGAIN_LATER, "Rate limit exceeded"))
+            return@webSocket
+        }
+
         var currentRoom: GameRoom? = null
         var currentPlayerId: String? = null
 
@@ -102,7 +108,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                                 sendError("Only the host can start the game")
                                 continue
                             }
-                            val started = room.startGame(message.fillWithBots)
+                            val started = room.startGame(message.fillWithBots, message.botDifficulty)
                             if (!started) {
                                 sendError("Cannot start game")
                             }
@@ -198,12 +204,13 @@ fun Routing.gameWebSocket(roomManager: RoomManager) {
                 }
             }
         } finally {
-            // Connection closed
+            // Connection closed — release rate limiter slot
+            rateLimiter.release(ip)
             val room = currentRoom
             val playerId = currentPlayerId
             log.info("WebSocket closed for player {}", playerId ?: "unknown")
             if (room != null && playerId != null) {
-                room.handleDisconnect(playerId)
+                room.handleDisconnect(playerId, this@webSocket)
                 if (room.phase == com.cards.game.literature.protocol.RoomPhase.WAITING) {
                     room.broadcastRoomUpdate()
                 }

@@ -271,4 +271,13 @@
     <string name="dialog_online_gate_message">We recommend playing an offline game first to learn the basics.</string>
     <string name="dialog_online_gate_play_offline">Play Offline</string>
     <string name="dialog_online_gate_continue">Continue Online</string>
+
+    <!-- Bot difficulty -->
+    <string name="game_setup_difficulty_label">Bot Difficulty</string>
+    <string name="difficulty_easy">Easy</string>
+    <string name="difficulty_medium">Medium</string>
+    <string name="difficulty_hard">Hard</string>
+    <string name="difficulty_easy_desc">Forgiving</string>
+    <string name="difficulty_medium_desc">Balanced</string>
+    <string name="difficulty_hard_desc">Expert</string>
 </resources>

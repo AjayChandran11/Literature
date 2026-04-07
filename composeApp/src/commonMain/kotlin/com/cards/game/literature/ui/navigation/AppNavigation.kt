@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.ui.game.GameBoardScreen
 import com.cards.game.literature.ui.home.HomeScreen
@@ -19,14 +20,14 @@ import org.koin.core.qualifier.named
 object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
-    const val GAME = "game/{playerName}/{playerCount}"
+    const val GAME = "game/{playerName}/{playerCount}/{difficulty}"
     const val ONLINE_GAME = "online_game"
     const val RESULT = "result"
     const val RESULT_ONLINE = "result_online"
     const val LOBBY = "lobby/{playerName}"
     const val WAITING_ROOM = "waiting_room/{roomCode}"
 
-    fun game(playerName: String, playerCount: Int) = "game/$playerName/$playerCount"
+    fun game(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) = "game/$playerName/$playerCount/${difficulty.name}"
     fun lobby(playerName: String) = "lobby/$playerName"
     fun waitingRoom(roomCode: String) = "waiting_room/$roomCode"
 }
@@ -49,8 +50,8 @@ fun AppNavigation() {
         }
         composable(Routes.HOME) {
             HomeScreen(
-                onStartGame = { playerName, playerCount ->
-                    navController.navigate(Routes.game(playerName, playerCount))
+                onStartGame = { playerName, playerCount, difficulty ->
+                    navController.navigate(Routes.game(playerName, playerCount, difficulty))
                 },
                 onPlayOnline = { playerName ->
                     navController.navigate(Routes.lobby(playerName))
@@ -60,9 +61,13 @@ fun AppNavigation() {
         composable(Routes.GAME) { backStackEntry ->
             val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
             val playerCount = backStackEntry.arguments?.getString("playerCount")?.toIntOrNull() ?: 6
+            val difficulty = backStackEntry.arguments?.getString("difficulty")
+                ?.let { runCatching { BotDifficulty.valueOf(it) }.getOrNull() }
+                ?: BotDifficulty.MEDIUM
             GameBoardScreen(
                 playerName = playerName,
                 playerCount = playerCount,
+                difficulty = difficulty,
                 onGameEnd = {
                     navController.navigate(Routes.RESULT) {
                         popUpTo(Routes.HOME)
