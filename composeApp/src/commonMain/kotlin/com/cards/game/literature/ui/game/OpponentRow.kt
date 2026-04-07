@@ -123,6 +123,102 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
     }
 }
 
+// ─── Compact variants for landscape ─────────────────────────────────────────
+
+@Composable
+fun CompactOpponentRow(opponents: List<PlayerInfo>, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        opponents.forEach { player ->
+            CompactPlayerAvatar(player = player, isOpponent = true)
+        }
+    }
+}
+
+@Composable
+fun CompactTeammateRow(teammates: List<PlayerInfo>, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        teammates.forEach { player ->
+            CompactPlayerAvatar(player = player, isOpponent = false)
+        }
+    }
+}
+
+@Composable
+fun CompactPlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
+    val borderColor by animateColorAsState(
+        targetValue = if (player.isCurrentTurn) MaterialTheme.colorScheme.secondary else Color.Transparent,
+        animationSpec = if (player.isCurrentTurn) {
+            infiniteRepeatable(
+                animation = tween(800),
+                repeatMode = RepeatMode.Reverse
+            )
+        } else {
+            tween(300)
+        }
+    )
+
+    val alpha = if (player.isActive) 1f else 0.4f
+
+    val avatarDesc = when {
+        player.isCurrentTurn -> stringResource(Res.string.cd_player_active, player.name, player.cardCount)
+        player.cardCount == 0 -> stringResource(Res.string.cd_player_out, player.name)
+        else -> stringResource(Res.string.cd_player, player.name, player.cardCount)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = avatarDesc },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isOpponent) CardRed.copy(alpha = 0.3f * alpha)
+                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f * alpha)
+                )
+                .border(1.5.dp, borderColor, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = player.name.first().uppercase(),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = player.name,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+            maxLines = 1,
+            modifier = Modifier.weight(1f)
+        )
+        if (player.cardCount == 0) {
+            Text(
+                text = stringResource(Res.string.player_out_of_cards),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.tertiary.copy(alpha = alpha)
+            )
+        } else {
+            Text(
+                text = stringResource(Res.string.player_card_count, player.cardCount),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)
+            )
+        }
+    }
+}
+
 // ─── Previews ────────────────────────────────────────────────────────────────
 
 @Preview(name = "Avatar — with cards, active")

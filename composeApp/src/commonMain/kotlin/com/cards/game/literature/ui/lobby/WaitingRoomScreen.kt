@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.sp
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.repository.PlayerConnectionEvent
 import com.cards.game.literature.ui.common.ConnectionBanner
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
 import com.cards.game.literature.viewmodel.WaitingRoomViewModel
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
@@ -112,20 +114,22 @@ fun WaitingRoomScreen(
             )
         }
 
+    val windowInfo = currentWindowAdaptiveInfo()
+    val isCompact = windowInfo.isCompactHeight
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(if (isCompact) 16.dp else 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 32.dp))
 
         Text(
             text = stringResource(Res.string.waiting_room_title),
-            style = MaterialTheme.typography.headlineMedium,
+            style = if (isCompact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.secondary
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
 
         // Room code display
         Surface(

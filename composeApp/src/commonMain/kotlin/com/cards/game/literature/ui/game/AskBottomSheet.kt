@@ -22,6 +22,8 @@ import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.Suit
 import com.cards.game.literature.model.symbol
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.cards.game.literature.ui.common.WindowSize.useSideBySide
 import com.cards.game.literature.viewmodel.PlayerInfo
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
@@ -173,8 +175,10 @@ fun AskBottomSheet(
                             val mine = myHandByHalfSuit[halfSuit] ?: emptyList()
                             all.filter { it !in mine }
                         }
+                        val windowInfo = currentWindowAdaptiveInfo()
+                        val gridColumns = if (windowInfo.useSideBySide) GridCells.Adaptive(56.dp) else GridCells.Fixed(3)
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(3),
+                            columns = gridColumns,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.fillMaxSize()
