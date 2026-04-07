@@ -31,18 +31,31 @@ class BotStrategy(private val cardTracker: CardTracker = CardTracker()) {
         val claimAction = tryClaimWithCertainty(state, bot, trackerState, claimedHalfSuits, difficulty)
         if (claimAction != null) return claimAction
 
-        // Priority 1.5 (Hard only): Speculative claim with 5/6 known
+        // Priority 1.5 (Hard only): Speculative claim with 5/6 known via elimination
         if (difficulty.speculativeClaimEnabled) {
             val speculativeClaim = trySpeculativeClaim(state, bot, trackerState, claimedHalfSuits)
             if (speculativeClaim != null) return speculativeClaim
         }
 
+        val opponents = state.getOpponents(bot.id).filter { it.isActive }
+        val myActiveHalfSuits = bot.hand
+            .map { DeckUtils.getHalfSuit(it) }
+            .filter { it !in claimedHalfSuits }
+            .toSet()
+
+        // Easy bots: single random check here — 40% of the time skip smart logic entirely
+        if (Random.nextFloat() < difficulty.randomAskChance) {
+            val randomAsk = askRandomOpponent(bot, opponents, myActiveHalfSuits)
+            if (randomAsk != null) return randomAsk
+            // null only if no active opponents — fall through to smart logic
+        }
+
         // Priority 2: Ask for a card we know an opponent has
-        val knownAsk = tryAskKnownCard(state, bot, trackerState, claimedHalfSuits, difficulty)
+        val knownAsk = tryAskKnownCard(bot, opponents, trackerState, myActiveHalfSuits)
         if (knownAsk != null) return knownAsk
 
         // Priority 3: Smart ask — deduce likely opponent for a needed card
-        return askSmartOpponent(state, bot, trackerState, claimedHalfSuits, difficulty)
+        return askSmartOpponent(state, bot, opponents, trackerState, claimedHalfSuits, myActiveHalfSuits, difficulty)
     }
 
     private fun tryClaimWithCertainty(
@@ -186,25 +199,12 @@ class BotStrategy(private val cardTracker: CardTracker = CardTracker()) {
     }
 
     private fun tryAskKnownCard(
-        state: GameState,
         bot: Player,
+        opponents: List<Player>,
         trackerState: CardTrackerState,
-        claimedHalfSuits: Set<HalfSuit>,
-        difficulty: BotDifficulty
+        myActiveHalfSuits: Set<HalfSuit>
     ): BotAction.Ask? {
-        val opponents = state.getOpponents(bot.id).filter { it.isActive }
         if (opponents.isEmpty()) return null
-
-        // Only consider half-suits the bot has cards in AND that aren't claimed
-        val myActiveHalfSuits = bot.hand
-            .map { DeckUtils.getHalfSuit(it) }
-            .filter { it !in claimedHalfSuits }
-            .toSet()
-
-        // Easy bots may ask a random opponent instead of using knowledge
-        if (Random.nextFloat() < difficulty.randomAskChance) {
-            return askRandomOpponent(bot, opponents, myActiveHalfSuits)
-        }
 
         // Shuffle to avoid always asking the same opponent first
         for (opponent in opponents.shuffled()) {
@@ -222,29 +222,16 @@ class BotStrategy(private val cardTracker: CardTracker = CardTracker()) {
     private fun askSmartOpponent(
         state: GameState,
         bot: Player,
+        opponents: List<Player>,
         trackerState: CardTrackerState,
         claimedHalfSuits: Set<HalfSuit>,
+        myActiveHalfSuits: Set<HalfSuit>,
         difficulty: BotDifficulty
     ): BotAction {
-        val opponents = state.getOpponents(bot.id).filter { it.isActive }
         val botTeam = state.getTeamForPlayer(bot.id)
-
-        // Easy bots may ask randomly instead of deducing
-        if (Random.nextFloat() < difficulty.randomAskChance) {
-            val myActiveHalfSuits = bot.hand
-                .map { DeckUtils.getHalfSuit(it) }
-                .filter { it !in claimedHalfSuits }
-                .toSet()
-            val randomAsk = askRandomOpponent(bot, opponents, myActiveHalfSuits)
-            if (randomAsk != null) return randomAsk
-        }
 
         // Get unclaimed half-suits the bot has cards in, sorted by how many cards
         // the team already has (prefer half-suits closer to completion)
-        val myActiveHalfSuits = bot.hand
-            .map { DeckUtils.getHalfSuit(it) }
-            .filter { it !in claimedHalfSuits }
-            .toSet()
 
         data class HalfSuitInfo(
             val halfSuit: HalfSuit,
