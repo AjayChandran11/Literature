@@ -241,6 +241,105 @@ fun GameBoardContent(
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
+            bottomBar = {
+                Column(modifier = Modifier.fillMaxWidth()
+                    .navigationBarsPadding()) {
+                    if (showSideBySide) {
+                        // ── Full-width: Event strip + Action buttons ────────────
+                        LandscapeLastEventStrip(events = gameLog)
+
+                        if (compactHeight) {
+                            CompactActionButtons(
+                                isMyTurn = uiState.isMyTurn,
+                                onAskCard = { showAskSheet = true },
+                                onClaimDeck = { showClaimSheet = true },
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                                    .onGloballyPositioned { coords ->
+                                        tutorialState?.reportBounds(
+                                            TutorialStep.ACTION_BUTTONS,
+                                            coords.boundsInRoot()
+                                        )
+                                    }
+                            )
+                        } else {
+                            ActionButtons(
+                                isMyTurn = uiState.isMyTurn,
+                                onAskCard = { showAskSheet = true },
+                                onClaimDeck = { showClaimSheet = true },
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .onGloballyPositioned { coords ->
+                                        tutorialState?.reportBounds(
+                                            TutorialStep.ACTION_BUTTONS,
+                                            coords.boundsInRoot()
+                                        )
+                                    }
+                            )
+                        }
+                    } else {
+                        // Last event strip
+                        LastEventStrip(events = gameLog)
+
+                        // Bottom NavigationBar
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            windowInsets = WindowInsets()
+                        ) {
+                            GameTab.entries.forEach { tab ->
+                                val tabLabel = stringResource(tab.labelRes)
+                                NavigationBarItem(
+                                    modifier = if (tab == GameTab.HAND) {
+                                        Modifier.onGloballyPositioned { coords ->
+                                            val rect = coords.boundsInRoot()
+                                            tutorialState?.reportBounds(TutorialStep.HAND_TAB, rect)
+                                        }
+                                    } else Modifier,
+                                    icon = { Icon(tab.icon, contentDescription = tabLabel) },
+                                    label = {
+                                        Text(
+                                            tabLabel,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    },
+                                    selected = selectedTab == tab,
+                                    onClick = {
+                                        selectedTab = tab
+                                        if (tab == GameTab.HAND
+                                            && tutorialState?.currentStep == TutorialStep.HAND_TAB
+                                        ) {
+                                            tutorialState.advance()
+                                        }
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = MaterialTheme.colorScheme.secondary,
+                                        selectedTextColor = MaterialTheme.colorScheme.secondary,
+                                        indicatorColor = MaterialTheme.colorScheme.secondary.copy(
+                                            alpha = 0.15f
+                                        ),
+                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                )
+                            }
+                        }
+
+                        // Pinned action buttons
+                        ActionButtons(
+                            isMyTurn = uiState.isMyTurn,
+                            onAskCard = { showAskSheet = true },
+                            onClaimDeck = { showClaimSheet = true },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 10.dp)
+                                .onGloballyPositioned { coords ->
+                                    tutorialState?.reportBounds(
+                                        TutorialStep.ACTION_BUTTONS,
+                                        coords.boundsInRoot()
+                                    )
+                                }
+                        )
+                    }
+                }
+            },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             Column(
@@ -354,33 +453,6 @@ fun GameBoardContent(
                             }
                         }
                     }
-
-                    // ── Full-width: Event strip + Action buttons ────────────
-                    LandscapeLastEventStrip(events = gameLog)
-
-                    if (compactHeight) {
-                        CompactActionButtons(
-                            isMyTurn = uiState.isMyTurn,
-                            onAskCard = { showAskSheet = true },
-                            onClaimDeck = { showClaimSheet = true },
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp, vertical = 4.dp)
-                                .onGloballyPositioned { coords ->
-                                    tutorialState?.reportBounds(TutorialStep.ACTION_BUTTONS, coords.boundsInRoot())
-                                }
-                        )
-                    } else {
-                        ActionButtons(
-                            isMyTurn = uiState.isMyTurn,
-                            onAskCard = { showAskSheet = true },
-                            onClaimDeck = { showClaimSheet = true },
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                                .onGloballyPositioned { coords ->
-                                    tutorialState?.reportBounds(TutorialStep.ACTION_BUTTONS, coords.boundsInRoot())
-                                }
-                        )
-                    }
                 } else {
                     // ── Portrait: original tabbed layout ────────────────────
 
@@ -406,56 +478,6 @@ fun GameBoardContent(
                             )
                         }
                     }
-
-                    // Last event strip
-                    LastEventStrip(events = gameLog)
-
-                    // Bottom NavigationBar
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        windowInsets = WindowInsets()
-                    ) {
-                        GameTab.entries.forEach { tab ->
-                            val tabLabel = stringResource(tab.labelRes)
-                            NavigationBarItem(
-                                modifier = if (tab == GameTab.HAND) {
-                                    Modifier.onGloballyPositioned { coords ->
-                                        val rect = coords.boundsInRoot()
-                                        tutorialState?.reportBounds(TutorialStep.HAND_TAB, rect)
-                                    }
-                                } else Modifier,
-                                icon = { Icon(tab.icon, contentDescription = tabLabel) },
-                                label = { Text(tabLabel, style = MaterialTheme.typography.bodyLarge) },
-                                selected = selectedTab == tab,
-                                onClick = {
-                                    selectedTab = tab
-                                    if (tab == GameTab.HAND
-                                        && tutorialState?.currentStep == TutorialStep.HAND_TAB
-                                    ) {
-                                        tutorialState.advance()
-                                    }
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.secondary,
-                                    selectedTextColor = MaterialTheme.colorScheme.secondary,
-                                    indicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            )
-                        }
-                    }
-
-                    // Pinned action buttons
-                    ActionButtons(
-                        isMyTurn = uiState.isMyTurn,
-                        onAskCard = { showAskSheet = true },
-                        onClaimDeck = { showClaimSheet = true },
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 10.dp)
-                            .onGloballyPositioned { coords ->
-                                tutorialState?.reportBounds(TutorialStep.ACTION_BUTTONS, coords.boundsInRoot())
-                            }
-                    )
                 }
             }
         }
