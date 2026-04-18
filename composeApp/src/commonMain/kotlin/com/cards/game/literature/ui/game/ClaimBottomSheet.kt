@@ -18,6 +18,8 @@ import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.*
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.viewmodel.PlayerInfo
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -41,6 +43,8 @@ fun ClaimBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val claimYouLabel = stringResource(Res.string.claim_you)
+    val windowInfo = currentWindowAdaptiveInfo()
+    val isCompact = windowInfo.isCompactHeight
 
     ModalBottomSheet(
         sheetState = sheetState,
@@ -51,7 +55,10 @@ fun ClaimBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(
+                    horizontal = if (isCompact) 16.dp else 20.dp,
+                    vertical = if (isCompact) 8.dp else 16.dp
+                )
         ) {
             Text(
                 text = when (step) {
@@ -63,7 +70,7 @@ fun ClaimBottomSheet(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 16.dp))
 
             when (step) {
                 ClaimStep.SELECT_HALF_SUIT -> {
@@ -106,9 +113,10 @@ fun ClaimBottomSheet(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 12.dp))
 
-                    allCards.forEach { card ->
+                    @Composable
+                    fun CardAssignRow(card: Card) {
                         val isMyCard = card in myHand
                         val currentAssignment = assignments[card]
                         val assignedName = when (currentAssignment) {
@@ -116,11 +124,10 @@ fun ClaimBottomSheet(
                             null -> stringResource(Res.string.claim_unassigned)
                             else -> allTeamPlayers.find { it.id == currentAssignment }?.name ?: "?"
                         }
-
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = if (isCompact) 2.dp else 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -130,12 +137,11 @@ fun ClaimBottomSheet(
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.weight(1f)
                             )
-                            // Both locked and dropdown use an identical-sized chip surface
                             if (isMyCard) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                    modifier = Modifier.height(36.dp)
+                                    modifier = Modifier.height(if (isCompact) 32.dp else 36.dp)
                                 ) {
                                     Box(
                                         contentAlignment = Alignment.Center,
@@ -155,7 +161,7 @@ fun ClaimBottomSheet(
                                         shape = RoundedCornerShape(6.dp),
                                         color = MaterialTheme.colorScheme.surfaceVariant,
                                         modifier = Modifier
-                                            .height(36.dp)
+                                            .height(if (isCompact) 32.dp else 36.dp)
                                             .clickable { expanded = true }
                                     ) {
                                         Box(
@@ -193,7 +199,25 @@ fun ClaimBottomSheet(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    if (isCompact) {
+                        // 2-column layout: 3 rows of 2 cards each
+                        allCards.chunked(2).forEach { pair ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                pair.forEach { card ->
+                                    Box(modifier = Modifier.weight(1f)) { CardAssignRow(card) }
+                                }
+                                // pad if odd number
+                                if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    } else {
+                        allCards.forEach { card -> CardAssignRow(card) }
+                    }
+
+                    Spacer(modifier = Modifier.height(if (isCompact) 6.dp else 12.dp))
                     val allAssigned = allCards.all { assignments.containsKey(it) }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -222,13 +246,13 @@ fun ClaimBottomSheet(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
                     Text(
                         stringResource(Res.string.claim_warning),
                         style = MaterialTheme.typography.titleSmall,
                         color = CardRed
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 16.dp))
 
                     assignments.entries.groupBy { it.value }.forEach { (playerId, cards) ->
                         val name = if (playerId == myPlayerId) claimYouLabel
@@ -254,7 +278,7 @@ fun ClaimBottomSheet(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 16.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -287,7 +311,7 @@ fun ClaimBottomSheet(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 24.dp))
         }
     }
 }

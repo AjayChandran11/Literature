@@ -8,6 +8,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,6 +45,10 @@ import com.cards.game.literature.ui.game.tutorial.TutorialOverlay
 import com.cards.game.literature.ui.game.tutorial.TutorialState
 import com.cards.game.literature.ui.game.tutorial.TutorialStep
 import com.cards.game.literature.ui.game.tutorial.rememberTutorialState
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
+import com.cards.game.literature.ui.common.WindowSize.isExpandedWidth
+import com.cards.game.literature.ui.common.WindowSize.useSideBySide
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
@@ -159,9 +165,14 @@ fun GameBoardContent(
         }
     }
 
-    // Auto-switch to Hand tab when it becomes the player's turn (suppressed during tutorial)
+    // Auto-switch to Hand tab when it becomes the player's turn
+    // Suppressed during tutorial and in side-by-side layout (both panels always visible)
+    val autoSwitchWindowInfo = currentWindowAdaptiveInfo()
     LaunchedEffect(uiState.isMyTurn, tutorialState?.isActive) {
-        if (uiState.isMyTurn && !previouslyMyTurn && tutorialState?.isActive != true) {
+        if (uiState.isMyTurn && !previouslyMyTurn
+            && tutorialState?.isActive != true
+            && !autoSwitchWindowInfo.useSideBySide
+        ) {
             selectedTab = GameTab.HAND
         }
         previouslyMyTurn = uiState.isMyTurn
@@ -222,9 +233,113 @@ fun GameBoardContent(
         }
     }
 
+    val windowInfo = currentWindowAdaptiveInfo()
+    val showSideBySide = windowInfo.useSideBySide
+    val compactHeight = windowInfo.isCompactHeight
+    val expandedWidth = windowInfo.isExpandedWidth
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
+            bottomBar = {
+                Column(modifier = Modifier.fillMaxWidth()
+                    .navigationBarsPadding()) {
+                    if (showSideBySide) {
+                        // ── Full-width: Event strip + Action buttons ────────────
+                        LandscapeLastEventStrip(events = gameLog)
+
+                        if (compactHeight) {
+                            CompactActionButtons(
+                                isMyTurn = uiState.isMyTurn,
+                                onAskCard = { showAskSheet = true },
+                                onClaimDeck = { showClaimSheet = true },
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                                    .onGloballyPositioned { coords ->
+                                        tutorialState?.reportBounds(
+                                            TutorialStep.ACTION_BUTTONS,
+                                            coords.boundsInRoot()
+                                        )
+                                    }
+                            )
+                        } else {
+                            ActionButtons(
+                                isMyTurn = uiState.isMyTurn,
+                                onAskCard = { showAskSheet = true },
+                                onClaimDeck = { showClaimSheet = true },
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .onGloballyPositioned { coords ->
+                                        tutorialState?.reportBounds(
+                                            TutorialStep.ACTION_BUTTONS,
+                                            coords.boundsInRoot()
+                                        )
+                                    }
+                            )
+                        }
+                    } else {
+                        // Last event strip
+                        LastEventStrip(events = gameLog)
+
+                        // Bottom NavigationBar
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            windowInsets = WindowInsets()
+                        ) {
+                            GameTab.entries.forEach { tab ->
+                                val tabLabel = stringResource(tab.labelRes)
+                                NavigationBarItem(
+                                    modifier = if (tab == GameTab.HAND) {
+                                        Modifier.onGloballyPositioned { coords ->
+                                            val rect = coords.boundsInRoot()
+                                            tutorialState?.reportBounds(TutorialStep.HAND_TAB, rect)
+                                        }
+                                    } else Modifier,
+                                    icon = { Icon(tab.icon, contentDescription = tabLabel) },
+                                    label = {
+                                        Text(
+                                            tabLabel,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    },
+                                    selected = selectedTab == tab,
+                                    onClick = {
+                                        selectedTab = tab
+                                        if (tab == GameTab.HAND
+                                            && tutorialState?.currentStep == TutorialStep.HAND_TAB
+                                        ) {
+                                            tutorialState.advance()
+                                        }
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = MaterialTheme.colorScheme.secondary,
+                                        selectedTextColor = MaterialTheme.colorScheme.secondary,
+                                        indicatorColor = MaterialTheme.colorScheme.secondary.copy(
+                                            alpha = 0.15f
+                                        ),
+                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                )
+                            }
+                        }
+
+                        // Pinned action buttons
+                        ActionButtons(
+                            isMyTurn = uiState.isMyTurn,
+                            onAskCard = { showAskSheet = true },
+                            onClaimDeck = { showClaimSheet = true },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 10.dp)
+                                .onGloballyPositioned { coords ->
+                                    tutorialState?.reportBounds(
+                                        TutorialStep.ACTION_BUTTONS,
+                                        coords.boundsInRoot()
+                                    )
+                                }
+                        )
+                    }
+                }
+            },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             Column(
@@ -237,81 +352,133 @@ fun GameBoardContent(
                     uiState = uiState,
                     headerOverlay = headerOverlay,
                     onHelpClick = { showHelpSheet = true },
-                    tutorialState = tutorialState
+                    tutorialState = tutorialState,
+                    compact = compactHeight
                 )
 
-                // Tab content area
-                AnimatedContent(
-                    targetState = selectedTab,
-                    modifier = Modifier.weight(1f),
-                    transitionSpec = {
-                        val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
-                        (slideInHorizontally { it * dir } + fadeIn(tween(180))) togetherWith
-                                (slideOutHorizontally { -it * dir } + fadeOut(tween(180)))
-                    },
-                    label = "TabContent"
-                ) { tab ->
-                    when (tab) {
-                        GameTab.TABLE -> TableTab(
-                            uiState = uiState,
-                            tutorialState = tutorialState
-                        )
-                        GameTab.HAND -> HandTab(
-                            uiState = uiState,
-                            tutorialState = tutorialState
-                        )
-                    }
-                }
+                if (showSideBySide) {
+                    // ── Side-by-side layout (Medium/Expanded width) ─────────
+                    val leftWeight = if (expandedWidth) 0.35f else 0.4f
+                    val rightWeight = if (expandedWidth) 0.65f else 0.6f
+                    val panelPadding = if (expandedWidth) 12.dp else 8.dp
 
-                // Last event strip
-                LastEventStrip(events = gameLog)
-
-                // Bottom NavigationBar
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    windowInsets = WindowInsets()
-                ) {
-                    GameTab.entries.forEach { tab ->
-                        val tabLabel = stringResource(tab.labelRes)
-                        NavigationBarItem(
-                            modifier = if (tab == GameTab.HAND) {
-                                Modifier.onGloballyPositioned { coords ->
-                                    val rect = coords.boundsInRoot()
-                                    tutorialState?.reportBounds(TutorialStep.HAND_TAB, rect)
+                    Row(modifier = Modifier.weight(1f)) {
+                        // Left panel: Players + DeckTracker
+                        Column(
+                            modifier = Modifier
+                                .weight(leftWeight)
+                                .fillMaxHeight()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = panelPadding, vertical = 4.dp)
+                        ) {
+                            if (compactHeight) {
+                                CompactSectionLabel(stringResource(Res.string.label_opponents_section))
+                                CompactOpponentRow(
+                                    opponents = uiState.opponents,
+                                    modifier = Modifier.onGloballyPositioned { coords ->
+                                        tutorialState?.reportBounds(TutorialStep.PLAYERS, coords.boundsInRoot())
+                                    }
+                                )
+                            } else {
+                                SectionLabel(stringResource(Res.string.label_opponents_section))
+                                OpponentRow(
+                                    opponents = uiState.opponents,
+                                    modifier = Modifier.onGloballyPositioned { coords ->
+                                        tutorialState?.reportBounds(TutorialStep.PLAYERS, coords.boundsInRoot())
+                                    }
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(if (compactHeight) 8.dp else 16.dp))
+                            if (uiState.teammates.isNotEmpty()) {
+                                if (compactHeight) {
+                                    CompactSectionLabel(stringResource(Res.string.label_teammates_section))
+                                    CompactTeammateRow(teammates = uiState.teammates)
+                                } else {
+                                    SectionLabel(stringResource(Res.string.label_teammates_section))
+                                    TeammateRow(teammates = uiState.teammates)
                                 }
-                            } else Modifier,
-                            icon = { Icon(tab.icon, contentDescription = tabLabel) },
-                            label = { Text(tabLabel, style = MaterialTheme.typography.bodyLarge) },
-                            selected = selectedTab == tab,
-                            onClick = {
-                                selectedTab = tab
-                                if (tab == GameTab.HAND
-                                    && tutorialState?.currentStep == TutorialStep.HAND_TAB
-                                ) {
-                                    tutorialState.advance()
+                                Spacer(modifier = Modifier.height(if (compactHeight) 8.dp else 16.dp))
+                            }
+                            Column(modifier = Modifier.onGloballyPositioned { coords ->
+                                tutorialState?.reportBounds(TutorialStep.HALF_SUITS, coords.boundsInRoot())
+                            }) {
+                                if (compactHeight) {
+                                    CompactSectionLabel(stringResource(Res.string.label_half_suits_section))
+                                    CompactDeckTracker(
+                                        statuses = uiState.halfSuitStatuses,
+                                        myTeamId = uiState.myTeamId
+                                    )
+                                } else {
+                                    SectionLabel(stringResource(Res.string.label_half_suits_section))
+                                    SideBySideDeckTracker(
+                                        statuses = uiState.halfSuitStatuses,
+                                        myTeamId = uiState.myTeamId
+                                    )
                                 }
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.secondary,
-                                selectedTextColor = MaterialTheme.colorScheme.secondary,
-                                indicatorColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    }
-                }
-
-                // Pinned action buttons
-                ActionButtons(
-                    isMyTurn = uiState.isMyTurn,
-                    onAskCard = { showAskSheet = true },
-                    onClaimDeck = { showClaimSheet = true },
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                        .onGloballyPositioned { coords ->
-                            tutorialState?.reportBounds(TutorialStep.ACTION_BUTTONS, coords.boundsInRoot())
+                            }
                         }
-                )
+
+                        // Divider
+                        VerticalDivider(
+                            modifier = Modifier.fillMaxHeight(),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+
+                        // Right panel: Hand only
+                        Box(
+                            modifier = Modifier
+                                .weight(rightWeight)
+                                .fillMaxHeight()
+                                .padding(horizontal = panelPadding, vertical = 4.dp)
+                                .onGloballyPositioned { coords ->
+                                    tutorialState?.reportBounds(TutorialStep.YOUR_HAND, coords.boundsInRoot())
+                                }
+                        ) {
+                            if (uiState.myHandByHalfSuit.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = stringResource(Res.string.hand_empty_title),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            } else {
+                                CardHand(
+                                    handByHalfSuit = uiState.myHandByHalfSuit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // ── Portrait: original tabbed layout ────────────────────
+
+                    // Tab content area
+                    AnimatedContent(
+                        targetState = selectedTab,
+                        modifier = Modifier.weight(1f),
+                        transitionSpec = {
+                            val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                            (slideInHorizontally { it * dir } + fadeIn(tween(180))) togetherWith
+                                    (slideOutHorizontally { -it * dir } + fadeOut(tween(180)))
+                        },
+                        label = "TabContent"
+                    ) { tab ->
+                        when (tab) {
+                            GameTab.TABLE -> TableTab(
+                                uiState = uiState,
+                                tutorialState = tutorialState
+                            )
+                            GameTab.HAND -> HandTab(
+                                uiState = uiState,
+                                tutorialState = tutorialState
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -568,25 +735,285 @@ private fun PersistentHeader(
     uiState: GameUiState,
     headerOverlay: @Composable () -> Unit = {},
     onHelpClick: () -> Unit = {},
-    tutorialState: TutorialState? = null
+    tutorialState: TutorialState? = null,
+    compact: Boolean = false
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Box(modifier = Modifier.onGloballyPositioned { coords ->
-            tutorialState?.reportBounds(TutorialStep.SCORE_BAR, coords.boundsInRoot())
-        }) {
-            ScoreBar(
-                myTeamScore = uiState.myTeamScore,
-                opponentTeamScore = uiState.opponentTeamScore
+    if (compact) {
+        // Landscape: single compact row merging score + turn info
+        Column(modifier = Modifier.fillMaxWidth()) {
+            headerOverlay()
+            Box(modifier = Modifier.onGloballyPositioned { coords ->
+                tutorialState?.reportBounds(TutorialStep.SCORE_BAR, coords.boundsInRoot())
+                tutorialState?.reportBounds(TutorialStep.TURN_BANNER, coords.boundsInRoot())
+            }) {
+                CompactHeaderRow(
+                    uiState = uiState,
+                    onHelpClick = onHelpClick,
+                    timerPaused = tutorialState?.isActive == true
+                )
+            }
+        }
+    } else {
+        // Portrait: full stacked header
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.onGloballyPositioned { coords ->
+                tutorialState?.reportBounds(TutorialStep.SCORE_BAR, coords.boundsInRoot())
+            }) {
+                ScoreBar(
+                    myTeamScore = uiState.myTeamScore,
+                    opponentTeamScore = uiState.opponentTeamScore
+                )
+            }
+            headerOverlay()
+            Box(modifier = Modifier.onGloballyPositioned { coords ->
+                tutorialState?.reportBounds(TutorialStep.TURN_BANNER, coords.boundsInRoot())
+            }) {
+                TurnIndicatorBanner(
+                    uiState = uiState,
+                    onHelpClick = onHelpClick,
+                    timerPaused = tutorialState?.isActive == true
+                )
+            }
+        }
+    }
+}
+
+/** Merged score + turn info in a single ~36dp row for landscape. */
+@Composable
+private fun CompactHeaderRow(
+    uiState: GameUiState,
+    onHelpClick: () -> Unit = {},
+    timerPaused: Boolean = false
+) {
+    var secondsRemaining by remember { mutableStateOf(60) }
+    val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
+
+    LaunchedEffect(timerKey, timerPaused) {
+        secondsRemaining = 60
+        while (secondsRemaining > 0 && !timerPaused) {
+            delay(1000L)
+            secondsRemaining--
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (uiState.isMyTurn) MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.surfaceVariant
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Score: left
+        Text(
+            stringResource(Res.string.label_your_team),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            "${uiState.myTeamScore}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = LightGreen
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Turn info: center (takes available space)
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            if (uiState.phase == GamePhase.IN_PROGRESS) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (uiState.isMyTurn) {
+                        Text(
+                            stringResource(Res.string.game_your_turn),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    } else if (uiState.isBotThinking) {
+                        val botDesc = stringResource(Res.string.cd_bot_thinking)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(12.dp).clearAndSetSemantics { contentDescription = botDesc },
+                            strokeWidth = 1.5.dp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            stringResource(Res.string.game_bot_thinking, uiState.activePlayerName),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            stringResource(Res.string.game_player_turn, uiState.activePlayerName),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (uiState.isOnline && secondsRemaining <= 15) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            stringResource(Res.string.game_timer_seconds, secondsRemaining),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (secondsRemaining <= 10) CardRed
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Score: right
+        Text(
+            "${uiState.opponentTeamScore}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = CardRed
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            stringResource(Res.string.label_opponents),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Help icon
+        val helpDesc = stringResource(Res.string.help_button_description)
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .background(
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                    shape = CircleShape
+                )
+                .clickable(
+                    onClick = onHelpClick,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                )
+                .semantics { contentDescription = helpDesc },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "?",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        headerOverlay()
-        Box(modifier = Modifier.onGloballyPositioned { coords ->
-            tutorialState?.reportBounds(TutorialStep.TURN_BANNER, coords.boundsInRoot())
-        }) {
-            TurnIndicatorBanner(
-                uiState = uiState,
-                onHelpClick = onHelpClick,
-                timerPaused = tutorialState?.isActive == true
+    }
+}
+
+/** Compact section label for landscape left panel. */
+@Composable
+private fun CompactSectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+    )
+}
+
+/** Single-line last event for landscape right panel. */
+@Composable
+private fun LandscapeLastEventStrip(events: List<GameEvent>) {
+    val lastTurnChange = events.lastOrNull { it is GameEvent.TurnChanged } as? GameEvent.TurnChanged
+        ?: return
+    val currentPlayerId = lastTurnChange.newPlayerId
+    val lastOtherTurnIdx = events.indexOfLast { event ->
+        event is GameEvent.TurnChanged && event.newPlayerId != currentPlayerId
+    }
+    val turnStartIdx = if (lastOtherTurnIdx >= 0) {
+        val slice = events.subList(lastOtherTurnIdx + 1, events.size)
+        val firstCurrent = slice.indexOfFirst { event ->
+            event is GameEvent.TurnChanged && event.newPlayerId == currentPlayerId
+        }
+        if (firstCurrent >= 0) lastOtherTurnIdx + 1 + firstCurrent + 1 else lastOtherTurnIdx + 1
+    } else 0
+
+    val currentTurnEvents = events.drop(turnStartIdx)
+        .filterNot { it is GameEvent.TurnChanged || it is GameEvent.GameStarted }
+
+    val displayEvents = if (currentTurnEvents.isNotEmpty()) {
+        currentTurnEvents
+    } else {
+        val prior = events.take(turnStartIdx)
+            .filter { it !is GameEvent.TurnChanged && it !is GameEvent.GameStarted }
+        if (prior.isEmpty()) emptyList()
+        else {
+            val lastEvent = prior.last()
+            val lastBatchId = (lastEvent as? GameEvent.CardAsked)?.batchId
+            if (lastBatchId != null) {
+                prior.filter { it is GameEvent.CardAsked && it.batchId == lastBatchId }
+            } else {
+                listOf(lastEvent)
+            }
+        }
+    }
+
+    if (displayEvents.isEmpty()) return
+
+    val fmtGotCard = stringResource(Res.string.game_log_got_card)
+    val fmtAskedNoStrip = stringResource(Res.string.game_log_asked_no_strip)
+    val fmtClaimedOk = stringResource(Res.string.game_log_claimed_correctly)
+    val fmtClaimedBad = stringResource(Res.string.game_log_claimed_incorrectly)
+    val textGameOver = stringResource(Res.string.game_log_game_over)
+    val fmtTimedOut = stringResource(Res.string.game_log_timed_out)
+
+    val messages = consolidateEvents(
+        events = displayEvents,
+        fmtGot = { a, c, t -> fmtGotCard.format(a, c, t) },
+        fmtDenied = { a, t, c -> fmtAskedNoStrip.format(a, t, c) },
+        fmtClaimedOk = { c, h -> fmtClaimedOk.format(c, h) },
+        fmtClaimedBad = { c, h -> fmtClaimedBad.format(c, h) },
+        textGameOver = textGameOver,
+        fmtTimedOut = { p -> fmtTimedOut.format(p) },
+        limit = 1
+    )
+    if (messages.isEmpty()) return
+    val msg = messages.last()
+
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val darkSuitColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f)
+        Color.White else Color(0xFF1C1B1F)
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                msg.indicator,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = msg.indicatorColor
+            )
+            Text(
+                text = styleSuitSymbols(msg.text, darkSuitColor),
+                style = MaterialTheme.typography.bodyLarge,
+                color = onSurface,
+                maxLines = 1
             )
         }
     }

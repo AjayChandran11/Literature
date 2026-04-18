@@ -43,6 +43,8 @@ kotlin {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
+            implementation(libs.compose.material3.adaptive)
+            implementation(libs.compose.material3.adaptive.layout)
             implementation(compose.materialIconsExtended)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
@@ -73,8 +75,8 @@ android {
         applicationId = "com.cards.game.literature"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 9
-        versionName = "1.0.0"
+        versionCode = 10
+        versionName = "1.0.1"
     }
     buildFeatures {
         buildConfig = true
@@ -89,7 +91,7 @@ android {
             firebaseCrashlytics {
                 mappingFileUploadEnabled = false
             }
-            buildConfigField("String", "SERVER_URL", "\"ws://192.168.29.206:8080\"")
+            buildConfigField("String", "SERVER_URL", "\"ws://10.69.103.15:8080\"")
         }
         getByName("release") {
             isMinifyEnabled = true

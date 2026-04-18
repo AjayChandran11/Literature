@@ -22,6 +22,9 @@ import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.Suit
 import com.cards.game.literature.model.symbol
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
+import com.cards.game.literature.ui.common.WindowSize.useSideBySide
 import com.cards.game.literature.viewmodel.PlayerInfo
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
@@ -84,79 +87,20 @@ fun AskBottomSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = stringResource(Res.string.ask_sheet_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary
-            )
+        val windowInfo = currentWindowAdaptiveInfo()
+        val isCompact = windowInfo.isCompactHeight
+        val gridColumns = if (windowInfo.useSideBySide) GridCells.Adaptive(56.dp) else GridCells.Fixed(3)
 
-            // Suit chips
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Suit.entries.forEach { suit ->
-                    FilterChip(
-                        selected = selectedSuit == suit,
-                        enabled = suit in availableSuits,
-                        onClick = {
-                            if (selectedSuit != suit) {
-                                selectedSuit = suit
-                                selectedIsLow = null
-                                onSuitSelected(suit)
-                                onIsLowSelected(null)
-                            }
-                        },
-                        label = { Text(suit.symbol, style = MaterialTheme.typography.headlineSmall) }
-                    )
-                }
-            }
-
-            // Low/High chips — slides in when a suit is selected
-            AnimatedVisibility(
-                visible = selectedSuit != null,
-                enter = expandVertically(tween(200)) + fadeIn(tween(200)),
-                exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(true, false).forEach { isLow ->
-                        if (isLow in availableHalves) {
-                            FilterChip(
-                                selected = selectedIsLow == isLow,
-                                onClick = {
-                                    if (selectedIsLow != isLow) {
-                                        selectedIsLow = isLow
-                                        onIsLowSelected(isLow)
-                                    }
-                                },
-                                label = {
-                                    Text(
-                                        if (isLow) stringResource(Res.string.ask_filter_low)
-                                        else stringResource(Res.string.ask_filter_high)
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Card area — fixed height, crossfades between placeholder and grid
+        @Composable
+        fun CardArea(modifier: Modifier) {
             AnimatedContent(
                 targetState = selectedHalfSuit,
                 transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
-                label = "CardArea"
+                label = "CardArea",
+                modifier = modifier
             ) { halfSuit ->
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     if (halfSuit == null) {
@@ -174,7 +118,7 @@ fun AskBottomSheet(
                             all.filter { it !in mine }
                         }
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(3),
+                            columns = gridColumns,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.fillMaxSize()
@@ -196,70 +140,261 @@ fun AskBottomSheet(
                     }
                 }
             }
+        }
 
-            // Ask Queue — slides in when cards are queued
-            AnimatedVisibility(
-                visible = selectedCards.isNotEmpty(),
-                enter = expandVertically(tween(200)) + fadeIn(tween(200)),
-                exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+        if (isCompact) {
+            // Landscape: controls on the left, card grid on the right
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(210.dp)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
-                        stringResource(Res.string.ask_queue_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = stringResource(Res.string.ask_sheet_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Suit.entries.forEach { suit ->
+                            FilterChip(
+                                selected = selectedSuit == suit,
+                                enabled = suit in availableSuits,
+                                onClick = {
+                                    if (selectedSuit != suit) {
+                                        selectedSuit = suit
+                                        selectedIsLow = null
+                                        onSuitSelected(suit)
+                                        onIsLowSelected(null)
+                                    }
+                                },
+                                label = { Text(suit.symbol, style = MaterialTheme.typography.titleMedium) }
+                            )
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = selectedSuit != null,
+                        enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+                        exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(true, false).forEach { isLow ->
+                                if (isLow in availableHalves) {
+                                    FilterChip(
+                                        selected = selectedIsLow == isLow,
+                                        onClick = {
+                                            if (selectedIsLow != isLow) {
+                                                selectedIsLow = isLow
+                                                onIsLowSelected(isLow)
+                                            }
+                                        },
+                                        label = {
+                                            Text(
+                                                if (isLow) stringResource(Res.string.ask_filter_low)
+                                                else stringResource(Res.string.ask_filter_high)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = selectedCards.isNotEmpty(),
+                        enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+                        exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                stringResource(Res.string.ask_queue_label),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                selectedCards.toList().forEach { card ->
+                                    FilterChip(
+                                        selected = false,
+                                        onClick = { selectedCards.remove(card) },
+                                        label = { Text("${card.value.displayName}${card.suit.symbol} \u00d7") }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (activeOpponents.isNotEmpty()) {
+                        Text(
+                            stringResource(Res.string.ask_label),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            activeOpponents.forEach { opp ->
+                                FilterChip(
+                                    selected = selectedOpponent == opp,
+                                    onClick = { selectedOpponent = opp },
+                                    label = { Text("${opp.name} (${opp.cardCount})") }
+                                )
+                            }
+                        }
+                    }
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        selectedCards.toList().forEach { card ->
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(Res.string.button_cancel))
+                        }
+                        Button(
+                            onClick = { onConfirm(selectedOpponent!!.id, selectedCards.toList()) },
+                            enabled = canConfirm,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(Res.string.ask_confirm_button, selectedCards.size))
+                        }
+                    }
+                }
+                CardArea(modifier = Modifier.weight(1f).fillMaxHeight())
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(Res.string.ask_sheet_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Suit.entries.forEach { suit ->
+                        FilterChip(
+                            selected = selectedSuit == suit,
+                            enabled = suit in availableSuits,
+                            onClick = {
+                                if (selectedSuit != suit) {
+                                    selectedSuit = suit
+                                    selectedIsLow = null
+                                    onSuitSelected(suit)
+                                    onIsLowSelected(null)
+                                }
+                            },
+                            label = { Text(suit.symbol, style = MaterialTheme.typography.headlineSmall) }
+                        )
+                    }
+                }
+                AnimatedVisibility(
+                    visible = selectedSuit != null,
+                    enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+                    exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(true, false).forEach { isLow ->
+                            if (isLow in availableHalves) {
+                                FilterChip(
+                                    selected = selectedIsLow == isLow,
+                                    onClick = {
+                                        if (selectedIsLow != isLow) {
+                                            selectedIsLow = isLow
+                                            onIsLowSelected(isLow)
+                                        }
+                                    },
+                                    label = {
+                                        Text(
+                                            if (isLow) stringResource(Res.string.ask_filter_low)
+                                            else stringResource(Res.string.ask_filter_high)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                CardArea(modifier = Modifier.fillMaxWidth().height(180.dp))
+                AnimatedVisibility(
+                    visible = selectedCards.isNotEmpty(),
+                    enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+                    exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            stringResource(Res.string.ask_queue_label),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            selectedCards.toList().forEach { card ->
+                                FilterChip(
+                                    selected = false,
+                                    onClick = { selectedCards.remove(card) },
+                                    label = { Text("${card.value.displayName}${card.suit.symbol} \u00d7") }
+                                )
+                            }
+                        }
+                    }
+                }
+                if (activeOpponents.isNotEmpty()) {
+                    Text(stringResource(Res.string.ask_label), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        activeOpponents.forEach { opp ->
                             FilterChip(
-                                selected = false,
-                                onClick = { selectedCards.remove(card) },
-                                label = { Text("${card.value.displayName}${card.suit.symbol} \u00d7") }
+                                selected = selectedOpponent == opp,
+                                onClick = { selectedOpponent = opp },
+                                label = { Text("${opp.name} (${opp.cardCount})") }
                             )
                         }
                     }
                 }
-            }
-
-            // Opponent chips
-            if (activeOpponents.isNotEmpty()) {
-                Text(stringResource(Res.string.ask_label), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    activeOpponents.forEach { opp ->
-                        FilterChip(
-                            selected = selectedOpponent == opp,
-                            onClick = { selectedOpponent = opp },
-                            label = { Text("${opp.name} (${opp.cardCount})") }
-                        )
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(Res.string.button_cancel))
                     }
-                }
-            }
-
-            // Cancel / Confirm buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(Res.string.button_cancel))
-                }
-                Button(
-                    onClick = { onConfirm(selectedOpponent!!.id, selectedCards.toList()) },
-                    enabled = canConfirm,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(Res.string.ask_confirm_button, selectedCards.size))
+                    Button(
+                        onClick = { onConfirm(selectedOpponent!!.id, selectedCards.toList()) },
+                        enabled = canConfirm,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(Res.string.ask_confirm_button, selectedCards.size))
+                    }
                 }
             }
         }

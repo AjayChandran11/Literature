@@ -57,3 +57,56 @@ fun ScoreBar(myTeamScore: Int, opponentTeamScore: Int, modifier: Modifier = Modi
         }
     }
 }
+
+/** Compact single-row score bar for landscape: [Team: 3  vs  Opponents: 2] */
+@Composable
+fun CompactScoreBar(myTeamScore: Int, opponentTeamScore: Int, modifier: Modifier = Modifier) {
+    val scoreDesc = stringResource(Res.string.cd_score, myTeamScore, opponentTeamScore)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = scoreDesc }
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant,
+                RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(Res.string.label_your_team),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                "$myTeamScore",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = LightGreen
+            )
+        }
+        Text(
+            stringResource(Res.string.score_vs),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.secondary
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "$opponentTeamScore",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = CardRed
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                stringResource(Res.string.label_opponents),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}

@@ -26,6 +26,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
+import com.cards.game.literature.ui.common.WindowSize.useSideBySide
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -64,11 +67,17 @@ class TutorialState(initiallyActive: Boolean) {
         private set
     var currentStep by mutableStateOf(TutorialStep.SCORE_BAR)
         private set
+    /** When true, skip HAND_TAB step (landscape has no tab bar). */
+    var skipHandTab by mutableStateOf(false)
 
     val targetBounds = mutableStateMapOf<TutorialStep, Rect>()
 
     fun advance() {
-        val next = currentStep.next()
+        var next = currentStep.next()
+        // Skip HAND_TAB in landscape — no tab bar exists
+        if (next == TutorialStep.HAND_TAB && skipHandTab) {
+            next = next.next()
+        }
         if (next != null) {
             currentStep = next
         } else {
@@ -83,7 +92,11 @@ class TutorialState(initiallyActive: Boolean) {
 
 @Composable
 fun rememberTutorialState(isFirstGame: Boolean): TutorialState {
-    return remember { TutorialState(initiallyActive = isFirstGame) }
+    val windowInfo = currentWindowAdaptiveInfo()
+    val state = remember { TutorialState(initiallyActive = isFirstGame) }
+    // Skip HAND_TAB in side-by-side layout (no tab bar exists)
+    state.skipHandTab = windowInfo.useSideBySide
+    return state
 }
 
 // ─── Tutorial Overlay ───────────────────────────────────────────────────────
@@ -238,16 +251,19 @@ fun TutorialOverlay(state: TutorialState) {
 
 @Composable
 private fun TooltipCard(state: TutorialState, accentColor: Color) {
+    val windowInfo = currentWindowAdaptiveInfo()
     val hintText = if (state.currentStep.requiresUserAction) {
         stringResource(Res.string.tutorial_tap_hand_tab)
     } else {
         stringResource(Res.string.tutorial_tap_continue)
     }
 
+    val maxTooltipWidth = if (windowInfo.isCompactHeight) 280.dp else 400.dp
+
     Column(
         modifier = Modifier
-            .padding(horizontal = 24.dp)
-            .widthIn(max = 400.dp)
+            .padding(horizontal = if (windowInfo.isCompactHeight) 16.dp else 24.dp)
+            .widthIn(max = maxTooltipWidth)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)

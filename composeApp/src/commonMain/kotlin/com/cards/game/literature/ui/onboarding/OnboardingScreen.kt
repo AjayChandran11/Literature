@@ -23,6 +23,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.cards.game.literature.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -399,6 +401,7 @@ private fun DeckPage(isActive: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
             .padding(top = 56.dp, bottom = 120.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -528,6 +531,7 @@ private fun TeamsPage(isActive: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
             .padding(top = 56.dp, bottom = 120.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -735,6 +739,7 @@ private fun AskPage() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
             .padding(top = 56.dp, bottom = 120.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -952,6 +957,7 @@ private fun ClaimPage(onFinish: () -> Unit, isActive: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
             .padding(top = 56.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

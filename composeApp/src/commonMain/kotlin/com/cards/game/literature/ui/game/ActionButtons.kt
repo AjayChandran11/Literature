@@ -14,6 +14,48 @@ import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
+/** Compact action buttons for landscape: shorter height, tighter padding. */
+@Composable
+fun CompactActionButtons(
+    isMyTurn: Boolean,
+    onAskCard: () -> Unit,
+    onClaimDeck: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(
+            onClick = onAskCard,
+            enabled = isMyTurn,
+            modifier = Modifier.weight(1f).height(40.dp),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+            )
+        ) {
+            Text(stringResource(Res.string.action_ask_card), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        }
+        Button(
+            onClick = onClaimDeck,
+            enabled = isMyTurn,
+            modifier = Modifier.weight(1f).height(40.dp),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary,
+                contentColor = MaterialTheme.colorScheme.onSecondary,
+                disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+            )
+        ) {
+            Text(stringResource(Res.string.action_claim_deck), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
 @Composable
 fun ActionButtons(
     isMyTurn: Boolean,
