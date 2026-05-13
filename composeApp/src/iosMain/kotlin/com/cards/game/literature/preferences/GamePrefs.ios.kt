@@ -18,4 +18,19 @@ actual object GamePrefs {
     actual fun setHapticsEnabled(enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = "haptics_enabled")
     }
+
+    actual fun isNotificationsEnabled(): Boolean =
+        if (NSUserDefaults.standardUserDefaults.objectForKey("notifications_enabled") == null) true
+        else NSUserDefaults.standardUserDefaults.boolForKey("notifications_enabled")
+
+    actual fun setNotificationsEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = "notifications_enabled")
+    }
+
+    actual fun hasRequestedNotificationPermission(): Boolean =
+        NSUserDefaults.standardUserDefaults.boolForKey("notif_perm_requested")
+
+    actual fun setRequestedNotificationPermission(requested: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(requested, forKey = "notif_perm_requested")
+    }
 }

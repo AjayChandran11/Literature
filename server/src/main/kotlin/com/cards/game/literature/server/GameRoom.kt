@@ -34,6 +34,8 @@ class GameRoom(
     private val pendingReclaims = ConcurrentHashMap<String, Boolean>()
     // Tracks the player who gave the current player their turn (via a failed ask)
     private var lastAskerId: String? = null
+    // Per-player reaction rate limiting
+    private val lastReactionTime = ConcurrentHashMap<String, Long>()
 
     var phase: RoomPhase = RoomPhase.WAITING
         private set
@@ -44,6 +46,7 @@ class GameRoom(
     companion object {
         private const val TURN_TIMEOUT_MS = 60_000L
         private const val RECONNECT_WINDOW_MS = 2 * 60_000L
+        private const val REACTION_RATE_LIMIT_MS = 2_000L
     }
 
     fun addPlayer(name: String, isHost: Boolean = false): String {
@@ -562,11 +565,29 @@ class GameRoom(
         }
     }
 
+    suspend fun processReaction(playerId: String, reaction: ReactionType) {
+        val session = players[playerId] ?: return
+        val now = System.currentTimeMillis()
+        val last = lastReactionTime[playerId] ?: 0L
+        if (now - last < REACTION_RATE_LIMIT_MS) return
+        lastReactionTime[playerId] = now
+
+        val message = ServerMessage.ReactionReceived(
+            senderId = playerId,
+            senderName = session.playerName,
+            reaction = reaction
+        )
+        players.values.filter { it.isConnected }.forEach { s ->
+            s.send(message)
+        }
+    }
+
     fun cleanup() {
         turnTimeoutJob?.cancel()
         disconnectJobs.values.forEach { it.cancel() }
         disconnectJobs.clear()
         pendingReclaims.clear()
+        lastReactionTime.clear()
         botScope?.cancel()
         botScope = null
     }

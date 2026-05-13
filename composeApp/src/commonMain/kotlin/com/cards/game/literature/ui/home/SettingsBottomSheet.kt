@@ -11,6 +11,7 @@ import com.cards.game.literature.preferences.GamePrefs
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.button_done
 import literature.composeapp.generated.resources.settings_haptic_feedback
+import literature.composeapp.generated.resources.settings_notifications
 import literature.composeapp.generated.resources.settings_sound_effects
 import literature.composeapp.generated.resources.settings_title
 import org.jetbrains.compose.resources.stringResource
@@ -20,6 +21,7 @@ import org.jetbrains.compose.resources.stringResource
 fun SettingsBottomSheet(onDismiss: () -> Unit) {
     var soundEnabled by remember { mutableStateOf(GamePrefs.isSoundEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(GamePrefs.isHapticsEnabled()) }
+    var notificationsEnabled by remember { mutableStateOf(GamePrefs.isNotificationsEnabled()) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(onDismissRequest = onDismiss,
@@ -53,6 +55,15 @@ fun SettingsBottomSheet(onDismiss: () -> Unit) {
                 onCheckedChange = {
                     hapticsEnabled = it
                     GamePrefs.setHapticsEnabled(it)
+                }
+            )
+
+            SettingsToggleRow(
+                label = stringResource(Res.string.settings_notifications),
+                checked = notificationsEnabled,
+                onCheckedChange = {
+                    notificationsEnabled = it
+                    GamePrefs.setNotificationsEnabled(it)
                 }
             )
 

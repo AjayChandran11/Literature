@@ -2,6 +2,7 @@ package com.cards.game.literature.protocol
 
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.ClaimDeclaration
+import com.cards.game.literature.model.ReactionType
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -32,4 +33,7 @@ sealed class ClientMessage {
 
     @Serializable
     data object SwitchTeam : ClientMessage()
+
+    @Serializable
+    data class SendReaction(val reaction: ReactionType) : ClientMessage()
 }

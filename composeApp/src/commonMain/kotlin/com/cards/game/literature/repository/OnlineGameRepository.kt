@@ -55,6 +55,11 @@ class OnlineGameRepository(
     private val _reconnectCountdowns = MutableStateFlow<Map<String, ReconnectInfo>>(emptyMap())
     val reconnectCountdowns: StateFlow<Map<String, ReconnectInfo>> = _reconnectCountdowns.asStateFlow()
 
+    private val _reactions = MutableSharedFlow<ServerMessage.ReactionReceived>(
+        replay = 0, extraBufferCapacity = 32
+    )
+    val reactions: Flow<ServerMessage.ReactionReceived> = _reactions.asSharedFlow()
+
     private var webSocketSession: WebSocketSession? = null
     private var connectionJob: Job? = null
     private var autoReconnectJob: Job? = null
@@ -110,6 +115,10 @@ class OnlineGameRepository(
 
     suspend fun switchTeam() {
         sendMessage(ClientMessage.SwitchTeam)
+    }
+
+    suspend fun sendReaction(reaction: ReactionType) {
+        sendMessage(ClientMessage.SendReaction(reaction))
     }
 
     override suspend fun createGame(playerName: String, playerCount: Int, difficulty: BotDifficulty): GameState {
@@ -340,6 +349,9 @@ class OnlineGameRepository(
                 _playerEvents.emit(
                     PlayerConnectionEvent.HostChanged(message.newHostName)
                 )
+            }
+            is ServerMessage.ReactionReceived -> {
+                _reactions.emit(message)
             }
         }
     }

@@ -17,8 +17,12 @@ import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.repository.ConnectionState
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.repository.ReconnectInfo
+import com.cards.game.literature.model.ReactionType
 import com.cards.game.literature.ui.common.ConnectionBanner
+import com.cards.game.literature.ui.game.DisplayReaction
+import com.cards.game.literature.ui.game.FloatingReactions
 import com.cards.game.literature.ui.game.GameBoardContent
+import com.cards.game.literature.ui.game.ReactionPicker
 import com.cards.game.literature.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -92,17 +96,62 @@ fun OnlineGameScreen(
         }
     }
 
-    GameBoardContent(
-        viewModel = viewModel,
-        headerOverlay = {
-            if (!isQuitting) {
-                ConnectionBanner(connectionState = onlineRepository.connectionState)
+    // Reaction state
+    var activeReactions by remember { mutableStateOf<List<DisplayReaction>>(emptyList()) }
+    var reactionIdCounter by remember { mutableLongStateOf(0L) }
+    var lastReactionSentTime by remember { mutableLongStateOf(0L) }
 
-                // Reconnect countdown banners for disconnected players
-                ReconnectCountdownBanners(reconnectCountdowns)
+    // Collect incoming reactions and auto-remove after 3s
+    LaunchedEffect(Unit) {
+        onlineRepository.reactions.collect { reaction ->
+            val id = reactionIdCounter++
+            val display = DisplayReaction(
+                id = id,
+                senderId = reaction.senderId,
+                senderName = reaction.senderName,
+                emoji = reaction.reaction.emoji
+            )
+            activeReactions = activeReactions + display
+            // Launch separate coroutine so the collector isn't blocked
+            scope.launch {
+                delay(3000)
+                activeReactions = activeReactions.filter { it.id != id }
             }
         }
-    )
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        GameBoardContent(
+            viewModel = viewModel,
+            headerOverlay = {
+                if (!isQuitting) {
+                    ConnectionBanner(connectionState = onlineRepository.connectionState)
+
+                    // Reconnect countdown banners for disconnected players
+                    ReconnectCountdownBanners(reconnectCountdowns)
+                }
+            },
+            floatingActionButton = {
+                if (!isQuitting) {
+                    ReactionPicker(
+                        onReaction = { reaction ->
+                            val now = currentTimeMillis()
+                            if (now - lastReactionSentTime >= 2000L) {
+                                lastReactionSentTime = now
+                                scope.launch { onlineRepository.sendReaction(reaction) }
+                            }
+                        }
+                    )
+                }
+            }
+        )
+
+        // Floating reactions overlay (pass-through for pointer events)
+        FloatingReactions(
+            activeReactions = activeReactions,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
 }
 
 @Composable

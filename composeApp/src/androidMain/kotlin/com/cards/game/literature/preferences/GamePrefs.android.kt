@@ -20,4 +20,15 @@ actual object GamePrefs {
     actual fun setHapticsEnabled(enabled: Boolean) {
         prefs()?.edit()?.putBoolean("haptics_enabled", enabled)?.apply()
     }
+
+    actual fun isNotificationsEnabled(): Boolean = prefs()?.getBoolean("notifications_enabled", true) ?: true
+    actual fun setNotificationsEnabled(enabled: Boolean) {
+        prefs()?.edit()?.putBoolean("notifications_enabled", enabled)?.apply()
+    }
+
+    actual fun hasRequestedNotificationPermission(): Boolean =
+        prefs()?.getBoolean("notif_perm_requested", false) ?: false
+    actual fun setRequestedNotificationPermission(requested: Boolean) {
+        prefs()?.edit()?.putBoolean("notif_perm_requested", requested)?.apply()
+    }
 }

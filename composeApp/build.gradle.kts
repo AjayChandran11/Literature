@@ -34,6 +34,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.core.splashscreen)
+            implementation("androidx.lifecycle:lifecycle-process:2.8.7")
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

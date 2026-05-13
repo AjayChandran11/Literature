@@ -263,6 +263,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_sound_effects">Sound Effects</string>
     <string name="settings_haptic_feedback">Haptic Feedback</string>
+    <string name="settings_notifications">Notifications</string>
     <string name="home_settings">Settings</string>
     <string name="button_done">Done</string>
 
@@ -280,4 +281,8 @@
     <string name="difficulty_easy_desc">Forgiving</string>
     <string name="difficulty_medium_desc">Balanced</string>
     <string name="difficulty_hard_desc">Expert</string>
+
+    <!-- Reactions -->
+    <string name="reaction_picker_open">Send a reaction</string>
+    <string name="cd_reaction_button">Send %1$s reaction</string>
 </resources>

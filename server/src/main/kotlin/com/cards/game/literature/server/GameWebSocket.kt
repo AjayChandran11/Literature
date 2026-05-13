@@ -200,6 +200,16 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             currentPlayerId = null
                             close(CloseReason(CloseReason.Codes.NORMAL, "Player left game"))
                         }
+
+                        is ClientMessage.SendReaction -> {
+                            val room = currentRoom
+                            val playerId = currentPlayerId
+                            if (room == null || playerId == null) {
+                                sendError("Not in a room")
+                                continue
+                            }
+                            room.processReaction(playerId, message.reaction)
+                        }
                     }
                 }
             }

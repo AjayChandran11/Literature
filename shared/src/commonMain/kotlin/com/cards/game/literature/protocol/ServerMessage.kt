@@ -1,6 +1,7 @@
 package com.cards.game.literature.protocol
 
 import com.cards.game.literature.model.GameEvent
+import com.cards.game.literature.model.ReactionType
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -28,4 +29,11 @@ sealed class ServerMessage {
 
     @Serializable
     data class HostTransferred(val newHostId: String, val newHostName: String) : ServerMessage()
+
+    @Serializable
+    data class ReactionReceived(
+        val senderId: String,
+        val senderName: String,
+        val reaction: ReactionType
+    ) : ServerMessage()
 }

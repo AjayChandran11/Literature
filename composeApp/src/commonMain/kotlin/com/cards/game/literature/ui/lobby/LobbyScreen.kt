@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cards.game.literature.network.NetworkMonitor
+import com.cards.game.literature.notifications.RequestNotificationPermissionOnce
 import com.cards.game.literature.ui.home.GameSetupDialog
 import com.cards.game.literature.viewmodel.LobbyViewModel
 import literature.composeapp.generated.resources.Res
@@ -31,6 +32,8 @@ fun LobbyScreen(
     val isNetworkAvailable by NetworkMonitor.isNetworkAvailable.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var joinRoomCode by remember { mutableStateOf("") }
+
+    RequestNotificationPermissionOnce()
 
     LaunchedEffect(Unit) {
         viewModel.navigateToWaitingRoom.collect { roomCode ->
