@@ -2,6 +2,7 @@ package com.cards.game.literature.di
 
 import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.logic.GameEngine
+import com.cards.game.literature.notifications.NotificationCoordinator
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.LocalGameRepository
 import com.cards.game.literature.repository.OnlineGameRepository
@@ -27,6 +28,7 @@ val appModule = module {
         }
     }
     single { OnlineGameRepository(serverUrl = serverUrl, client = get()) }
+    single { NotificationCoordinator(get()) }
 
     viewModel { GameViewModel(get()) }
     viewModel(qualifier = named("online")) {

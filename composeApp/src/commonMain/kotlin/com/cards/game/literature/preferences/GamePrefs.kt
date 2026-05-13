@@ -5,4 +5,8 @@ expect object GamePrefs {
     fun setSoundEnabled(enabled: Boolean)
     fun isHapticsEnabled(): Boolean
     fun setHapticsEnabled(enabled: Boolean)
+    fun isNotificationsEnabled(): Boolean
+    fun setNotificationsEnabled(enabled: Boolean)
+    fun hasRequestedNotificationPermission(): Boolean
+    fun setRequestedNotificationPermission(requested: Boolean)
 }
