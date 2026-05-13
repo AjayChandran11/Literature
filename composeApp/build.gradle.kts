@@ -104,7 +104,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "SERVER_URL", "\"wss://literature-production-8fb8.up.railway.app\"")
+            buildConfigField("String", "SERVER_URL", "\"wss://literature-um4a.onrender.com\"")
         }
     }
     applicationVariants.all {
