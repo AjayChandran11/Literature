@@ -280,4 +280,8 @@
     <string name="difficulty_easy_desc">Forgiving</string>
     <string name="difficulty_medium_desc">Balanced</string>
     <string name="difficulty_hard_desc">Expert</string>
+
+    <!-- Reactions -->
+    <string name="reaction_picker_open">Send a reaction</string>
+    <string name="cd_reaction_button">Send %1$s reaction</string>
 </resources>

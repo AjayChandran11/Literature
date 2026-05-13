@@ -275,7 +275,6 @@ fun ResultScreenContent(
 
     // ── Sound + haptics ──────────────────────────────────────────────────
     LaunchedEffect(Unit) {
-        if (uiState.isDraw) return@LaunchedEffect
         if (uiState.isWinner) {
             SoundPlayer.play(SoundEvent.GAME_WIN)
             if (GamePrefs.isHapticsEnabled()) {
