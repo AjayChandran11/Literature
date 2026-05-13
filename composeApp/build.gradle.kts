@@ -76,8 +76,8 @@ android {
         applicationId = "com.cards.game.literature"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 10
-        versionName = "1.0.1"
+        versionCode = 11
+        versionName = "1.0.2"
     }
     buildFeatures {
         buildConfig = true
