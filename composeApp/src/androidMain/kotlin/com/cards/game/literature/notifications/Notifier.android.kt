@@ -93,15 +93,17 @@ actual object Notifier {
     private fun post(id: Int, channelId: String, title: String, body: String) {
         if (!canPostNotifications()) return
         val ctx = appContext ?: return
-        val notification = NotificationCompat.Builder(ctx, channelId)
-            .setSmallIcon(R.mipmap.app_icon)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setAutoCancel(true)
-            .setContentIntent(launchIntent())
-            .build()
-        val manager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(id, notification)
+        try {
+            val notification = NotificationCompat.Builder(ctx, channelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setAutoCancel(true)
+                .setContentIntent(launchIntent())
+                .build()
+            val manager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.notify(id, notification)
+        } catch (_: Exception) {}
     }
 
     actual fun notifyYourTurn() {
