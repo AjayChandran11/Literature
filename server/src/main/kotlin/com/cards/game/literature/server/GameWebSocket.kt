@@ -18,7 +18,8 @@ private val json = Json {
 
 fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
     webSocket("/game") {
-        val ip = call.request.local.remoteAddress
+        val ip = call.request.headers["X-Forwarded-For"]?.split(",")?.firstOrNull()?.trim()
+            ?: call.request.local.remoteAddress
         if (!rateLimiter.tryAcquire(ip)) {
             close(CloseReason(CloseReason.Codes.TRY_AGAIN_LATER, "Rate limit exceeded"))
             return@webSocket
