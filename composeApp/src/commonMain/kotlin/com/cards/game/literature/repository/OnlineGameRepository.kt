@@ -6,7 +6,9 @@ import com.cards.game.literature.model.*
 import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.protocol.*
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -95,6 +97,29 @@ class OnlineGameRepository(
                     }
                 }
             }
+        }
+    }
+
+    suspend fun warmUp() {
+        val httpUrl = when {
+            serverUrl.startsWith("wss://") -> "https://" + serverUrl.removePrefix("wss://")
+            serverUrl.startsWith("ws://") -> "http://" + serverUrl.removePrefix("ws://")
+            else -> serverUrl
+        }
+        try {
+            log.i { "Warming up server: $httpUrl/health" }
+            client.get("$httpUrl/health") {
+                timeout {
+                    connectTimeoutMillis = 65_000
+                    socketTimeoutMillis = 65_000
+                    requestTimeoutMillis = 65_000
+                }
+            }
+            log.i { "Server warm-up successful" }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.w { "Server warm-up finished (${e.message})" }
         }
     }
 

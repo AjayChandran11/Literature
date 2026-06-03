@@ -51,6 +51,7 @@
     <string name="lobby_join_with_code">or join with a code</string>
     <string name="lobby_room_code_hint">Room Code</string>
     <string name="lobby_join_room">Join Room</string>
+    <string name="lobby_server_warming_up">Server is warming up, please wait…</string>
 
     <!-- Waiting Room Screen -->
     <string name="dialog_leave_room_title">Leave Room?</string>
