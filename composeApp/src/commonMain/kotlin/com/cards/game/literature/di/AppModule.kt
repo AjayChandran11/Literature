@@ -11,6 +11,7 @@ import com.cards.game.literature.viewmodel.LobbyViewModel
 import com.cards.game.literature.viewmodel.ResultViewModel
 import com.cards.game.literature.viewmodel.WaitingRoomViewModel
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.websocket.*
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -25,6 +26,7 @@ val appModule = module {
     single {
         HttpClient {
             install(WebSockets)
+            install(HttpTimeout)
         }
     }
     single { OnlineGameRepository(serverUrl = serverUrl, client = get()) }

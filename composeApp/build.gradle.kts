@@ -92,7 +92,7 @@ android {
             firebaseCrashlytics {
                 mappingFileUploadEnabled = false
             }
-            buildConfigField("String", "SERVER_URL", "\"ws://10.69.103.15:8080\"")
+            buildConfigField("String", "SERVER_URL", "\"wss://literature-um4a.onrender.com\"")
         }
         getByName("release") {
             isMinifyEnabled = true
