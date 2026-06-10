@@ -9,9 +9,15 @@ import java.util.concurrent.ConcurrentHashMap
  * and a concurrent connection limit per IP.
  */
 class RateLimiter(
-    private val maxConnectionsPerWindow: Int = 10,
+    // 60/min (was 10): real players reconnect repeatedly on flaky mobile networks,
+    // and friends playing together share one public IP (home WiFi / carrier NAT).
+    // The old limit of 10 locked legitimate groups out of their own games.
+    private val maxConnectionsPerWindow: Int = 60,
     private val windowMs: Long = 60_000L,
-    private val maxConcurrentPerIp: Int = 5
+    // 15 (was 5): an 8-player game hosted from a single location needs 8 concurrent
+    // connections, plus headroom for brief overlap during reconnects. 5 made it
+    // impossible for co-located groups to all connect.
+    private val maxConcurrentPerIp: Int = 15
 ) {
     private val log = LoggerFactory.getLogger("RateLimiter")
 
