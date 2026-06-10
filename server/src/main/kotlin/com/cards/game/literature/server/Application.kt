@@ -26,7 +26,11 @@ fun main() {
 fun Application.configureServer() {
     install(WebSockets) {
         pingPeriod = 15.seconds
-        timeout = 15.seconds
+        // 45s (was 15s): mobile clients briefly lose connectivity when switching
+        // WiFi/cellular or backgrounding. A 15s pong timeout tore them down on every
+        // blip, triggering reconnect storms. 45s tolerates transient drops so the
+        // player stays in the game without a full reconnect.
+        timeout = 45.seconds
         maxFrameSize = 65536L // 64 KB — game messages are small
         masking = false
     }
