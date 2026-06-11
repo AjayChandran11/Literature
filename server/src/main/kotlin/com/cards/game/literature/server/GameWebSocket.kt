@@ -1,6 +1,7 @@
 package com.cards.game.literature.server
 
 import com.cards.game.literature.protocol.ClientMessage
+import com.cards.game.literature.protocol.Protocol
 import com.cards.game.literature.protocol.ServerMessage
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
@@ -22,6 +23,15 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
             ?: call.request.local.remoteAddress
         if (!rateLimiter.tryAcquire(ip)) {
             close(CloseReason(CloseReason.Codes.TRY_AGAIN_LATER, "Rate limit exceeded"))
+            return@webSocket
+        }
+
+        // Protocol version handshake: clients report their version via ?v=N.
+        // Absent param = legacy client (version 1).
+        val clientVersion = call.request.queryParameters["v"]?.toIntOrNull() ?: 1
+        if (clientVersion < Protocol.MIN_SUPPORTED) {
+            rateLimiter.release(ip)
+            close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Please update the app to the latest version"))
             return@webSocket
         }
 
@@ -62,9 +72,12 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             currentRoom = room
                             currentPlayerId = playerId
 
-                            room.getPlayerSession(playerId)?.session = this
+                            room.getPlayerSession(playerId)?.let {
+                                it.session = this
+                                it.protocolVersion = clientVersion
+                            }
 
-                            sendMessage(ServerMessage.RoomCreated(room.roomCode, playerId))
+                            sendMessage(ServerMessage.RoomCreated(room.roomCode, playerId, Protocol.VERSION))
                             room.broadcastRoomUpdate()
                         }
 
@@ -92,9 +105,12 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             currentRoom = room
                             currentPlayerId = playerId
 
-                            room.getPlayerSession(playerId)?.session = this
+                            room.getPlayerSession(playerId)?.let {
+                                it.session = this
+                                it.protocolVersion = clientVersion
+                            }
 
-                            sendMessage(ServerMessage.RoomCreated(room.roomCode, playerId))
+                            sendMessage(ServerMessage.RoomCreated(room.roomCode, playerId, Protocol.VERSION))
                             room.broadcastRoomUpdate()
                         }
 
@@ -171,6 +187,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 continue
                             }
                             session.session = this
+                            session.protocolVersion = clientVersion
                             currentRoom = room
                             currentPlayerId = message.playerId
                             room.handleReconnect(message.playerId)

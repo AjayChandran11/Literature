@@ -217,7 +217,7 @@ class OnlineGameRepository(
 
         connectionJob = scope.launch {
             try {
-                client.webSocket(urlString = "$serverUrl/game") {
+                client.webSocket(urlString = "$serverUrl/game?v=${Protocol.VERSION}") {
                     webSocketSession = this
                     _connectionState.value = ConnectionState.CONNECTED
                     log.i { "WebSocket connected" }
@@ -313,6 +313,9 @@ class OnlineGameRepository(
                 roomCode = message.roomCode
                 myPlayerId = message.playerId
                 log.i { "Room created: code=$roomCode, playerId=$myPlayerId" }
+                if (message.protocolVersion > Protocol.VERSION) {
+                    log.w { "Server protocol ${message.protocolVersion} is newer than client ${Protocol.VERSION} — app update recommended" }
+                }
             }
             is ServerMessage.RoomUpdate -> {
                 _roomState.value = message.room
