@@ -11,6 +11,9 @@ import com.cards.game.literature.model.*
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.LocalGameRepository
 import com.cards.game.literature.repository.OnlineGameRepository
+import com.cards.game.literature.stats.MatchRecord
+import com.cards.game.literature.stats.Outcome
+import com.cards.game.literature.stats.StatsStore
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -70,6 +73,16 @@ class GameViewModel(
     private val cardTracker = CardTracker()
     private var myPlayerId = overridePlayerId ?: "player_0"
 
+    // Per-game stat counters, tracked incrementally because the online
+    // GameState only carries the last ~20 events — totals can't be derived
+    // from the final state.
+    private var myAsks = 0
+    private var myAsksSuccessful = 0
+    private var myClaims = 0
+    private var myClaimsCorrect = 0
+    private var recordedGameId: String? = null
+    private var lastDifficulty: BotDifficulty? = null
+
     fun setPlayerId(playerId: String) {
         myPlayerId = playerId
     }
@@ -78,16 +91,70 @@ class GameViewModel(
         viewModelScope.launch {
             repository.gameState.filterNotNull().collect { state ->
                 updateUiState(state)
+                if (state.phase == GamePhase.FINISHED) {
+                    maybeRecordGame(state)
+                }
             }
         }
         viewModelScope.launch {
             repository.gameEvents.collect { event ->
                 _gameLog.update { it + event }
+                trackMyActions(event)
             }
         }
     }
 
+    private fun trackMyActions(event: GameEvent) {
+        when (event) {
+            is GameEvent.CardAsked -> if (event.askerId == myPlayerId) {
+                myAsks++
+                if (event.success) myAsksSuccessful++
+            }
+            is GameEvent.DeckClaimed -> if (event.claimerId == myPlayerId) {
+                myClaims++
+                if (event.correct) myClaimsCorrect++
+            }
+            else -> {}
+        }
+    }
+
+    private suspend fun maybeRecordGame(state: GameState) {
+        if (recordedGameId == state.gameId) return
+        recordedGameId = state.gameId
+
+        val myTeam = state.getTeamForPlayer(myPlayerId) ?: return
+        val opponentTeam = state.teams.firstOrNull { it.id != myTeam.id } ?: return
+        val outcome = when {
+            myTeam.score > opponentTeam.score -> Outcome.WIN
+            myTeam.score < opponentTeam.score -> Outcome.LOSS
+            else -> Outcome.DRAW
+        }
+        val recorded = StatsStore.recordGame(
+            gameId = state.gameId,
+            record = MatchRecord(
+                timestamp = currentTimeMillis(),
+                isOnline = isOnline,
+                playerCount = state.playerCount,
+                botDifficulty = if (isOnline) null else lastDifficulty?.name,
+                myScore = myTeam.score,
+                opponentScore = opponentTeam.score,
+                outcome = outcome,
+                myAsks = myAsks,
+                myAsksSuccessful = myAsksSuccessful,
+                myClaims = myClaims,
+                myClaimsCorrect = myClaimsCorrect
+            )
+        )
+        if (recorded) log.i { "Recorded ${outcome.name} for game ${state.gameId}" }
+    }
+
     fun startGame(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) {
+        lastDifficulty = difficulty
+        myAsks = 0
+        myAsksSuccessful = 0
+        myClaims = 0
+        myClaimsCorrect = 0
+        recordedGameId = null
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {

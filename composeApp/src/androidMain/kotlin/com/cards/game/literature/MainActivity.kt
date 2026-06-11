@@ -15,6 +15,7 @@ import com.cards.game.literature.audio.SoundPlayer
 import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.preferences.GamePrefs
 import com.cards.game.literature.preferences.OnboardingPrefs
+import com.cards.game.literature.preferences.StatsPrefs
 import com.cards.game.literature.preferences.TutorialPrefs
 
 class MainActivity : ComponentActivity() {
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
         TutorialPrefs.init(this)
         NetworkMonitor.init(this)
         GamePrefs.init(this)
+        StatsPrefs.init(this)
         SoundPlayer.init(this)
         FirebaseApp.initializeApp(this)
         FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = true
