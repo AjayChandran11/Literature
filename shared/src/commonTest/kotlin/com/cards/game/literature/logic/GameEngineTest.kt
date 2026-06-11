@@ -80,4 +80,36 @@ class GameEngineTest {
         assertEquals("p1", state.players[0].id)
         assertEquals("Alice", state.players[0].name)
     }
+
+    @Test
+    fun createGameWith8Players() {
+        val state = engine.createGame("test", "Human", 8)
+        assertEquals(8, state.players.size)
+        assertEquals(2, state.teams.size)
+        assertEquals(GamePhase.IN_PROGRESS, state.phase)
+        state.players.forEach { assertEquals(6, it.hand.size) }
+        state.teams.forEach { assertEquals(4, it.playerIds.size) }
+    }
+
+    @Test
+    fun createMultiplayerGameWith8Players() {
+        val players = (1..8).map { i ->
+            PlayerSetupInfo("p$i", "Player $i", if (i % 2 == 1) "team_1" else "team_2")
+        }
+        val state = engine.createMultiplayerGame("test-mp8", players)
+        assertEquals(8, state.players.size)
+        state.players.forEach { assertEquals(6, it.hand.size) }
+        state.teams.forEach { assertEquals(4, it.playerIds.size) }
+        // All 48 cards dealt exactly once
+        assertEquals(48, state.players.flatMap { it.hand }.toSet().size)
+    }
+
+    @Test
+    fun createdGameRecordsDealSeed() {
+        val state = engine.createGame("test", "Human", 4)
+        // Seed must be recorded so the deal is reproducible
+        val redeal = CardDealer.dealCards(4, state.dealSeed)
+        val sortedHands = state.players.map { it.hand.toSet() }
+        assertEquals(redeal.map { it.toSet() }, sortedHands)
+    }
 }
