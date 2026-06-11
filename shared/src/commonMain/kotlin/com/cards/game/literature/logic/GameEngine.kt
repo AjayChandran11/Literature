@@ -44,8 +44,9 @@ class GameEngine {
             Team(id = "team_2", name = "Opponents", playerIds = team2Ids)
         )
 
-        // Deal cards
-        val hands = CardDealer.dealCards(playerCount)
+        // Deal cards with a recorded seed so the game is reproducible
+        val dealSeed = kotlin.random.Random.nextLong()
+        val hands = CardDealer.dealCards(playerCount, dealSeed)
         val playersWithCards = allPlayers.mapIndexed { index, player ->
             player.copy(hand = hands[index].sortedWith(compareBy({ it.suit }, { it.value.rank })))
         }
@@ -57,7 +58,8 @@ class GameEngine {
             currentPlayerIndex = 0,
             phase = GamePhase.IN_PROGRESS,
             playerCount = playerCount,
-            events = listOf(GameEvent.GameStarted(playerCount))
+            events = listOf(GameEvent.GameStarted(playerCount)),
+            dealSeed = dealSeed
         )
     }
 
@@ -85,7 +87,9 @@ class GameEngine {
             Team(id = "team_2", name = "Team 2", playerIds = team2Ids)
         )
 
-        val hands = CardDealer.dealCards(playerCount)
+        // Deal cards with a recorded seed so the game is reproducible
+        val dealSeed = kotlin.random.Random.nextLong()
+        val hands = CardDealer.dealCards(playerCount, dealSeed)
         val playersWithCards = allPlayers.mapIndexed { index, player ->
             player.copy(hand = hands[index].sortedWith(compareBy({ it.suit }, { it.value.rank })))
         }
@@ -97,7 +101,8 @@ class GameEngine {
             currentPlayerIndex = 0,
             phase = GamePhase.IN_PROGRESS,
             playerCount = playerCount,
-            events = listOf(GameEvent.GameStarted(playerCount))
+            events = listOf(GameEvent.GameStarted(playerCount)),
+            dealSeed = dealSeed
         )
     }
 
