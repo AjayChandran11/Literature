@@ -48,6 +48,14 @@ class GameRoom(
         private const val RECONNECT_WINDOW_MS = 2 * 60_000L
         private const val REACTION_RATE_LIMIT_MS = 2_000L
         private const val ABANDON_GRACE_MS = 60_000L
+        private val secureRandom = java.security.SecureRandom()
+
+        /** 128-bit random hex token — proof of identity for reconnects. */
+        private fun generateReconnectToken(): String {
+            val bytes = ByteArray(16)
+            secureRandom.nextBytes(bytes)
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
     }
 
     fun addPlayer(name: String, isHost: Boolean = false): String {
@@ -55,7 +63,8 @@ class GameRoom(
         val session = PlayerSession(
             playerId = playerId,
             playerName = name,
-            session = null
+            session = null,
+            reconnectToken = generateReconnectToken()
         )
         players[playerId] = session
         playerTeams[playerId] = if (playerTeams.size % 2 == 0) "team_1" else "team_2"

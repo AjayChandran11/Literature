@@ -12,7 +12,10 @@ sealed class ServerMessage {
         val playerId: String,
         // Defaulted so messages from old servers still decode; old clients
         // ignore the extra field (ignoreUnknownKeys). See Protocol.VERSION.
-        val protocolVersion: Int = 1
+        val protocolVersion: Int = 1,
+        // Secret the client must present in Reconnect to prove identity —
+        // prevents session hijack via guessable room code + sequential IDs.
+        val reconnectToken: String = ""
     ) : ServerMessage()
 
     @Serializable

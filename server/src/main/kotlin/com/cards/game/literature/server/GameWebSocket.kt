@@ -72,12 +72,16 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             currentRoom = room
                             currentPlayerId = playerId
 
-                            room.getPlayerSession(playerId)?.let {
+                            val created = room.getPlayerSession(playerId)
+                            created?.let {
                                 it.session = this
                                 it.protocolVersion = clientVersion
                             }
 
-                            sendMessage(ServerMessage.RoomCreated(room.roomCode, playerId, Protocol.VERSION))
+                            sendMessage(ServerMessage.RoomCreated(
+                                room.roomCode, playerId, Protocol.VERSION,
+                                created?.reconnectToken ?: ""
+                            ))
                             room.broadcastRoomUpdate()
                         }
 
@@ -105,12 +109,16 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             currentRoom = room
                             currentPlayerId = playerId
 
-                            room.getPlayerSession(playerId)?.let {
+                            val joined = room.getPlayerSession(playerId)
+                            joined?.let {
                                 it.session = this
                                 it.protocolVersion = clientVersion
                             }
 
-                            sendMessage(ServerMessage.RoomCreated(room.roomCode, playerId, Protocol.VERSION))
+                            sendMessage(ServerMessage.RoomCreated(
+                                room.roomCode, playerId, Protocol.VERSION,
+                                joined?.reconnectToken ?: ""
+                            ))
                             room.broadcastRoomUpdate()
                         }
 
@@ -185,6 +193,23 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             if (session == null) {
                                 sendError("Player not found in room")
                                 continue
+                            }
+                            // Token validation (soft rollout):
+                            // - a wrong token is always rejected
+                            // - v2+ clients must present their token (they always
+                            //   receive one in RoomCreated)
+                            // - legacy v1 clients may reconnect tokenless until
+                            //   Protocol.MIN_SUPPORTED is raised to 2
+                            val tokenValid = message.token == session.reconnectToken
+                            if (!tokenValid && (message.token.isNotEmpty() || clientVersion >= 2)) {
+                                log.warn("[{}] Rejected reconnect for {} — invalid token (client v{})",
+                                    room.roomCode, message.playerId, clientVersion)
+                                sendError("Session invalid — please rejoin the room")
+                                continue
+                            }
+                            if (!tokenValid) {
+                                log.warn("[{}] Tokenless legacy reconnect accepted for {} (client v{})",
+                                    room.roomCode, message.playerId, clientVersion)
                             }
                             session.session = this
                             session.protocolVersion = clientVersion

@@ -74,6 +74,8 @@ class OnlineGameRepository(
         private set
     var roomCode: String = ""
         private set
+    // Proof of identity for reconnects, issued by the server in RoomCreated.
+    private var reconnectToken: String = ""
 
     init {
         scope.launch {
@@ -93,7 +95,7 @@ class OnlineGameRepository(
                     ) {
                         autoReconnectJob?.cancel()
                         needsEventReplay.value = true
-                        connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
+                        connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId, reconnectToken))
                     }
                 }
             }
@@ -183,20 +185,21 @@ class OnlineGameRepository(
         needsEventReplay.value = false
         myPlayerId = ""
         roomCode = ""
+        reconnectToken = ""
     }
 
     suspend fun reconnect(code: String, playerId: String) {
         roomCode = code
         myPlayerId = playerId
         needsEventReplay.value = true
-        connectAndSend(ClientMessage.Reconnect(code, playerId))
+        connectAndSend(ClientMessage.Reconnect(code, playerId, reconnectToken))
     }
 
     fun triggerReconnect() {
         if (roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
             needsEventReplay.value = true
             scope.launch {
-                connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
+                connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId, reconnectToken))
             }
         }
     }
@@ -270,7 +273,7 @@ class OnlineGameRepository(
                 try {
                     _connectionState.value = ConnectionState.RECONNECTING
                     needsEventReplay.value = true
-                    connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
+                    connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId, reconnectToken))
                     return@launch // success
                 } catch (e: CancellationException) {
                     throw e
@@ -312,6 +315,7 @@ class OnlineGameRepository(
             is ServerMessage.RoomCreated -> {
                 roomCode = message.roomCode
                 myPlayerId = message.playerId
+                reconnectToken = message.reconnectToken
                 log.i { "Room created: code=$roomCode, playerId=$myPlayerId" }
                 if (message.protocolVersion > Protocol.VERSION) {
                     log.w { "Server protocol ${message.protocolVersion} is newer than client ${Protocol.VERSION} — app update recommended" }
