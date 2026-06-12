@@ -322,6 +322,16 @@ class GameRoom(
         val playerSession = players[playerId] ?: return
         playerSession.intentionalLeave = true
 
+        // Mark the leaver gone HERE: the LeaveGame handler nulls its IDs
+        // before closing the socket, so the connection's finally-block
+        // bookkeeping (handleDisconnect) is skipped. Without this the player
+        // stayed "connected" on a dead socket forever — blocking isAbandoned
+        // room cleanup and making every broadcast throw on the dead session
+        // (which froze bot turns for the remaining players).
+        playerSession.isConnected = false
+        playerSession.session = null
+        playerSession.lastSeen = System.currentTimeMillis()
+
         // Cancel any pending reconnect timeout
         disconnectJobs.remove(playerId)?.cancel()
 
