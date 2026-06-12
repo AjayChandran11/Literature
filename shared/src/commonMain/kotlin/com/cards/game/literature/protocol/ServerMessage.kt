@@ -7,7 +7,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class ServerMessage {
     @Serializable
-    data class RoomCreated(val roomCode: String, val playerId: String) : ServerMessage()
+    data class RoomCreated(
+        val roomCode: String,
+        val playerId: String,
+        // Defaulted so messages from old servers still decode; old clients
+        // ignore the extra field (ignoreUnknownKeys). See Protocol.VERSION.
+        val protocolVersion: Int = 1,
+        // Secret the client must present in Reconnect to prove identity —
+        // prevents session hijack via guessable room code + sequential IDs.
+        val reconnectToken: String = ""
+    ) : ServerMessage()
 
     @Serializable
     data class RoomUpdate(val room: RoomState) : ServerMessage()

@@ -61,4 +61,92 @@ class MoveValidatorTest {
         val result = MoveValidator.validateAsk(state, "p2", "p1", Card(Suit.SPADES, CardValue.ACE))
         assertFalse(result.isValid)
     }
+
+    // --- validateClaim ---
+    // Validation checks structure/turn/team only; card possession is the
+    // evaluator's job, so hands don't need to contain the claimed cards.
+
+    private val spadesLow = DeckUtils.getAllCardsForHalfSuit(HalfSuit.SPADES_LOW)
+
+    private fun spadesLowClaim(
+        claimerId: String = "p1",
+        assignments: Map<String, List<Card>> = mapOf(
+            "p1" to spadesLow.take(3),
+            "p3" to spadesLow.drop(3)
+        )
+    ) = ClaimDeclaration(claimerId, HalfSuit.SPADES_LOW, assignments)
+
+    @Test
+    fun validClaim() {
+        val result = MoveValidator.validateClaim(createTestState(), spadesLowClaim())
+        assertTrue(result.isValid)
+    }
+
+    @Test
+    fun cannotClaimWhenNotYourTurn() {
+        val claim = spadesLowClaim(
+            claimerId = "p2",
+            assignments = mapOf("p2" to spadesLow.take(3), "p4" to spadesLow.drop(3))
+        )
+        val result = MoveValidator.validateClaim(createTestState(), claim)
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun cannotAssignCardsToOpponents() {
+        val claim = spadesLowClaim(
+            assignments = mapOf("p1" to spadesLow.take(3), "p2" to spadesLow.drop(3))
+        )
+        val result = MoveValidator.validateClaim(createTestState(), claim)
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun cannotIncludeCardFromAnotherHalfSuit() {
+        val claim = spadesLowClaim(
+            assignments = mapOf(
+                "p1" to spadesLow.take(3),
+                "p3" to (spadesLow.drop(4) + Card(Suit.HEARTS, CardValue.TWO))
+            )
+        )
+        val result = MoveValidator.validateClaim(createTestState(), claim)
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun mustAssignExactlySixCards() {
+        val claim = spadesLowClaim(
+            assignments = mapOf("p1" to spadesLow.take(3), "p3" to spadesLow.drop(4))
+        )
+        val result = MoveValidator.validateClaim(createTestState(), claim)
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun cannotAssignDuplicateCards() {
+        val claim = spadesLowClaim(
+            assignments = mapOf(
+                "p1" to listOf(spadesLow[0], spadesLow[0], spadesLow[1]),
+                "p3" to spadesLow.drop(3)
+            )
+        )
+        val result = MoveValidator.validateClaim(createTestState(), claim)
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun cannotClaimAlreadyClaimedHalfSuit() {
+        val state = createTestState()
+        val claimed = state.halfSuitStatuses.map {
+            if (it.halfSuit == HalfSuit.SPADES_LOW) it.copy(claimedByTeamId = "t2") else it
+        }
+        val result = MoveValidator.validateClaim(state.copy(halfSuitStatuses = claimed), spadesLowClaim())
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun unknownClaimerRejected() {
+        val result = MoveValidator.validateClaim(createTestState(), spadesLowClaim(claimerId = "ghost"))
+        assertFalse(result.isValid)
+    }
 }

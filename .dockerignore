@@ -1,0 +1,23 @@
+# VCS
+.git
+.gitignore
+
+# IDE / local tooling
+.idea
+.kotlin
+*.iml
+local.properties
+
+# Gradle caches and build outputs
+.gradle
+**/build
+
+# Android release artifacts
+composeApp/release
+**/*.apk
+**/*.aab
+
+# Not needed for the server image
+iosApp
+screenshots
+*.md

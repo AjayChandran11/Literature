@@ -12,7 +12,11 @@ data class PlayerSession(
     var isConnected: Boolean = true,
     var lastSeen: Long = System.currentTimeMillis(),
     var disconnectDeadline: Long? = null,
-    var intentionalLeave: Boolean = false
+    var intentionalLeave: Boolean = false,
+    /** Protocol version the client reported at connect (1 = legacy, no report). */
+    var protocolVersion: Int = 1,
+    /** Secret issued in RoomCreated; required to Reconnect (protocol v2+). */
+    val reconnectToken: String = ""
 ) {
     suspend fun send(message: ServerMessage) {
         val text = Json.encodeToString(message)

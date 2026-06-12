@@ -26,7 +26,13 @@ sealed class ClientMessage {
     data object LeaveRoom : ClientMessage()
 
     @Serializable
-    data class Reconnect(val roomCode: String, val playerId: String) : ClientMessage()
+    data class Reconnect(
+        val roomCode: String,
+        val playerId: String,
+        // Proof of identity issued in RoomCreated. Defaulted so messages from
+        // legacy clients (protocol v1, no token) still decode on the server.
+        val token: String = ""
+    ) : ClientMessage()
 
     @Serializable
     data object LeaveGame : ClientMessage()

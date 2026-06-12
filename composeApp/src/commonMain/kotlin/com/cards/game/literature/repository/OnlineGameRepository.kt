@@ -14,6 +14,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.random.Random
 
 sealed class PlayerConnectionEvent {
     data class Disconnected(val playerId: String, val playerName: String) : PlayerConnectionEvent()
@@ -70,10 +71,23 @@ class OnlineGameRepository(
     private var lastSeenEventTimestamp: Long = 0L
     private val needsEventReplay = MutableStateFlow(false)
 
+    // Survives across connection failures so backoff genuinely grows; reset
+    // only on a confirmed connection or after giving up. NOT reset in
+    // disconnect() — connectAndSend() calls disconnect() on every retry.
+    private var reconnectAttempts = 0
+
+    private companion object {
+        const val MAX_RECONNECT_ATTEMPTS = 10
+        const val INITIAL_RECONNECT_DELAY_MS = 1_000L
+        const val MAX_RECONNECT_DELAY_MS = 16_000L
+    }
+
     var myPlayerId: String = ""
         private set
     var roomCode: String = ""
         private set
+    // Proof of identity for reconnects, issued by the server in RoomCreated.
+    private var reconnectToken: String = ""
 
     init {
         scope.launch {
@@ -93,7 +107,7 @@ class OnlineGameRepository(
                     ) {
                         autoReconnectJob?.cancel()
                         needsEventReplay.value = true
-                        connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
+                        connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId, reconnectToken))
                     }
                 }
             }
@@ -183,20 +197,22 @@ class OnlineGameRepository(
         needsEventReplay.value = false
         myPlayerId = ""
         roomCode = ""
+        reconnectToken = ""
+        reconnectAttempts = 0
     }
 
     suspend fun reconnect(code: String, playerId: String) {
         roomCode = code
         myPlayerId = playerId
         needsEventReplay.value = true
-        connectAndSend(ClientMessage.Reconnect(code, playerId))
+        connectAndSend(ClientMessage.Reconnect(code, playerId, reconnectToken))
     }
 
     fun triggerReconnect() {
         if (roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
             needsEventReplay.value = true
             scope.launch {
-                connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
+                connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId, reconnectToken))
             }
         }
     }
@@ -217,9 +233,10 @@ class OnlineGameRepository(
 
         connectionJob = scope.launch {
             try {
-                client.webSocket(urlString = "$serverUrl/game") {
+                client.webSocket(urlString = "$serverUrl/game?v=${Protocol.VERSION}") {
                     webSocketSession = this
                     _connectionState.value = ConnectionState.CONNECTED
+                    reconnectAttempts = 0
                     log.i { "WebSocket connected" }
 
                     // Send the initial message
@@ -242,7 +259,7 @@ class OnlineGameRepository(
                 webSocketSession = null
                 if (shouldAutoReconnect && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
                     _connectionState.value = ConnectionState.RECONNECTING
-                    startAutoReconnect()
+                    scheduleReconnect()
                 } else {
                     _connectionState.value = ConnectionState.DISCONNECTED
                 }
@@ -250,37 +267,41 @@ class OnlineGameRepository(
         }
     }
 
-    private fun startAutoReconnect() {
+    /**
+     * Schedules a single reconnect attempt with exponential backoff + jitter.
+     * Called from the connection's finally block on every failure, so the
+     * attempt counter must live at repository level — a local variable here
+     * would reset to the initial delay on each failure (the old bug that
+     * caused 1 reconnect/second storms and rate-limit lockouts).
+     */
+    private fun scheduleReconnect() {
         autoReconnectJob?.cancel()
         autoReconnectJob = scope.launch {
-            var delayMs = 1000L
-            val maxDelay = 16_000L
-            val maxAttempts = 10
-
-            for (attempt in 1..maxAttempts) {
-                if (!shouldAutoReconnect) return@launch
-                delay(delayMs)
-                if (!shouldAutoReconnect) return@launch
-
-                // Skip attempt if no network — don't count it
-                if (!NetworkMonitor.isNetworkAvailable.value) {
-                    continue
-                }
-
-                try {
-                    _connectionState.value = ConnectionState.RECONNECTING
-                    needsEventReplay.value = true
-                    connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId))
-                    return@launch // success
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    delayMs = (delayMs * 2).coerceAtMost(maxDelay)
-                }
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                _connectionState.value = ConnectionState.DISCONNECTED
+                log.e { "Failed to reconnect after $MAX_RECONNECT_ATTEMPTS attempts" }
+                _errors.emit("Failed to reconnect after $MAX_RECONNECT_ATTEMPTS attempts")
+                reconnectAttempts = 0
+                return@launch
             }
-            _connectionState.value = ConnectionState.DISCONNECTED
-            log.e { "Failed to reconnect after $maxAttempts attempts" }
-            _errors.emit("Failed to reconnect after $maxAttempts attempts")
+
+            // 1s, 2s, 4s, 8s, then 16s — jittered to 50–100% so players on a
+            // shared network don't reconnect in lockstep after a WiFi blip.
+            val base = (INITIAL_RECONNECT_DELAY_MS shl reconnectAttempts.coerceAtMost(4))
+                .coerceAtMost(MAX_RECONNECT_DELAY_MS)
+            val jittered = (base * (0.5 + Random.nextDouble() * 0.5)).toLong()
+            delay(jittered)
+
+            if (!shouldAutoReconnect) return@launch
+            if (!NetworkMonitor.isNetworkAvailable.value) {
+                // Offline: don't burn an attempt — the NetworkMonitor collector
+                // in init reconnects immediately when the network returns.
+                return@launch
+            }
+
+            reconnectAttempts++
+            needsEventReplay.value = true
+            connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId, reconnectToken))
         }
     }
 
@@ -312,7 +333,11 @@ class OnlineGameRepository(
             is ServerMessage.RoomCreated -> {
                 roomCode = message.roomCode
                 myPlayerId = message.playerId
+                reconnectToken = message.reconnectToken
                 log.i { "Room created: code=$roomCode, playerId=$myPlayerId" }
+                if (message.protocolVersion > Protocol.VERSION) {
+                    log.w { "Server protocol ${message.protocolVersion} is newer than client ${Protocol.VERSION} — app update recommended" }
+                }
             }
             is ServerMessage.RoomUpdate -> {
                 _roomState.value = message.room

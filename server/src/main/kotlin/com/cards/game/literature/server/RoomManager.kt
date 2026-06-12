@@ -49,7 +49,9 @@ class RoomManager {
         val staleRooms = rooms.filter { (_, room) ->
             (room.phase == RoomPhase.FINISHED && now - room.finishedAt > 5 * 60_000) ||
                 (room.phase == RoomPhase.WAITING && now - room.createdAt > 30 * 60_000) ||
-                room.allDisconnected()
+                // isAbandoned (not allDisconnected) — respects pending reconnect
+                // deadlines so a group WiFi blip doesn't delete an active game
+                room.isAbandoned(now)
         }
         if (staleRooms.isNotEmpty()) {
             log.info("Cleaning up {} stale room(s): {}", staleRooms.size, staleRooms.keys)
