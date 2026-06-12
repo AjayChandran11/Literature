@@ -19,7 +19,15 @@ data class PlayerSession(
     val reconnectToken: String = ""
 ) {
     suspend fun send(message: ServerMessage) {
-        val text = Json.encodeToString(message)
-        session?.send(Frame.Text(text))
+        val ws = session ?: return
+        try {
+            ws.send(Frame.Text(Json.encodeToString(message)))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Dead or closing socket. Never let one broken connection abort a
+            // broadcast loop, bot turns, or disconnect bookkeeping — the
+            // socket gets reaped by its own close/ping-timeout path.
+        }
     }
 }
