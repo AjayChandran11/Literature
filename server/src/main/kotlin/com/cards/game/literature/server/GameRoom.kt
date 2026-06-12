@@ -47,6 +47,15 @@ class GameRoom(
         private const val TURN_TIMEOUT_MS = 60_000L
         private const val RECONNECT_WINDOW_MS = 2 * 60_000L
         private const val REACTION_RATE_LIMIT_MS = 2_000L
+        private const val ABANDON_GRACE_MS = 60_000L
+        private val secureRandom = java.security.SecureRandom()
+
+        /** 128-bit random hex token — proof of identity for reconnects. */
+        private fun generateReconnectToken(): String {
+            val bytes = ByteArray(16)
+            secureRandom.nextBytes(bytes)
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
     }
 
     fun addPlayer(name: String, isHost: Boolean = false): String {
@@ -54,7 +63,8 @@ class GameRoom(
         val session = PlayerSession(
             playerId = playerId,
             playerName = name,
-            session = null
+            session = null,
+            reconnectToken = generateReconnectToken()
         )
         players[playerId] = session
         playerTeams[playerId] = if (playerTeams.size % 2 == 0) "team_1" else "team_2"
@@ -74,6 +84,22 @@ class GameRoom(
     fun isHost(playerId: String): Boolean = playerId == hostPlayerId
 
     fun allDisconnected(): Boolean = players.values.all { !it.isConnected }
+
+    /**
+     * True when the room can be safely cleaned up because nobody is connected
+     * AND no disconnected player is still within their reconnect window.
+     * Without the deadline check, a simultaneous disconnect (e.g. shared WiFi
+     * blip) would delete the room while players were promised 2 minutes to
+     * return, sending them to "Room not found".
+     */
+    fun isAbandoned(now: Long = System.currentTimeMillis()): Boolean {
+        if (players.values.any { it.isConnected }) return false
+        // Keep the room alive until the latest reconnect deadline (plus a small
+        // grace buffer so a reconnect racing the cleanup tick doesn't lose).
+        val latestDeadline = players.values.mapNotNull { it.disconnectDeadline }.maxOrNull()
+        if (latestDeadline != null && now < latestDeadline + ABANDON_GRACE_MS) return false
+        return true
+    }
 
     fun getConnectionStatus(): Map<String, Boolean> {
         return players.mapValues { (_, session) -> session.isConnected }

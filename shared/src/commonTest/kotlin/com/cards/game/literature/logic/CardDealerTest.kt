@@ -2,6 +2,7 @@ package com.cards.game.literature.logic
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class CardDealerTest {
     @Test
@@ -30,5 +31,15 @@ class CardDealerTest {
         val hands = CardDealer.dealCards(6)
         val allCards = hands.flatten().toSet()
         assertEquals(48, allCards.size)
+    }
+
+    @Test
+    fun sameSeedProducesIdenticalDeal() {
+        assertEquals(CardDealer.dealCards(6, seed = 42L), CardDealer.dealCards(6, seed = 42L))
+    }
+
+    @Test
+    fun differentSeedsProduceDifferentDeals() {
+        assertNotEquals(CardDealer.dealCards(6, seed = 1L), CardDealer.dealCards(6, seed = 2L))
     }
 }

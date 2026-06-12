@@ -1,6 +1,7 @@
 package com.cards.game.literature.server
 
 import com.cards.game.literature.protocol.ClientMessage
+import com.cards.game.literature.protocol.Protocol
 import com.cards.game.literature.protocol.ServerMessage
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
@@ -22,6 +23,15 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
             ?: call.request.local.remoteAddress
         if (!rateLimiter.tryAcquire(ip)) {
             close(CloseReason(CloseReason.Codes.TRY_AGAIN_LATER, "Rate limit exceeded"))
+            return@webSocket
+        }
+
+        // Protocol version handshake: clients report their version via ?v=N.
+        // Absent param = legacy client (version 1).
+        val clientVersion = call.request.queryParameters["v"]?.toIntOrNull() ?: 1
+        if (clientVersion < Protocol.MIN_SUPPORTED) {
+            rateLimiter.release(ip)
+            close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Please update the app to the latest version"))
             return@webSocket
         }
 
@@ -62,9 +72,16 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             currentRoom = room
                             currentPlayerId = playerId
 
-                            room.getPlayerSession(playerId)?.session = this
+                            val created = room.getPlayerSession(playerId)
+                            created?.let {
+                                it.session = this
+                                it.protocolVersion = clientVersion
+                            }
 
-                            sendMessage(ServerMessage.RoomCreated(room.roomCode, playerId))
+                            sendMessage(ServerMessage.RoomCreated(
+                                room.roomCode, playerId, Protocol.VERSION,
+                                created?.reconnectToken ?: ""
+                            ))
                             room.broadcastRoomUpdate()
                         }
 
@@ -92,9 +109,16 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             currentRoom = room
                             currentPlayerId = playerId
 
-                            room.getPlayerSession(playerId)?.session = this
+                            val joined = room.getPlayerSession(playerId)
+                            joined?.let {
+                                it.session = this
+                                it.protocolVersion = clientVersion
+                            }
 
-                            sendMessage(ServerMessage.RoomCreated(room.roomCode, playerId))
+                            sendMessage(ServerMessage.RoomCreated(
+                                room.roomCode, playerId, Protocol.VERSION,
+                                joined?.reconnectToken ?: ""
+                            ))
                             room.broadcastRoomUpdate()
                         }
 
@@ -170,7 +194,25 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Player not found in room")
                                 continue
                             }
+                            // Token validation (soft rollout):
+                            // - a wrong token is always rejected
+                            // - v2+ clients must present their token (they always
+                            //   receive one in RoomCreated)
+                            // - legacy v1 clients may reconnect tokenless until
+                            //   Protocol.MIN_SUPPORTED is raised to 2
+                            val tokenValid = message.token == session.reconnectToken
+                            if (!tokenValid && (message.token.isNotEmpty() || clientVersion >= 2)) {
+                                log.warn("[{}] Rejected reconnect for {} — invalid token (client v{})",
+                                    room.roomCode, message.playerId, clientVersion)
+                                sendError("Session invalid — please rejoin the room")
+                                continue
+                            }
+                            if (!tokenValid) {
+                                log.warn("[{}] Tokenless legacy reconnect accepted for {} (client v{})",
+                                    room.roomCode, message.playerId, clientVersion)
+                            }
                             session.session = this
+                            session.protocolVersion = clientVersion
                             currentRoom = room
                             currentPlayerId = message.playerId
                             room.handleReconnect(message.playerId)

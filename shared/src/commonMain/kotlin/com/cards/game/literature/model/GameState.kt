@@ -25,7 +25,12 @@ data class GameState(
     val phase: GamePhase = GamePhase.WAITING,
     val halfSuitStatuses: List<HalfSuitStatus> = HalfSuit.entries.map { HalfSuitStatus(it) },
     val events: List<GameEvent> = emptyList(),
-    val playerCount: Int = 6
+    val playerCount: Int = 6,
+    // Seed used for the deal — makes the game reproducible (replays, puzzles).
+    // SECURITY: never expose this to clients mid-game; the seed reconstructs
+    // every hand. It stays out of PlayerGameView; GameState itself is never
+    // sent over the wire in online mode.
+    val dealSeed: Long = 0L
 ) {
     val currentPlayer: Player get() = players[currentPlayerIndex]
     val isGameOver: Boolean get() = phase == GamePhase.FINISHED
