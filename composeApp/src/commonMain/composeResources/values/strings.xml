@@ -286,4 +286,33 @@
     <!-- Reactions -->
     <string name="reaction_picker_open">Send a reaction</string>
     <string name="cd_reaction_button">Send %1$s reaction</string>
+
+    <!-- Stats -->
+    <string name="stats_title">My Stats</string>
+    <string name="cd_stats_back">Back</string>
+    <string name="stats_games">Games</string>
+    <string name="stats_wins">Wins</string>
+    <string name="stats_win_rate">Win rate</string>
+    <string name="stats_losses">Losses</string>
+    <string name="stats_draws">Draws</string>
+    <string name="stats_current_streak">Streak</string>
+    <string name="stats_best_streak">Best streak</string>
+    <string name="stats_ask_success">Ask success</string>
+    <string name="stats_claim_accuracy">Claim accuracy</string>
+    <string name="stats_online_title">Online</string>
+    <string name="stats_online_record">%1$d wins in %2$d games</string>
+    <string name="stats_vs_bots_title">Vs Bots</string>
+    <string name="stats_vs_bots_record">%1$d / %2$d won</string>
+    <string name="stats_history_title">Match History</string>
+    <string name="stats_history_empty">No games recorded yet — go play one!</string>
+    <string name="stats_mode_online">Online · %1$d players</string>
+    <string name="stats_mode_offline">Vs bots · %1$d players</string>
+    <string name="stats_outcome_win">W</string>
+    <string name="stats_outcome_loss">L</string>
+    <string name="stats_outcome_draw">D</string>
+    <string name="stats_today">Today</string>
+    <string name="stats_yesterday">Yesterday</string>
+    <string name="stats_days_ago">%1$d days ago</string>
+    <string name="cd_home_stats_card">View your stats</string>
+    <string name="home_my_stats">My Stats</string>
 </resources>

@@ -13,6 +13,7 @@ import com.cards.game.literature.ui.lobby.WaitingRoomScreen
 import com.cards.game.literature.preferences.OnboardingPrefs
 import com.cards.game.literature.ui.onboarding.OnboardingScreen
 import com.cards.game.literature.ui.result.ResultScreen
+import com.cards.game.literature.ui.stats.StatsScreen
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.qualifier.named
@@ -26,6 +27,7 @@ object Routes {
     const val RESULT_ONLINE = "result_online"
     const val LOBBY = "lobby/{playerName}"
     const val WAITING_ROOM = "waiting_room/{roomCode}"
+    const val STATS = "stats"
 
     fun game(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) = "game/$playerName/$playerCount/${difficulty.name}"
     fun lobby(playerName: String) = "lobby/$playerName"
@@ -55,7 +57,15 @@ fun AppNavigation() {
                 },
                 onPlayOnline = { playerName ->
                     navController.navigate(Routes.lobby(playerName))
+                },
+                onOpenStats = {
+                    navController.navigate(Routes.STATS)
                 }
+            )
+        }
+        composable(Routes.STATS) {
+            StatsScreen(
+                onBack = { navController.popBackStack(Routes.HOME, inclusive = false) }
             )
         }
         composable(Routes.GAME) { backStackEntry ->
