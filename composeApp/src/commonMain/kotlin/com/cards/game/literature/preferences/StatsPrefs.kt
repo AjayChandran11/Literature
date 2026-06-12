@@ -8,4 +8,6 @@ expect object StatsPrefs {
     fun setHistoryJson(json: String)
     fun getLastRecordedGameId(): String?
     fun setLastRecordedGameId(id: String)
+    fun getAchievementsJson(): String?
+    fun setAchievementsJson(json: String)
 }

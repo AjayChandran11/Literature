@@ -19,4 +19,9 @@ actual object StatsPrefs {
     actual fun setLastRecordedGameId(id: String) {
         defaults.setObject(id, forKey = "last_recorded_game")
     }
+
+    actual fun getAchievementsJson(): String? = defaults.stringForKey("achievements_json")
+    actual fun setAchievementsJson(json: String) {
+        defaults.setObject(json, forKey = "achievements_json")
+    }
 }

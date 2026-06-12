@@ -9,9 +9,16 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+/** Result of recording one finished game. */
+data class GameRecordResult(
+    val updatedStats: PlayerStats,
+    val newlyUnlocked: List<Achievement>
+)
+
 /**
- * Loads, updates, and persists the local player's stats and match history.
- * Pure aggregation logic lives in [PlayerStats.applying]; this object only
+ * Loads, updates, and persists the local player's stats, match history,
+ * and achievement unlocks. Pure aggregation/evaluation logic lives in
+ * [PlayerStats.applying] and [AchievementEvaluator]; this object only
  * orchestrates persistence and exposes reactive state for the UI.
  */
 object StatsStore {
@@ -25,23 +32,41 @@ object StatsStore {
     private val _history by lazy { MutableStateFlow(loadHistory()) }
     val history: StateFlow<List<MatchRecord>> get() = _history.asStateFlow()
 
+    /** Achievement name -> unlock timestamp (millis). String keys so a
+     *  removed enum entry can never break decoding of old data. */
+    private val _achievements by lazy { MutableStateFlow(loadAchievements()) }
+    val achievements: StateFlow<Map<String, Long>> get() = _achievements.asStateFlow()
+
     /**
-     * Folds a finished game into stats and history exactly once per [gameId]
-     * (guards against re-observation of the same FINISHED state, e.g. after
-     * ViewModel recreation). Returns true if the game was recorded.
+     * Folds a finished game into stats/history and evaluates achievements,
+     * exactly once per [gameId] (guards against re-observation of the same
+     * FINISHED state, e.g. after ViewModel recreation). Returns null if this
+     * game was already recorded.
      */
-    suspend fun recordGame(gameId: String, record: MatchRecord): Boolean = mutex.withLock {
-        if (StatsPrefs.getLastRecordedGameId() == gameId) return false
+    suspend fun recordGame(gameId: String, record: MatchRecord): GameRecordResult? = mutex.withLock {
+        if (StatsPrefs.getLastRecordedGameId() == gameId) return null
         StatsPrefs.setLastRecordedGameId(gameId)
 
         val updatedStats = _stats.value.applying(record)
         val updatedHistory = (listOf(record) + _history.value).take(HISTORY_LIMIT)
 
+        val unlocked = _achievements.value
+        val newlyUnlocked = AchievementEvaluator.satisfiedBy(updatedStats, record)
+            .filter { it.name !in unlocked }
+            .sortedBy { it.ordinal }
+        val updatedAchievements =
+            if (newlyUnlocked.isEmpty()) unlocked
+            else unlocked + newlyUnlocked.associate { it.name to record.timestamp }
+
         _stats.value = updatedStats
         _history.value = updatedHistory
+        _achievements.value = updatedAchievements
         StatsPrefs.setStatsJson(json.encodeToString(updatedStats))
         StatsPrefs.setHistoryJson(json.encodeToString(updatedHistory))
-        true
+        if (newlyUnlocked.isNotEmpty()) {
+            StatsPrefs.setAchievementsJson(json.encodeToString(updatedAchievements))
+        }
+        GameRecordResult(updatedStats, newlyUnlocked)
     }
 
     private fun loadStats(): PlayerStats = runCatching {
@@ -51,4 +76,8 @@ object StatsStore {
     private fun loadHistory(): List<MatchRecord> = runCatching {
         StatsPrefs.getHistoryJson()?.let { json.decodeFromString<List<MatchRecord>>(it) }
     }.getOrNull() ?: emptyList()
+
+    private fun loadAchievements(): Map<String, Long> = runCatching {
+        StatsPrefs.getAchievementsJson()?.let { json.decodeFromString<Map<String, Long>>(it) }
+    }.getOrNull() ?: emptyMap()
 }

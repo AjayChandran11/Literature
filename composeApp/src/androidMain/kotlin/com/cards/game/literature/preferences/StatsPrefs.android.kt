@@ -25,4 +25,9 @@ actual object StatsPrefs {
     actual fun setLastRecordedGameId(id: String) {
         prefs()?.edit()?.putString("last_recorded_game", id)?.apply()
     }
+
+    actual fun getAchievementsJson(): String? = prefs()?.getString("achievements_json", null)
+    actual fun setAchievementsJson(json: String) {
+        prefs()?.edit()?.putString("achievements_json", json)?.apply()
+    }
 }
