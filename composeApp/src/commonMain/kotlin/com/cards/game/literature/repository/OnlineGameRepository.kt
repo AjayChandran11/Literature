@@ -63,6 +63,11 @@ class OnlineGameRepository(
     )
     val reactions: Flow<ServerMessage.ReactionReceived> = _reactions.asSharedFlow()
 
+    // Fired when the host resets the room for a rematch — the result screen
+    // navigates everyone back to the waiting room.
+    private val _rematchStarted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val rematchStarted: Flow<Unit> = _rematchStarted.asSharedFlow()
+
     private var webSocketSession: WebSocketSession? = null
     private var connectionJob: Job? = null
     private var autoReconnectJob: Job? = null
@@ -158,6 +163,10 @@ class OnlineGameRepository(
 
     suspend fun sendReaction(reaction: ReactionType) {
         sendMessage(ClientMessage.SendReaction(reaction))
+    }
+
+    suspend fun requestRematch() {
+        sendMessage(ClientMessage.Rematch)
     }
 
     override suspend fun createGame(playerName: String, playerCount: Int, difficulty: BotDifficulty): GameState {
@@ -402,6 +411,18 @@ class OnlineGameRepository(
             }
             is ServerMessage.ReactionReceived -> {
                 _reactions.emit(message)
+            }
+            is ServerMessage.RematchStarted -> {
+                log.i { "Rematch started for room ${message.room.roomCode}" }
+                // Clear game state BEFORE updating the room: the waiting room
+                // auto-navigates to the game when gameState is non-null, so a
+                // stale FINISHED state would bounce players straight back out.
+                _gameState.value = null
+                _reconnectCountdowns.value = emptyMap()
+                lastSeenEventTimestamp = 0L
+                needsEventReplay.value = false
+                _roomState.value = message.room
+                _rematchStarted.tryEmit(Unit)
             }
         }
     }

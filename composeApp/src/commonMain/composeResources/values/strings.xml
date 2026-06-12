@@ -11,6 +11,7 @@
     <string name="button_stay">Stay</string>
     <string name="button_start_game">Start Game</string>
     <string name="button_play_again">Play Again</string>
+    <string name="button_rematch">Rematch</string>
     <string name="button_home">Home</string>
     <string name="button_quit">Quit</string>
     <string name="button_keep_playing">Keep Playing</string>

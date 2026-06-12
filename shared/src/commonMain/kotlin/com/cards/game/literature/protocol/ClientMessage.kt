@@ -42,4 +42,9 @@ sealed class ClientMessage {
 
     @Serializable
     data class SendReaction(val reaction: ReactionType) : ClientMessage()
+
+    /** Host-only (protocol v2+): reset a FINISHED room back to the waiting
+     *  room with the same connected players for another game. */
+    @Serializable
+    data object Rematch : ClientMessage()
 }

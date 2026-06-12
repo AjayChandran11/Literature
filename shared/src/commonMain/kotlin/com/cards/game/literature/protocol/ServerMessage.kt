@@ -45,4 +45,9 @@ sealed class ServerMessage {
         val senderName: String,
         val reaction: ReactionType
     ) : ServerMessage()
+
+    /** Sent only to protocol v2+ sessions (old clients can't decode unknown
+     *  message types); v1 clients still receive the accompanying RoomUpdate. */
+    @Serializable
+    data class RematchStarted(val room: RoomState) : ServerMessage()
 }

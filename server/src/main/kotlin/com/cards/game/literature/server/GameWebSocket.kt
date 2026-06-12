@@ -253,6 +253,22 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             }
                             room.processReaction(playerId, message.reaction)
                         }
+
+                        is ClientMessage.Rematch -> {
+                            val room = currentRoom
+                            val playerId = currentPlayerId
+                            if (room == null || playerId == null) {
+                                sendError("Not in a room")
+                                continue
+                            }
+                            if (!room.isHost(playerId)) {
+                                sendError("Only the host can start a rematch")
+                                continue
+                            }
+                            if (!room.resetForRematch()) {
+                                sendError("Cannot rematch right now")
+                            }
+                        }
                     }
                 }
             }

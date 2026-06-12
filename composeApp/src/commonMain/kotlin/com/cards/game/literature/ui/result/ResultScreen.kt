@@ -82,6 +82,7 @@ import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.achievement_unlocked_banner
 import literature.composeapp.generated.resources.button_home
 import literature.composeapp.generated.resources.button_play_again
+import literature.composeapp.generated.resources.button_rematch
 import literature.composeapp.generated.resources.label_opponents
 import literature.composeapp.generated.resources.label_your_team
 import literature.composeapp.generated.resources.result_breakdown_title
@@ -254,17 +255,27 @@ private fun BreakdownRow(
 fun ResultScreen(
     onPlayAgain: () -> Unit,
     onGoHome: () -> Unit,
+    onRematchNavigate: (roomCode: String) -> Unit = {},
     viewModel: ResultViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showLog by remember { mutableStateOf(false) }
+
+    // Host pressed Rematch (or we're a guest and the host did) — the server
+    // confirmed by resetting the room, so everyone returns to the waiting room.
+    LaunchedEffect(Unit) {
+        viewModel.rematchStarted.collect {
+            onRematchNavigate(viewModel.roomCode)
+        }
+    }
 
     ResultScreenContent(
         uiState = uiState,
         showLog = showLog,
         onToggleLog = { showLog = !showLog },
         onPlayAgain = onPlayAgain,
-        onGoHome = onGoHome
+        onGoHome = onGoHome,
+        onRematch = viewModel::requestRematch
     )
 }
 
@@ -274,7 +285,8 @@ fun ResultScreenContent(
     showLog: Boolean,
     onToggleLog: () -> Unit,
     onPlayAgain: () -> Unit,
-    onGoHome: () -> Unit
+    onGoHome: () -> Unit,
+    onRematch: () -> Unit = {}
 ) {
     val hapticFeedback = LocalHapticFeedback.current
 
@@ -499,14 +511,28 @@ fun ResultScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                onClick = onPlayAgain,
-                modifier = Modifier
-                    .fillMaxWidth(0.7f)
-                    .height(48.dp),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Text(stringResource(Res.string.button_play_again), fontWeight = FontWeight.Bold)
+            // Online host gets Rematch (same room, same players); everyone
+            // else keeps the local Play Again behavior.
+            if (uiState.canRematch) {
+                Button(
+                    onClick = onRematch,
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(stringResource(Res.string.button_rematch), fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Button(
+                    onClick = onPlayAgain,
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(stringResource(Res.string.button_play_again), fontWeight = FontWeight.Bold)
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

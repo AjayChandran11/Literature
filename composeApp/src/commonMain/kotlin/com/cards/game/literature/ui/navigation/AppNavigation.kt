@@ -147,6 +147,11 @@ fun AppNavigation() {
                 },
                 onGoHome = {
                     navController.popBackStack(Routes.HOME, inclusive = false)
+                },
+                onRematchNavigate = { roomCode ->
+                    navController.navigate(Routes.waitingRoom(roomCode)) {
+                        popUpTo(Routes.HOME)
+                    }
                 }
             )
         }
