@@ -38,6 +38,20 @@ object StatsStore {
     val achievements: StateFlow<Map<String, Long>> get() = _achievements.asStateFlow()
 
     /**
+     * Achievements unlocked by the most recently recorded game, awaiting
+     * their celebration on the result screen. A flow (not a return value)
+     * because the recording GameViewModel is popped off the back stack
+     * before the result screen's ViewModel exists.
+     */
+    private val _pendingCelebration = MutableStateFlow<List<Achievement>>(emptyList())
+    val pendingCelebration: StateFlow<List<Achievement>> get() = _pendingCelebration.asStateFlow()
+
+    /** Called by the result screen once it has displayed the unlocks. */
+    fun clearPendingCelebration() {
+        _pendingCelebration.value = emptyList()
+    }
+
+    /**
      * Folds a finished game into stats/history and evaluates achievements,
      * exactly once per [gameId] (guards against re-observation of the same
      * FINISHED state, e.g. after ViewModel recreation). Returns null if this
@@ -65,6 +79,7 @@ object StatsStore {
         StatsPrefs.setHistoryJson(json.encodeToString(updatedHistory))
         if (newlyUnlocked.isNotEmpty()) {
             StatsPrefs.setAchievementsJson(json.encodeToString(updatedAchievements))
+            _pendingCelebration.value = newlyUnlocked
         }
         GameRecordResult(updatedStats, newlyUnlocked)
     }

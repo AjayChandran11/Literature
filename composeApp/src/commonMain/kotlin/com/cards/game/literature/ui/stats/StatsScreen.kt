@@ -9,10 +9,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.currentTimeMillis
+import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.MatchRecord
 import com.cards.game.literature.stats.Outcome
 import com.cards.game.literature.stats.PlayerStats
@@ -35,7 +39,8 @@ import org.jetbrains.compose.resources.stringResource
 fun StatsScreen(onBack: () -> Unit) {
     val stats by StatsStore.stats.collectAsState()
     val history by StatsStore.history.collectAsState()
-    StatsScreenContent(stats = stats, history = history, onBack = onBack)
+    val achievements by StatsStore.achievements.collectAsState()
+    StatsScreenContent(stats = stats, history = history, achievements = achievements, onBack = onBack)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,8 +48,10 @@ fun StatsScreen(onBack: () -> Unit) {
 internal fun StatsScreenContent(
     stats: PlayerStats,
     history: List<MatchRecord>,
+    achievements: Map<String, Long> = emptyMap(),
     onBack: () -> Unit
 ) {
+    var selectedAchievement by remember { mutableStateOf<Achievement?>(null) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -83,6 +90,12 @@ internal fun StatsScreenContent(
                 item { VsBotsCard(stats) }
             }
             item {
+                AchievementsSection(
+                    unlocked = achievements,
+                    onSelect = { selectedAchievement = it }
+                )
+            }
+            item {
                 Text(
                     stringResource(Res.string.stats_history_title),
                     style = MaterialTheme.typography.titleMedium,
@@ -103,6 +116,140 @@ internal fun StatsScreenContent(
             }
         }
     }
+
+    selectedAchievement?.let { achievement ->
+        AchievementDetailDialog(
+            achievement = achievement,
+            unlockedAt = achievements[achievement.name],
+            onDismiss = { selectedAchievement = null }
+        )
+    }
+}
+
+// ─── Achievements ──────────────────────────────────────────────────────────
+
+@Composable
+private fun AchievementsSection(
+    unlocked: Map<String, Long>,
+    onSelect: (Achievement) -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                stringResource(Res.string.achievements_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                stringResource(Res.string.achievements_progress, unlocked.size, Achievement.entries.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Achievement.entries.chunked(4).forEach { rowItems ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    rowItems.forEach { achievement ->
+                        AchievementBadge(
+                            achievement = achievement,
+                            isUnlocked = achievement.name in unlocked,
+                            onClick = { onSelect(achievement) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    // Pad the last row so badges keep a uniform width
+                    repeat(4 - rowItems.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AchievementBadge(
+    achievement: Achievement,
+    isUnlocked: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val ui = achievement.ui
+    val title = stringResource(ui.title)
+    val contentAlpha = if (isUnlocked) 1f else 0.35f
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (isUnlocked) LightGreen.copy(alpha = 0.12f)
+                else MaterialTheme.colorScheme.surfaceVariant
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(if (isUnlocked) ui.emoji else "🔒", fontSize = 24.sp)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            // Break two-word titles one-word-per-line ("First Victory" ->
+            // "First"/"Victory") so they fill both reserved lines instead of
+            // wrapping unpredictably by width. Badge-local on purpose — the
+            // same strings appear unbroken in the dialog and result card.
+            title.replace(' ', '\n'),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+            fontWeight = if (isUnlocked) FontWeight.Bold else FontWeight.Normal,
+            // Reserve two lines for every badge so one-word titles
+            // ("Veteran") get the same box height as two-line ones
+            minLines = 2,
+            maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun AchievementDetailDialog(
+    achievement: Achievement,
+    unlockedAt: Long?,
+    onDismiss: () -> Unit
+) {
+    val ui = achievement.ui
+    val now = remember { currentTimeMillis() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Text(if (unlockedAt != null) ui.emoji else "🔒", fontSize = 36.sp) },
+        title = {
+            Text(stringResource(ui.title), fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    stringResource(ui.description),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (unlockedAt != null) relativeDate(unlockedAt, now)
+                    else stringResource(Res.string.achievement_locked),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (unlockedAt != null) LightGreen
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.button_ok))
+            }
+        }
+    )
 }
 
 @Composable

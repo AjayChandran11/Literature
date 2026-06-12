@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cards.game.literature.model.currentTimeMillis
+import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.MatchRecord
 import com.cards.game.literature.stats.Outcome
 import com.cards.game.literature.stats.PlayerStats
@@ -49,6 +50,16 @@ private val veteranStats = PlayerStats(
     gamesByDifficulty = mapOf("EASY" to 333, "MEDIUM" to 108, "HARD" to 100),
     winsByDifficulty = mapOf("EASY" to 333, "MEDIUM" to 108, "HARD" to 100)
 )
+
+private val someAchievements: Map<String, Long> = mapOf(
+    Achievement.FIRST_WIN.name to 1L,
+    Achievement.HAT_TRICK.name to 2L,
+    Achievement.SOCIALITE.name to 3L,
+    Achievement.SHARP_CALLER.name to 4L
+)
+
+private val allAchievements: Map<String, Long> =
+    Achievement.entries.associate { it.name to 1L }
 
 private fun sampleHistory(count: Int): List<MatchRecord> {
     val now = currentTimeMillis()
@@ -105,19 +116,29 @@ private fun HomeStatsCardNarrowPreview() {
 
 // ---- Stats screen ----
 
-@Preview(showBackground = true, name = "Stats — typical", heightDp = 1400)
+@Preview(showBackground = true, name = "Stats — typical", heightDp = 1700)
 @Composable
 private fun StatsScreenPreview() {
     LiteratureTheme {
-        StatsScreenContent(stats = typicalStats, history = sampleHistory(8), onBack = {})
+        StatsScreenContent(
+            stats = typicalStats,
+            history = sampleHistory(8),
+            achievements = someAchievements,
+            onBack = {}
+        )
     }
 }
 
-@Preview(showBackground = true, name = "Stats — veteran, full history", heightDp = 2000)
+@Preview(showBackground = true, name = "Stats — veteran, full history", heightDp = 2300)
 @Composable
 private fun StatsScreenVeteranPreview() {
     LiteratureTheme {
-        StatsScreenContent(stats = veteranStats, history = sampleHistory(50), onBack = {})
+        StatsScreenContent(
+            stats = veteranStats,
+            history = sampleHistory(50),
+            achievements = allAchievements,
+            onBack = {}
+        )
     }
 }
 
@@ -129,10 +150,15 @@ private fun StatsScreenEmptyPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "Stats — dark mode", heightDp = 1400)
+@Preview(showBackground = true, name = "Stats — dark mode", heightDp = 1700)
 @Composable
 private fun StatsScreenDarkPreview() {
     LiteratureTheme(darkTheme = true) {
-        StatsScreenContent(stats = typicalStats, history = sampleHistory(8), onBack = {})
+        StatsScreenContent(
+            stats = typicalStats,
+            history = sampleHistory(8),
+            achievements = someAchievements,
+            onBack = {}
+        )
     }
 }

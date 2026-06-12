@@ -68,13 +68,18 @@ import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.model.Suit
+import androidx.compose.foundation.border
+import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.ui.game.GameLogEntry
+import com.cards.game.literature.ui.stats.ui
 import com.cards.game.literature.ui.theme.CardRed
+import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
 import com.cards.game.literature.ui.theme.LiteratureTheme
 import com.cards.game.literature.viewmodel.ResultUiState
 import com.cards.game.literature.viewmodel.ResultViewModel
 import literature.composeapp.generated.resources.Res
+import literature.composeapp.generated.resources.achievement_unlocked_banner
 import literature.composeapp.generated.resources.button_home
 import literature.composeapp.generated.resources.button_play_again
 import literature.composeapp.generated.resources.label_opponents
@@ -413,6 +418,28 @@ fun ResultScreenContent(
                 }
             }
 
+            // ── Achievement unlocks ───────────────────────────────────────
+            if (uiState.unlockedAchievements.isNotEmpty()) {
+                var achievementsVisible by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    delay(1200) // let the score count-up land first
+                    achievementsVisible = true
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                AnimatedVisibility(
+                    visible = achievementsVisible,
+                    enter = slideInVertically(
+                        initialOffsetY = { it / 3 },
+                        animationSpec = tween(450, easing = EaseOutBack)
+                    ) + scaleIn(
+                        initialScale = 0.8f,
+                        animationSpec = tween(450, easing = EaseOutBack)
+                    ) + fadeIn(animationSpec = tween(300))
+                ) {
+                    AchievementUnlockCard(uiState.unlockedAchievements)
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── Breakdown ─────────────────────────────────────────────────
@@ -502,6 +529,52 @@ fun ResultScreenContent(
     }
 }
 
+// ─── Achievement unlock card ───────────────────────────────────────────────
+
+@Composable
+private fun AchievementUnlockCard(achievements: List<Achievement>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(GoldAccent.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+            .border(1.5.dp, GoldAccent.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "⭐ " + stringResource(Res.string.achievement_unlocked_banner),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.secondary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        achievements.forEach { achievement ->
+            val ui = achievement.ui
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(ui.emoji, fontSize = 26.sp)
+                Column(modifier = Modifier.padding(start = 12.dp)) {
+                    Text(
+                        stringResource(ui.title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        stringResource(ui.description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
 // ─── Preview data ──────────────────────────────────────────────────────────
 
 private val previewBreakdown = listOf(
@@ -565,6 +638,22 @@ private fun PreviewResultWin() {
     LiteratureTheme {
         ResultScreenContent(
             uiState = previewWinState,
+            showLog = false,
+            onToggleLog = {},
+            onPlayAgain = {},
+            onGoHome = {}
+        )
+    }
+}
+
+@Preview(name = "Result — Win with achievements", showBackground = true)
+@Composable
+private fun PreviewResultWinWithAchievements() {
+    LiteratureTheme {
+        ResultScreenContent(
+            uiState = previewWinState.copy(
+                unlockedAchievements = listOf(Achievement.FIRST_WIN, Achievement.CLAIM_MASTER)
+            ),
             showLog = false,
             onToggleLog = {},
             onPlayAgain = {},

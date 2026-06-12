@@ -5,6 +5,7 @@
 
     <!-- Common buttons -->
     <string name="button_cancel">Cancel</string>
+    <string name="button_ok">OK</string>
     <string name="button_back">Back</string>
     <string name="button_leave">Leave</string>
     <string name="button_stay">Stay</string>
@@ -315,4 +316,33 @@
     <string name="stats_days_ago">%1$d days ago</string>
     <string name="cd_home_stats_card">View your stats</string>
     <string name="home_my_stats">My Stats</string>
+
+    <!-- Achievements -->
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_progress">%1$d / %2$d</string>
+    <string name="achievement_unlocked_banner">Achievement unlocked!</string>
+    <string name="achievement_locked">Locked</string>
+    <string name="cd_achievement_locked">%1$s — locked</string>
+    <string name="ach_first_win">First Victory</string>
+    <string name="ach_first_win_desc">Win your first game</string>
+    <string name="ach_hat_trick">Hat-Trick</string>
+    <string name="ach_hat_trick_desc">Win 3 games in a row</string>
+    <string name="ach_on_fire">On Fire</string>
+    <string name="ach_on_fire_desc">Win 5 games in a row</string>
+    <string name="ach_veteran">Veteran</string>
+    <string name="ach_veteran_desc">Play 25 games</string>
+    <string name="ach_centurion">Centurion</string>
+    <string name="ach_centurion_desc">Play 100 games</string>
+    <string name="ach_socialite">Socialite</string>
+    <string name="ach_socialite_desc">Play your first online game</string>
+    <string name="ach_online_champ">Online Champion</string>
+    <string name="ach_online_champ_desc">Win 10 online games</string>
+    <string name="ach_bot_slayer">Bot Slayer</string>
+    <string name="ach_bot_slayer_desc">Win a game against Hard bots</string>
+    <string name="ach_sharp_caller">Sharp Caller</string>
+    <string name="ach_sharp_caller_desc">Make 10 correct claims</string>
+    <string name="ach_perfect_game">Perfect Game</string>
+    <string name="ach_perfect_game_desc">Win a game where every ask succeeds (at least 5 asks)</string>
+    <string name="ach_claim_master">Claim Master</string>
+    <string name="ach_claim_master_desc">Make 3 correct claims in a single game</string>
 </resources>

@@ -11,7 +11,6 @@ import com.cards.game.literature.model.*
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.LocalGameRepository
 import com.cards.game.literature.repository.OnlineGameRepository
-import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.MatchRecord
 import com.cards.game.literature.stats.Outcome
 import com.cards.game.literature.stats.StatsStore
@@ -70,11 +69,6 @@ class GameViewModel(
 
     private val _trackerState = MutableStateFlow(CardTrackerState())
     val trackerState: StateFlow<CardTrackerState> = _trackerState.asStateFlow()
-
-    // Achievements unlocked by the game that just finished; the result screen
-    // consumes these for the unlock celebration.
-    private val _newAchievements = MutableStateFlow<List<Achievement>>(emptyList())
-    val newAchievements: StateFlow<List<Achievement>> = _newAchievements.asStateFlow()
 
     private val cardTracker = CardTracker()
     private var myPlayerId = overridePlayerId ?: "player_0"
@@ -151,11 +145,11 @@ class GameViewModel(
                 myClaimsCorrect = myClaimsCorrect
             )
         )
+        // Newly unlocked achievements travel to the result screen via
+        // StatsStore.pendingCelebration — this ViewModel is popped off the
+        // back stack before the result screen exists.
         if (result != null) {
             log.i { "Recorded ${outcome.name} for game ${state.gameId}, unlocked: ${result.newlyUnlocked}" }
-            if (result.newlyUnlocked.isNotEmpty()) {
-                _newAchievements.value = result.newlyUnlocked
-            }
         }
     }
 
