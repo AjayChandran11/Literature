@@ -312,10 +312,32 @@ class BotStrategy(private val cardTracker: CardTracker = CardTracker()) {
             }
         }
 
-        // Last resort: shouldn't normally reach here
-        val anyHalfSuit = bot.hand.first().let { DeckUtils.getHalfSuit(it) }
-        val card = DeckUtils.getAllCardsForHalfSuit(anyHalfSuit).first { it !in bot.hand }
-        return BotAction.Ask(targetId = opponent.id, card = card)
+        // Last resort: the bot's hand is made up entirely of complete half-suits, so
+        // there is no card it can legally ask for. Reachable when an Easy bot skips a
+        // certain claim (missClaimChance) and has no partial half-suit left to ask
+        // about. The only legal move is to claim a complete half-suit it fully holds —
+        // so do that instead of crashing on a non-existent "missing" card (the old
+        // `.first { it !in bot.hand }` threw NoSuchElementException here).
+        val completeHalfSuit = myActiveHalfSuits.firstOrNull { hs ->
+            DeckUtils.getAllCardsForHalfSuit(hs).all { it in bot.hand }
+        }
+        if (completeHalfSuit != null) {
+            return BotAction.Claim(
+                ClaimDeclaration(
+                    claimerId = bot.id,
+                    halfSuit = completeHalfSuit,
+                    cardAssignments = mapOf(bot.id to DeckUtils.getAllCardsForHalfSuit(completeHalfSuit))
+                )
+            )
+        }
+
+        // Defensive: with a non-empty hand a complete half-suit always exists above, so
+        // this is only reachable from a degenerate state (e.g. an empty hand). Pick any
+        // card the bot does not hold so we return a well-formed action and never throw.
+        val safeCard = myActiveHalfSuits.firstNotNullOfOrNull { hs ->
+            DeckUtils.getAllCardsForHalfSuit(hs).firstOrNull { it !in bot.hand }
+        } ?: DeckUtils.createFullDeck().first { it !in bot.hand }
+        return BotAction.Ask(targetId = opponent.id, card = safeCard)
     }
 
     /**

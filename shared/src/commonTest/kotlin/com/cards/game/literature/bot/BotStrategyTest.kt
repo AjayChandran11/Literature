@@ -139,6 +139,23 @@ class BotStrategyTest {
     }
 
     @Test
+    fun easyBotWithOnlyCompleteHalfSuitClaimsInsteadOfCrashing() {
+        // Regression: an Easy bot whose hand is only a complete half-suit used to crash
+        // in askSmartOpponent — when missClaimChance made it skip the certain claim it
+        // had no card left to legally ask for, and `.first { it !in bot.hand }` threw
+        // NoSuchElementException. The only legal move is to claim the complete half-suit.
+        val spadesLow = DeckUtils.getAllCardsForHalfSuit(HalfSuit.SPADES_LOW)
+        val state = makeState(botHand = spadesLow) // bot holds all 6 of SPADES_LOW, nothing else
+
+        // Loop so the random missClaimChance skip path (the crash) is exercised.
+        repeat(300) {
+            val action = strategy.decideMove(state, "p1", BotDifficulty.EASY)
+            assertIs<BotAction.Claim>(action) // never an illegal ask, never a crash
+            assertEquals(HalfSuit.SPADES_LOW, action.declaration.halfSuit)
+        }
+    }
+
+    @Test
     fun hardBotClaimsViaSameLogicAsmediumWhenCertain() {
         val spadesLow = DeckUtils.getAllCardsForHalfSuit(HalfSuit.SPADES_LOW)
         val botCards = spadesLow.take(3)

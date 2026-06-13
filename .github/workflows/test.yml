@@ -34,6 +34,46 @@ jobs:
       - name: Set up Gradle (with caching)
         uses: gradle/actions/setup-gradle@v4
 
+      # google-services.json is gitignored (real Firebase config stays off the
+      # repo). The Google Services plugin hard-fails without it, so CI builds
+      # against a placeholder with the correct package name. Compile-only —
+      # nothing here ever talks to Firebase.
+      - name: Create placeholder google-services.json
+        run: |
+          if [ ! -f composeApp/google-services.json ]; then
+            cat > composeApp/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "literature-ci-placeholder",
+              "storage_bucket": "literature-ci-placeholder.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.cards.game.literature"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
+
       - name: Run shared and server tests
         run: ./gradlew :shared:jvmTest :server:test
 

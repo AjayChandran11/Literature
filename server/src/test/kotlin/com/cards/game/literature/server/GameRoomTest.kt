@@ -233,4 +233,44 @@ class GameRoomTest {
         assertEquals(RoomPhase.IN_PROGRESS, room.phase)
         room.cleanup()
     }
+
+    // --- intentional leave: ghost-session regression (production bug) ---
+    // The LeaveGame handler nulls its IDs before closing the socket, so the
+    // connection's finally-block bookkeeping never runs for a leaver. The
+    // leave itself must mark the session gone, or the player stays
+    // "connected" on a dead socket — blocking room cleanup forever.
+
+    @Test
+    fun intentionalLeaveMarksSessionGone() = runBlocking {
+        val room = room()
+        room.addPlayer("Alice", isHost = true)
+        val bob = room.addPlayer("Bob")
+        room.startGame(fillWithBots = true)
+
+        room.handleIntentionalLeave(bob)
+
+        val session = room.getPlayerSession(bob)!!
+        assertFalse(session.isConnected, "leaver must not stay 'connected'")
+        assertNull(session.session, "dead socket must not be retained")
+        assertTrue(session.intentionalLeave)
+        room.cleanup()
+    }
+
+    @Test
+    fun roomIsAbandonedAfterEveryoneLeavesIntentionally() = runBlocking {
+        val room = room()
+        val alice = room.addPlayer("Alice", isHost = true)
+        val bob = room.addPlayer("Bob")
+        room.startGame(fillWithBots = true)
+
+        room.handleIntentionalLeave(bob)
+        room.handleIntentionalLeave(alice)
+
+        // Leavers carry no reconnect deadline — the room must be cleanable
+        assertTrue(
+            room.isAbandoned(),
+            "room with only intentional leavers must be sweepable (was leaked in production)"
+        )
+        room.cleanup()
+    }
 }
