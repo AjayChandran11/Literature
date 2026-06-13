@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,6 +30,7 @@ import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.ui.game.tutorial.TutorialState
 import com.cards.game.literature.ui.game.tutorial.TutorialStep
+import com.cards.game.literature.ui.theme.LightGreen
 import com.cards.game.literature.ui.theme.LiteratureTheme
 import com.cards.game.literature.viewmodel.GameUiState
 import com.cards.game.literature.viewmodel.PlayerInfo
@@ -46,48 +48,55 @@ enum class GameTab(val labelRes: StringResource, val icon: ImageVector) {
 
 @Composable
 fun TableTab(uiState: GameUiState, tutorialState: TutorialState? = null) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        // Opponents section — takes equal space
+    // The shared LastEventStrip (in the Scaffold's bottomBar) grows to 5 rows, which
+    // shrinks this tab's available height. The old layout distributed the sections by
+    // weight and never scrolled, so on a tall strip / small screen the fixed-size player
+    // avatars and the half-suit tracker got squeezed — clipping the card-count text and
+    // the tracker. Instead we let the content scroll: heightIn(min = maxHeight) plus
+    // Arrangement.SpaceBetween makes it FILL the viewport when there's room and SCROLL
+    // when there isn't. Fully fluid (driven by the real available height, no fixed sizes)
+    // and consistent with the Hand tab and the tablet side-by-side panel.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = maxHeight)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            SectionLabel(stringResource(Res.string.label_opponents_section))
-            OpponentRow(
-                opponents = uiState.opponents,
-                modifier = Modifier.onGloballyPositioned { coords ->
-                    tutorialState?.reportBounds(TutorialStep.PLAYERS, coords.boundsInRoot())
+            // Opponents
+            Column {
+                SectionLabel(stringResource(Res.string.label_opponents_section))
+                OpponentRow(
+                    opponents = uiState.opponents,
+                    modifier = Modifier.onGloballyPositioned { coords ->
+                        tutorialState?.reportBounds(TutorialStep.PLAYERS, coords.boundsInRoot())
+                    }
+                )
+            }
+
+            // Teammates
+            if (uiState.teammates.isNotEmpty()) {
+                Column {
+                    SectionLabel(stringResource(Res.string.label_teammates_section))
+                    TeammateRow(teammates = uiState.teammates)
                 }
-            )
-        }
+            }
 
-        // Teammates section — takes equal space
-        if (uiState.teammates.isNotEmpty()) {
+            // Half-suits
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
+                modifier = Modifier.onGloballyPositioned { coords ->
+                    tutorialState?.reportBounds(TutorialStep.HALF_SUITS, coords.boundsInRoot())
+                }
             ) {
-                SectionLabel(stringResource(Res.string.label_teammates_section))
-                TeammateRow(teammates = uiState.teammates)
+                SectionLabel(stringResource(Res.string.label_half_suits_section))
+                DeckTracker(
+                    statuses = uiState.halfSuitStatuses,
+                    myTeamId = uiState.myTeamId
+                )
+                Spacer(modifier = Modifier.height(4.dp))
             }
-        }
-
-        // Half-suits pinned at the bottom
-        Column(
-            modifier = Modifier.onGloballyPositioned { coords ->
-                tutorialState?.reportBounds(TutorialStep.HALF_SUITS, coords.boundsInRoot())
-            }
-        ) {
-            SectionLabel(stringResource(Res.string.label_half_suits_section))
-            DeckTracker(
-                statuses = uiState.halfSuitStatuses,
-                myTeamId = uiState.myTeamId
-            )
-            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
@@ -276,3 +285,99 @@ private fun PreviewHandTabEmpty() {
         HandTab(uiState = previewUiStateEmptyHand)
     }
 }
+
+// ─── TableTab squeeze previews ───────────────────────────────────────────────
+// These reproduce the real portrait screen budget — header on top, TableTab in the
+// content slot (outlined so you can see its bounds), then the LastEventStrip + nav +
+// action bars at the bottom — so you can verify the tab FILLS when roomy and SCROLLS
+// (never clips the card counts / tracker) when the 5-row strip eats the space.
+
+/** Mirrors LastEventStrip's surface + StripEntry rows so it consumes a realistic height. */
+@Composable
+private fun PreviewStripMock(rows: Int) {
+    if (rows <= 0) return
+    Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            repeat(rows) { i ->
+                Row(
+                    modifier = Modifier.padding(vertical = 3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text("✓", style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold, color = LightGreen)
+                    Text("Player ${i + 1} got 7♠ from Priya",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+    }
+}
+
+/** Approximates the bottom NavigationBar (tabs) + ActionButtons heights. */
+@Composable
+private fun PreviewBottomChromeMock() {
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Column {
+            Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
+                Text("[ Table | Hand ]  — nav bar",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Box(Modifier.fillMaxWidth().height(68.dp), contentAlignment = Alignment.Center) {
+                Text("[  Ask   |   Claim  ]  — action buttons",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TableTabPortraitHost(stripRows: Int) {
+    LiteratureTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize()) {
+                // Mock header (ScoreBar + turn indicator)
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Box(Modifier.fillMaxWidth().height(84.dp), contentAlignment = Alignment.Center) {
+                        Text("Score / Turn — header",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                // The real content slot — outlined to show where TableTab can clip/scroll
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    TableTab(uiState = previewUiStateWithCards)
+                }
+                PreviewStripMock(rows = stripRows)
+                PreviewBottomChromeMock()
+            }
+        }
+    }
+}
+
+@Preview(name = "Table · small phone · no strip", widthDp = 320, heightDp = 506, showBackground = true)
+@Composable
+private fun PreviewTableSmallNoStrip() = TableTabPortraitHost(stripRows = 0)
+
+@Preview(name = "Table · small phone · 5 strips", widthDp = 320, heightDp = 506, showBackground = true)
+@Composable
+private fun PreviewTableSmall5Strips() = TableTabPortraitHost(stripRows = 5)
+
+@Preview(name = "Table · large phone · no strip", widthDp = 412, heightDp = 915, showBackground = true)
+@Composable
+private fun PreviewTableLargeNoStrip() = TableTabPortraitHost(stripRows = 0)
+
+@Preview(name = "Table · large phone · 5 strips", widthDp = 412, heightDp = 915, showBackground = true)
+@Composable
+private fun PreviewTableLarge5Strips() = TableTabPortraitHost(stripRows = 5)
