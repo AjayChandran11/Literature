@@ -11,6 +11,9 @@ import com.cards.game.literature.model.*
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.LocalGameRepository
 import com.cards.game.literature.repository.OnlineGameRepository
+import com.cards.game.literature.stats.MatchRecord
+import com.cards.game.literature.stats.Outcome
+import com.cards.game.literature.stats.StatsStore
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -51,10 +54,13 @@ class GameViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        when (repository) {
-            is LocalGameRepository -> repository.cleanup()
-            is OnlineGameRepository -> repository.cleanup()
-        }
+        // Online: do NOT tear down the connection here. This ViewModel is cleared on the
+        // game→result navigation (popUpTo HOME), and disconnecting at that point killed the
+        // socket right as the result screen opened — which broke Rematch (the message never
+        // reached the server). The online connection is closed explicitly when the user
+        // leaves the result screen to Home (ResultViewModel.onCleared) or quits mid-game
+        // (leaveGame()); rematch keeps it alive.
+        if (repository is LocalGameRepository) repository.cleanup()
     }
 
     private val isOnline = repository is OnlineGameRepository
@@ -70,6 +76,16 @@ class GameViewModel(
     private val cardTracker = CardTracker()
     private var myPlayerId = overridePlayerId ?: "player_0"
 
+    // Per-game stat counters, tracked incrementally because the online
+    // GameState only carries the last ~20 events — totals can't be derived
+    // from the final state.
+    private var myAsks = 0
+    private var myAsksSuccessful = 0
+    private var myClaims = 0
+    private var myClaimsCorrect = 0
+    private var recordedGameId: String? = null
+    private var lastDifficulty: BotDifficulty? = null
+
     fun setPlayerId(playerId: String) {
         myPlayerId = playerId
     }
@@ -78,16 +94,75 @@ class GameViewModel(
         viewModelScope.launch {
             repository.gameState.filterNotNull().collect { state ->
                 updateUiState(state)
+                if (state.phase == GamePhase.FINISHED) {
+                    maybeRecordGame(state)
+                }
             }
         }
         viewModelScope.launch {
             repository.gameEvents.collect { event ->
                 _gameLog.update { it + event }
+                trackMyActions(event)
             }
         }
     }
 
+    private fun trackMyActions(event: GameEvent) {
+        when (event) {
+            is GameEvent.CardAsked -> if (event.askerId == myPlayerId) {
+                myAsks++
+                if (event.success) myAsksSuccessful++
+            }
+            is GameEvent.DeckClaimed -> if (event.claimerId == myPlayerId) {
+                myClaims++
+                if (event.correct) myClaimsCorrect++
+            }
+            else -> {}
+        }
+    }
+
+    private suspend fun maybeRecordGame(state: GameState) {
+        if (recordedGameId == state.gameId) return
+        recordedGameId = state.gameId
+
+        val myTeam = state.getTeamForPlayer(myPlayerId) ?: return
+        val opponentTeam = state.teams.firstOrNull { it.id != myTeam.id } ?: return
+        val outcome = when {
+            myTeam.score > opponentTeam.score -> Outcome.WIN
+            myTeam.score < opponentTeam.score -> Outcome.LOSS
+            else -> Outcome.DRAW
+        }
+        val result = StatsStore.recordGame(
+            gameId = state.gameId,
+            record = MatchRecord(
+                timestamp = currentTimeMillis(),
+                isOnline = isOnline,
+                playerCount = state.playerCount,
+                botDifficulty = if (isOnline) null else lastDifficulty?.name,
+                myScore = myTeam.score,
+                opponentScore = opponentTeam.score,
+                outcome = outcome,
+                myAsks = myAsks,
+                myAsksSuccessful = myAsksSuccessful,
+                myClaims = myClaims,
+                myClaimsCorrect = myClaimsCorrect
+            )
+        )
+        // Newly unlocked achievements travel to the result screen via
+        // StatsStore.pendingCelebration — this ViewModel is popped off the
+        // back stack before the result screen exists.
+        if (result != null) {
+            log.i { "Recorded ${outcome.name} for game ${state.gameId}, unlocked: ${result.newlyUnlocked}" }
+        }
+    }
+
     fun startGame(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) {
+        lastDifficulty = difficulty
+        myAsks = 0
+        myAsksSuccessful = 0
+        myClaims = 0
+        myClaimsCorrect = 0
+        recordedGameId = null
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {

@@ -20,12 +20,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.preferences.TutorialPrefs
+import com.cards.game.literature.stats.PlayerStats
+import com.cards.game.literature.stats.StatsStore
+import com.cards.game.literature.ui.stats.StreakValue
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
 import com.cards.game.literature.ui.theme.CardRed
 import literature.composeapp.generated.resources.Res
@@ -37,7 +43,8 @@ import org.koin.compose.koinInject
 @Composable
 fun HomeScreen(
     onStartGame: (playerName: String, playerCount: Int, difficulty: BotDifficulty) -> Unit,
-    onPlayOnline: (playerName: String) -> Unit = {}
+    onPlayOnline: (playerName: String) -> Unit = {},
+    onOpenStats: () -> Unit = {}
 ) {
     val session = koinInject<SessionStore>()
     var playerName by rememberSaveable { mutableStateOf(session.playerName) }
@@ -97,7 +104,15 @@ fun HomeScreen(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(48.dp))
+
+            val stats by StatsStore.stats.collectAsState()
+            if (stats.gamesPlayed > 0) {
+                Spacer(modifier = Modifier.height(24.dp))
+                HomeStatsCard(stats = stats)
+                Spacer(modifier = Modifier.height(24.dp))
+            } else {
+                Spacer(modifier = Modifier.height(48.dp))
+            }
 
             OutlinedTextField(
                 value = playerName,
@@ -153,19 +168,35 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            TextButton(onClick = { showSettingsSheet = true }) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    stringResource(Res.string.home_settings),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onOpenStats) {
+                    Icon(
+                        imageVector = Icons.Filled.BarChart,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        stringResource(Res.string.home_my_stats),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(onClick = { showSettingsSheet = true }) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        stringResource(Res.string.home_settings),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -217,6 +248,63 @@ fun HomeScreen(
                     Text(stringResource(Res.string.dialog_online_gate_continue))
                 }
             }
+        )
+    }
+}
+
+@Composable
+internal fun HomeStatsCard(stats: PlayerStats) {
+    val cd = stringResource(Res.string.cd_home_stats_card)
+    // Not clickable by design — stats are opened via the "My Stats" button only.
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(0.8f)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .semantics { contentDescription = cd },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HomeStatMini("${stats.gamesPlayed}", stringResource(Res.string.stats_games), Modifier.weight(1f))
+        HomeStatMini("${(stats.winRate * 100).toInt()}%", stringResource(Res.string.stats_wins), Modifier.weight(1f))
+        HomeStreakMini(stats, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun HomeStreakMini(stats: PlayerStats, modifier: Modifier = Modifier) {
+    // Adaptive, no guilt-trip: show the live streak when active, else fall back to the
+    // best streak (a proud number rather than a "-"). The Home strip only shows once
+    // gamesPlayed > 0, so best is always >= 1 here and "-" never appears on Home.
+    val current = stats.displayedDailyStreak()
+    val showingBest = current == 0 && stats.bestDailyStreak > 0
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        StreakValue(
+            streak = if (current > 0) current else stats.bestDailyStreak,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            stringResource(if (showingBest) Res.string.home_streak_best else Res.string.stats_current_streak),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun HomeStatMini(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

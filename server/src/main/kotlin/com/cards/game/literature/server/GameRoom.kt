@@ -39,7 +39,10 @@ class GameRoom(
 
     var phase: RoomPhase = RoomPhase.WAITING
         private set
-    val createdAt: Long = System.currentTimeMillis()
+    // var: reset on rematch so the 30-min stale-waiting-room cleanup doesn't
+    // measure from the room's original creation
+    var createdAt: Long = System.currentTimeMillis()
+        private set
     var finishedAt: Long = 0L
         private set
 
@@ -78,6 +81,9 @@ class GameRoom(
     }
 
     fun getPlayerSession(playerId: String): PlayerSession? = players[playerId]
+
+    /** Test visibility: lets server tests drive a real game to completion. */
+    internal val currentPlayerId: String? get() = gameState?.currentPlayer?.id
 
     fun getHumanPlayerCount(): Int = players.size
 
@@ -318,6 +324,46 @@ class GameRoom(
         }
     }
 
+    /**
+     * Host-initiated rematch: returns a FINISHED room to WAITING with the
+     * same connected players and team assignments. Disconnected players are
+     * dropped (their seats free up); bots are implicitly dropped because the
+     * next startGame() refills them.
+     */
+    suspend fun resetForRematch(): Boolean {
+        mutex.withLock {
+            if (phase != RoomPhase.FINISHED) return false
+
+            turnTimeoutJob?.cancel()
+            disconnectJobs.values.forEach { it.cancel() }
+            disconnectJobs.clear()
+            pendingReclaims.clear()
+            lastAskerId = null
+            botScope?.cancel()
+            botScope = null
+            gameState = null
+            finishedAt = 0L
+
+            // Free the seats of players who are gone
+            players.values.filter { !it.isConnected }
+                .map { it.playerId }
+                .forEach { removePlayer(it) }
+
+            phase = RoomPhase.WAITING
+            createdAt = System.currentTimeMillis()
+        }
+        log.info("[{}] Rematch — room reset to waiting with {} player(s)", roomCode, players.size)
+
+        // v2+ clients get the navigation signal; old clients can't decode
+        // unknown message types, so they only get the RoomUpdate below.
+        val state = toRoomState()
+        players.values.filter { it.isConnected && it.protocolVersion >= 2 }.forEach { session ->
+            session.send(ServerMessage.RematchStarted(state))
+        }
+        broadcastRoomUpdate()
+        return true
+    }
+
     suspend fun handleIntentionalLeave(playerId: String) {
         val playerSession = players[playerId] ?: return
         playerSession.intentionalLeave = true
@@ -402,7 +448,16 @@ class GameRoom(
             // Broadcast updated views to all
             broadcastGameViews()
         } else {
-            session.send(ServerMessage.RoomUpdate(toRoomState()))
+            val roomState = toRoomState()
+            session.send(ServerMessage.RoomUpdate(roomState))
+            // If the room was reset for a rematch while this player was disconnected, they
+            // missed the one-shot RematchStarted broadcast. Re-send it on reconnect (v2+ only
+            // — older clients can't decode it) so a player stranded on the result screen
+            // navigates back to the waiting room. Harmless for a normal waiting-room
+            // reconnect: a client that isn't on the result screen simply ignores it.
+            if (phase == RoomPhase.WAITING && session.protocolVersion >= 2) {
+                session.send(ServerMessage.RematchStarted(roomState))
+            }
         }
         return true
     }

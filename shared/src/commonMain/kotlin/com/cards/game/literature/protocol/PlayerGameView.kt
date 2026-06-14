@@ -12,7 +12,11 @@ data class PlayerGameView(
     val currentPlayerId: String,
     val phase: GamePhase,
     val halfSuitStatuses: List<HalfSuitStatus>,
-    val recentEvents: List<GameEvent>
+    val recentEvents: List<GameEvent>,
+    /** Server-issued unique id for THIS game; lets the client de-dup stats per match
+     *  (a rematch reuses the room code, so the room code alone is not unique). Defaulted
+     *  for back-compat: older servers omit it and the client falls back to the room code. */
+    val gameId: String = ""
 )
 
 @Serializable
@@ -53,6 +57,7 @@ fun GameState.toPlayerView(
         currentPlayerId = currentPlayer.id,
         phase = phase,
         halfSuitStatuses = halfSuitStatuses,
-        recentEvents = events.takeLast(20)
+        recentEvents = events.takeLast(20),
+        gameId = this.gameId
     )
 }

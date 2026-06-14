@@ -63,6 +63,11 @@ class OnlineGameRepository(
     )
     val reactions: Flow<ServerMessage.ReactionReceived> = _reactions.asSharedFlow()
 
+    // Fired when the host resets the room for a rematch — the result screen
+    // navigates everyone back to the waiting room.
+    private val _rematchStarted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val rematchStarted: Flow<Unit> = _rematchStarted.asSharedFlow()
+
     private var webSocketSession: WebSocketSession? = null
     private var connectionJob: Job? = null
     private var autoReconnectJob: Job? = null
@@ -160,6 +165,10 @@ class OnlineGameRepository(
         sendMessage(ClientMessage.SendReaction(reaction))
     }
 
+    suspend fun requestRematch() {
+        sendMessage(ClientMessage.Rematch)
+    }
+
     override suspend fun createGame(playerName: String, playerCount: Int, difficulty: BotDifficulty): GameState {
         // Not used for online mode
         throw UnsupportedOperationException("Use createRoom/joinRoom for online play")
@@ -187,6 +196,16 @@ class OnlineGameRepository(
         sendMessage(ClientMessage.LeaveGame)
         disconnect()
         reset()
+    }
+
+    /**
+     * Fire-and-forget leave for use from a ViewModel's onCleared (where the caller's scope
+     * is being cancelled): tells the server, disconnects, and clears identity via reset() so
+     * the NetworkMonitor auto-reconnect can't re-attach to the abandoned room after a blip.
+     * Runs on the repository's app-lifetime scope.
+     */
+    fun leaveRoomAndReset() {
+        scope.launch { leaveRoom() }
     }
 
     private fun reset() {
@@ -403,6 +422,18 @@ class OnlineGameRepository(
             is ServerMessage.ReactionReceived -> {
                 _reactions.emit(message)
             }
+            is ServerMessage.RematchStarted -> {
+                log.i { "Rematch started for room ${message.room.roomCode}" }
+                // Clear game state BEFORE updating the room: the waiting room
+                // auto-navigates to the game when gameState is non-null, so a
+                // stale FINISHED state would bounce players straight back out.
+                _gameState.value = null
+                _reconnectCountdowns.value = emptyMap()
+                lastSeenEventTimestamp = 0L
+                needsEventReplay.value = false
+                _roomState.value = message.room
+                _rematchStarted.tryEmit(Unit)
+            }
         }
     }
 
@@ -436,7 +467,9 @@ class OnlineGameRepository(
             .coerceAtLeast(0)
 
         val syntheticState = GameState(
-            gameId = "online_${roomCode}",
+            // Server-issued per-match id (unique across rematches in the same room); fall
+            // back to the room code only if talking to an older server that omits it.
+            gameId = view.gameId.ifBlank { "online_${roomCode}" },
             players = players,
             teams = view.teams,
             currentPlayerIndex = currentPlayerIndex,

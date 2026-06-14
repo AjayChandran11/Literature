@@ -122,11 +122,13 @@
             </div>
             <h1>Privacy Policy</h1>
             <p class="subtitle">Literature — The Classic Card Game</p>
-            <span class="updated">Last updated: March 20, 2026</span>
+            <span class="updated">Last updated: June 14, 2026</span>
         </header>
 
         <div class="highlight-box">
-            Literature does not require account registration and does not sell or share your personal data with third parties.
+            Literature does not require account registration and does not sell your personal data.
+            We use Google Firebase for crash reporting and basic, anonymous usage analytics to keep
+            the app stable and improve it — details are below.
         </div>
 
         <section>
@@ -135,7 +137,7 @@
                 This Privacy Policy describes how Literature ("the app", "we") handles information
                 when you use the app on your Android device. By using Literature, you agree to
                 the practices described below. We process data based on legitimate interest to
-                ensure app stability and functionality.
+                ensure app stability and functionality, and to understand how the app is used.
             </p>
         </section>
 
@@ -159,6 +161,14 @@
                     information (stack trace, device model, Android version, app version) is
                     automatically sent to Firebase Crashlytics. This data does not include your
                     name, location, or any personally identifiable information.
+                </li>
+                <li>
+                    <strong>Usage &amp; analytics data</strong> — the app uses Google Firebase
+                    Analytics to collect anonymous, aggregated information about how the app is
+                    used (for example app opens, screens viewed, session length, and basic
+                    device/OS details), together with a Firebase-generated app-instance
+                    identifier. This helps us see which features are used and improve the game.
+                    It is not linked to your name, and the advertising identifier is disabled.
                 </li>
             </ul>
         </section>
@@ -210,6 +220,15 @@
                     or regains connectivity so the app can automatically attempt to reconnect
                     during an online game session.
                 </li>
+                <li>
+                    <strong>Vibration</strong> — used for haptic feedback during gameplay
+                    (for example on your turn or when a deck is claimed), when haptics are enabled.
+                </li>
+                <li>
+                    <strong>Notifications</strong> — used to show local notifications on your
+                    device, such as when it becomes your turn or when a game starts or ends.
+                    These are generated on your device; no data is sent anywhere to deliver them.
+                </li>
             </ul>
             <p>No other device permissions (camera, microphone, contacts, storage, location) are requested or used.</p>
         </section>
@@ -218,31 +237,44 @@
             <h2>7. Security</h2>
             <p>
                 All data transmitted between the app and our game server is encrypted in transit
-                using TLS (WSS protocol). Crash reports sent to Firebase Crashlytics are also
-                transmitted over HTTPS. We do not store any personal data on our servers beyond
-                the active game session.
+                using TLS (WSS protocol). Diagnostic and usage data sent to Google Firebase
+                (Crashlytics and Analytics) is also transmitted over HTTPS. We do not store any
+                personal data on our servers beyond the active game session.
             </p>
         </section>
 
         <section>
             <h2>8. Third-Party Services</h2>
-            <p>The app uses the following third-party service:</p>
+            <p>The app uses the following third-party services, both provided by Google Firebase:</p>
             <ul>
                 <li>
                     <strong>Firebase Crashlytics (Google)</strong> — used for automated crash
                     reporting to help us identify and fix bugs. Firebase Crashlytics may collect
                     device information such as device model, OS version, and crash logs.
-                    This information does not directly identify you. You can review Google's privacy practices at
-                    <a href="https://policies.google.com/privacy" target="_blank">policies.google.com/privacy</a>.
+                    This information does not directly identify you.
+                </li>
+                <li>
+                    <strong>Firebase Analytics (Google)</strong> — used to collect anonymous,
+                    aggregated usage statistics (such as app opens, screen views, session length,
+                    device/OS information, and a Firebase app-instance identifier) so we can
+                    understand how the app is used and improve it. The advertising identifier is
+                    disabled, and this information does not directly identify you.
                 </li>
             </ul>
+            <p>
+                You can review Google's privacy practices at
+                <a href="https://policies.google.com/privacy" target="_blank">policies.google.com/privacy</a>
+                and Google's Firebase privacy information at
+                <a href="https://firebase.google.com/support/privacy" target="_blank">firebase.google.com/support/privacy</a>.
+            </p>
         </section>
 
         <section>
             <h2>9. Data Sharing</h2>
             <p>
-                We do not sell, rent, or share your information with any third party, except
-                as described in Section 8 (Firebase Crashlytics, solely for crash diagnostics).
+                We do not sell or rent your information. The only data shared with a third party
+                is the limited diagnostic and usage data sent to Google Firebase (Crashlytics and
+                Analytics) described in Section 8, used solely to keep the app stable and improve it.
             </p>
         </section>
 
@@ -251,7 +283,8 @@
             <ul>
                 <li><strong>Player name &amp; gameplay data</strong> — retained only for the duration of the active game session, then permanently deleted.</li>
                 <li><strong>Crash reports</strong> — retained by Firebase Crashlytics for up to 90 days per their standard policy.</li>
-                <li><strong>Onboarding preference</strong> — a single flag indicating whether you have completed the onboarding is stored locally on your device. It contains no personal information and can be cleared by uninstalling the app.</li>
+                <li><strong>On-device data</strong> — your chosen player name, gameplay statistics, match history (most recent games), achievements, daily streak, and app settings/onboarding state are stored only on your device. This data contains no personally identifying information and is removed when you uninstall the app.</li>
+                <li><strong>Usage analytics</strong> — retained by Google Firebase Analytics in accordance with Google's standard data-retention settings.</li>
             </ul>
         </section>
 
