@@ -254,7 +254,7 @@ private fun AchievementDetailDialog(
 
 @Composable
 private fun OverviewTiles(stats: PlayerStats) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         StatTile(
             value = "${stats.gamesPlayed}",
             label = stringResource(Res.string.stats_games),
@@ -275,7 +275,7 @@ private fun OverviewTiles(stats: PlayerStats) {
 
 @Composable
 private fun StreakRow(stats: PlayerStats) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         StatTile(
             value = "🔥 ${stats.currentStreak}",
             label = stringResource(Res.string.stats_current_streak),
@@ -291,7 +291,7 @@ private fun StreakRow(stats: PlayerStats) {
 
 @Composable
 private fun SkillRow(stats: PlayerStats) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         StatTile(
             value = if (stats.totalAsks == 0) "—" else stats.askSuccessRate.asPercent(),
             label = stringResource(Res.string.stats_ask_success),

@@ -107,7 +107,7 @@ fun HomeScreen(
             val stats by StatsStore.stats.collectAsState()
             if (stats.gamesPlayed > 0) {
                 Spacer(modifier = Modifier.height(24.dp))
-                HomeStatsCard(stats = stats, onClick = onOpenStats)
+                HomeStatsCard(stats = stats)
                 Spacer(modifier = Modifier.height(24.dp))
             } else {
                 Spacer(modifier = Modifier.height(48.dp))
@@ -168,20 +168,6 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { showSettingsSheet = true }) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        stringResource(Res.string.home_settings),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
                 TextButton(onClick = onOpenStats) {
                     Icon(
                         imageVector = Icons.Filled.BarChart,
@@ -192,6 +178,20 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         stringResource(Res.string.home_my_stats),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(onClick = { showSettingsSheet = true }) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        stringResource(Res.string.home_settings),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -252,14 +252,14 @@ fun HomeScreen(
 }
 
 @Composable
-internal fun HomeStatsCard(stats: PlayerStats, onClick: () -> Unit) {
+internal fun HomeStatsCard(stats: PlayerStats) {
     val cd = stringResource(Res.string.cd_home_stats_card)
+    // Not clickable by design — stats are opened via the "My Stats" button only.
     Row(
         modifier = Modifier
             .fillMaxWidth(0.8f)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .semantics { contentDescription = cd },
         verticalAlignment = Alignment.CenterVertically

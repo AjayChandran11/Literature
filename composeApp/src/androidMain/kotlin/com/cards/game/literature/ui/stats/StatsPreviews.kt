@@ -89,7 +89,7 @@ private fun sampleHistory(count: Int): List<MatchRecord> {
 private fun HomeStatsCardPreview() {
     LiteratureTheme {
         Surface {
-            HomeStatsCard(stats = typicalStats, onClick = {})
+            HomeStatsCard(stats = typicalStats)
         }
     }
 }
@@ -99,7 +99,7 @@ private fun HomeStatsCardPreview() {
 private fun HomeStatsCardStressPreview() {
     LiteratureTheme {
         Surface(modifier = Modifier.padding(8.dp)) {
-            HomeStatsCard(stats = veteranStats, onClick = {})
+            HomeStatsCard(stats = veteranStats)
         }
     }
 }
@@ -109,7 +109,7 @@ private fun HomeStatsCardStressPreview() {
 private fun HomeStatsCardNarrowPreview() {
     LiteratureTheme {
         Surface {
-            HomeStatsCard(stats = veteranStats, onClick = {})
+            HomeStatsCard(stats = veteranStats)
         }
     }
 }
