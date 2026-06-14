@@ -448,7 +448,16 @@ class GameRoom(
             // Broadcast updated views to all
             broadcastGameViews()
         } else {
-            session.send(ServerMessage.RoomUpdate(toRoomState()))
+            val roomState = toRoomState()
+            session.send(ServerMessage.RoomUpdate(roomState))
+            // If the room was reset for a rematch while this player was disconnected, they
+            // missed the one-shot RematchStarted broadcast. Re-send it on reconnect (v2+ only
+            // — older clients can't decode it) so a player stranded on the result screen
+            // navigates back to the waiting room. Harmless for a normal waiting-room
+            // reconnect: a client that isn't on the result screen simply ignores it.
+            if (phase == RoomPhase.WAITING && session.protocolVersion >= 2) {
+                session.send(ServerMessage.RematchStarted(roomState))
+            }
         }
         return true
     }
