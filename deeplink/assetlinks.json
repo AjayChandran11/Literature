@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.cards.game.literature",
+      "sha256_cert_fingerprints": [
+        "2D:9C:6F:86:7D:01:07:EC:07:5E:8A:99:ED:64:B6:E4:9D:B0:D6:8E:B3:ED:0C:6F:55:E3:69:DC:9E:D8:08:FC",
+        "EA:4B:54:05:35:6E:CF:91:1B:DE:33:F1:8D:72:00:6F:65:9D:62:06:35:9E:D8:81:08:8B:6C:5C:0C:49:0D:0E"
+      ]
+    }
+  }
+]

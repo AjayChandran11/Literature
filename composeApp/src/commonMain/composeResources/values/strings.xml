@@ -41,6 +41,13 @@
     <string name="home_new_game">New Game</string>
     <string name="home_play_online">Play Online</string>
 
+    <!-- Room invite (deep link) -->
+    <string name="home_invite_title">You're invited!</string>
+    <string name="home_invite_room_code">Room %1$s</string>
+    <string name="home_invite_hint">Enter your name to join</string>
+    <string name="home_invite_join">Join Game</string>
+    <string name="cd_dismiss_invite">Dismiss invite</string>
+
     <!-- Game Setup Dialog -->
     <string name="game_setup_title">Game Setup</string>
     <string name="game_setup_players_question">How many players?</string>
@@ -61,6 +68,8 @@
     <string name="waiting_room_title">Waiting Room</string>
     <string name="waiting_room_code_label">Room Code</string>
     <string name="waiting_room_share_code">Share this code with friends</string>
+    <string name="waiting_room_invite">Invite Friends</string>
+    <string name="invite_share_text">Join my Literature game! 🃏\nRoom code: %1$s\n%2$s</string>
     <string name="waiting_room_players_count">Players (%1$d/%2$d)</string>
     <string name="waiting_room_team_1">Team 1</string>
     <string name="waiting_room_team_2">Team 2</string>

@@ -22,10 +22,35 @@
         <activity
             android:exported="true"
             android:name=".MainActivity"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Literature.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Verified HTTPS App Link: room invites. Auto-opens the app when installed
+                 (verification reads https://ajaychandran11.github.io/.well-known/assetlinks.json).
+                 Non-installers land on join.html → Play Store. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="ajaychandran11.github.io"
+                    android:pathPrefix="/Literature/join" />
+            </intent-filter>
+
+            <!-- Custom scheme fallback, used by join.html's "Open in app" button and by
+                 chat apps that strip https deep links. No verification, app-only. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="literature"
+                    android:host="join" />
             </intent-filter>
         </activity>
     </application>

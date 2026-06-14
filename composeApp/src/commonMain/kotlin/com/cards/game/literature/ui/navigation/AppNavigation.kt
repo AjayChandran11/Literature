@@ -1,9 +1,11 @@
 package com.cards.game.literature.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.ui.game.GameBoardScreen
@@ -25,12 +27,14 @@ object Routes {
     const val ONLINE_GAME = "online_game"
     const val RESULT = "result"
     const val RESULT_ONLINE = "result_online"
-    const val LOBBY = "lobby/{playerName}"
+    const val LOBBY = "lobby/{playerName}?room={roomCode}"
     const val WAITING_ROOM = "waiting_room/{roomCode}"
     const val STATS = "stats"
 
     fun game(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) = "game/$playerName/$playerCount/${difficulty.name}"
     fun lobby(playerName: String) = "lobby/$playerName"
+    // Deep-link invite: lands in the lobby with the room code prefilled to auto-join.
+    fun lobby(playerName: String, roomCode: String) = "lobby/$playerName?room=$roomCode"
     fun waitingRoom(roomCode: String) = "waiting_room/$roomCode"
 }
 
@@ -57,6 +61,9 @@ fun AppNavigation() {
                 },
                 onPlayOnline = { playerName ->
                     navController.navigate(Routes.lobby(playerName))
+                },
+                onJoinRoom = { playerName, roomCode ->
+                    navController.navigate(Routes.lobby(playerName, roomCode))
                 },
                 onOpenStats = {
                     navController.navigate(Routes.STATS)
@@ -88,10 +95,21 @@ fun AppNavigation() {
                 }
             )
         }
-        composable(Routes.LOBBY) { backStackEntry ->
+        composable(
+            Routes.LOBBY,
+            arguments = listOf(
+                navArgument("roomCode") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
             val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
+            val initialRoomCode = backStackEntry.arguments?.getString("roomCode")
             LobbyScreen(
                 playerName = playerName,
+                initialRoomCode = initialRoomCode,
                 onNavigateToWaitingRoom = { roomCode ->
                     navController.navigate(Routes.waitingRoom(roomCode)) {
                         popUpTo(Routes.lobby(playerName)) { inclusive = true }
