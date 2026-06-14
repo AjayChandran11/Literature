@@ -198,6 +198,16 @@ class OnlineGameRepository(
         reset()
     }
 
+    /**
+     * Fire-and-forget leave for use from a ViewModel's onCleared (where the caller's scope
+     * is being cancelled): tells the server, disconnects, and clears identity via reset() so
+     * the NetworkMonitor auto-reconnect can't re-attach to the abandoned room after a blip.
+     * Runs on the repository's app-lifetime scope.
+     */
+    fun leaveRoomAndReset() {
+        scope.launch { leaveRoom() }
+    }
+
     private fun reset() {
         _gameState.value = null
         _roomState.value = null
@@ -457,7 +467,9 @@ class OnlineGameRepository(
             .coerceAtLeast(0)
 
         val syntheticState = GameState(
-            gameId = "online_${roomCode}",
+            // Server-issued per-match id (unique across rematches in the same room); fall
+            // back to the room code only if talking to an older server that omits it.
+            gameId = view.gameId.ifBlank { "online_${roomCode}" },
             players = players,
             teams = view.teams,
             currentPlayerIndex = currentPlayerIndex,

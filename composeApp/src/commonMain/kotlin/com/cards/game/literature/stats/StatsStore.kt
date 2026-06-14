@@ -15,6 +15,12 @@ data class GameRecordResult(
     val newlyUnlocked: List<Achievement>
 )
 
+/** Achievements unlocked by a specific game, awaiting their result-screen celebration. */
+data class PendingCelebration(
+    val gameId: String,
+    val achievements: List<Achievement>
+)
+
 /**
  * Loads, updates, and persists the local player's stats, match history,
  * and achievement unlocks. Pure aggregation/evaluation logic lives in
@@ -43,13 +49,8 @@ object StatsStore {
      * because the recording GameViewModel is popped off the back stack
      * before the result screen's ViewModel exists.
      */
-    private val _pendingCelebration = MutableStateFlow<List<Achievement>>(emptyList())
-    val pendingCelebration: StateFlow<List<Achievement>> get() = _pendingCelebration.asStateFlow()
-
-    /** Called by the result screen once it has displayed the unlocks. */
-    fun clearPendingCelebration() {
-        _pendingCelebration.value = emptyList()
-    }
+    private val _pendingCelebration = MutableStateFlow<PendingCelebration?>(null)
+    val pendingCelebration: StateFlow<PendingCelebration?> get() = _pendingCelebration.asStateFlow()
 
     /**
      * Folds a finished game into stats/history and evaluates achievements,
@@ -79,8 +80,11 @@ object StatsStore {
         StatsPrefs.setHistoryJson(json.encodeToString(updatedHistory))
         if (newlyUnlocked.isNotEmpty()) {
             StatsPrefs.setAchievementsJson(json.encodeToString(updatedAchievements))
-            _pendingCelebration.value = newlyUnlocked
         }
+        // Scoped to gameId and set unconditionally (even when empty) so a stale celebration
+        // can't leak onto a later game's result screen, and a result-screen recreation
+        // re-reads the matching payload instead of losing it.
+        _pendingCelebration.value = PendingCelebration(gameId, newlyUnlocked)
         GameRecordResult(updatedStats, newlyUnlocked)
     }
 

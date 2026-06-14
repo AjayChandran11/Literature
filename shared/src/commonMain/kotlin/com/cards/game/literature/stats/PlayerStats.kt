@@ -39,7 +39,7 @@ data class PlayerStats(
      * Missing a full day breaks it (0) even before the next game is played.
      */
     fun displayedDailyStreak(today: Long = currentEpochDay()): Int =
-        if (lastPlayedEpochDay != 0L && today - lastPlayedEpochDay <= 1) currentDailyStreak else 0
+        if (lastPlayedEpochDay != 0L && (today - lastPlayedEpochDay) in 0..1) currentDailyStreak else 0
 
     /** Returns a new [PlayerStats] with [record] folded in. Pure — no I/O. */
     fun applying(record: MatchRecord): PlayerStats {

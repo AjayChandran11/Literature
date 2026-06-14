@@ -39,6 +39,10 @@ class ResultViewModel(
 
     private val onlineRepository = repository as? OnlineGameRepository
 
+    // Identifies THIS game's pending celebration so a stale one can't leak onto a later
+    // game's result screen (captured at construction — the result screen shows a FINISHED game).
+    private val myGameId: String? = repository.gameState.value?.gameId
+
     private val _uiState = MutableStateFlow(ResultUiState())
     val uiState: StateFlow<ResultUiState> = _uiState.asStateFlow()
 
@@ -64,14 +68,15 @@ class ResultViewModel(
         super.onCleared()
         // Leaving the result screen to Home ends the online session. The game→result
         // transition deliberately keeps the socket open (so Rematch works), so we close it
-        // here on a genuine exit. On a rematch we navigate to the waiting room instead and
-        // must keep the connection — hence the guard.
-        if (!isRematching) onlineRepository?.cleanup()
+        // here on a genuine exit — leaveRoomAndReset() also tells the server and clears the
+        // repo identity so a network blip can't auto-reconnect us to the abandoned room. On a
+        // rematch we navigate to the waiting room instead and must keep the connection.
+        if (!isRematching) onlineRepository?.leaveRoomAndReset()
     }
 
     init {
         // Intercept the repo's rematch signal so isRematching is set BEFORE the result
-        // screen navigates away (onCleared relies on it to keep the connection).
+        // screen navigates away (onCleared relies on it to keep the connection alive).
         viewModelScope.launch {
             onlineRepository?.rematchStarted?.collect {
                 isRematching = true
@@ -99,14 +104,13 @@ class ResultViewModel(
             )
         }
 
-        // Collect (rather than read once) — game recording may still be
-        // in flight when this ViewModel is created. Once displayed, the
-        // unlocks stick to this screen's state and the store is cleared.
+        // Collect (rather than read once) — game recording may still be in flight when this
+        // ViewModel is created. Accept only the celebration for THIS game (gameId match), so a
+        // stale unlock can't leak onto a later game and a screen recreation re-reads it.
         viewModelScope.launch {
-            StatsStore.pendingCelebration.collect { unlocked ->
-                if (unlocked.isNotEmpty()) {
-                    _uiState.update { it.copy(unlockedAchievements = unlocked) }
-                    StatsStore.clearPendingCelebration()
+            StatsStore.pendingCelebration.collect { pending ->
+                if (pending != null && pending.gameId == myGameId && pending.achievements.isNotEmpty()) {
+                    _uiState.update { it.copy(unlockedAchievements = pending.achievements) }
                 }
             }
         }
