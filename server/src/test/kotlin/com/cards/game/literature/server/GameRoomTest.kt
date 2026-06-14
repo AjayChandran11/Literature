@@ -1,5 +1,8 @@
 package com.cards.game.literature.server
 
+import com.cards.game.literature.logic.DeckUtils
+import com.cards.game.literature.model.ClaimDeclaration
+import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.protocol.RoomPhase
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -167,6 +170,68 @@ class GameRoomTest {
         room.handleDisconnect(bob)
 
         assertEquals(1, room.getHumanPlayerCount())
+    }
+
+    @Test
+    fun rematchIsRejectedUnlessGameFinished() = runBlocking {
+        val room = room()
+        room.addPlayer("Alice", isHost = true)
+
+        // WAITING — nothing to rematch
+        assertFalse(room.resetForRematch())
+        assertEquals(RoomPhase.WAITING, room.phase)
+
+        // IN_PROGRESS — game must finish first
+        room.startGame(fillWithBots = true)
+        assertFalse(room.resetForRematch())
+        assertEquals(RoomPhase.IN_PROGRESS, room.phase)
+        room.cleanup()
+    }
+
+    /** Drives a real 4-human game to completion via claims, then rematches. */
+    @Test
+    fun rematchAfterFinishedGameResetsRoomKeepingConnectedPlayers() = runBlocking {
+        val room = room(targetPlayers = 4)
+        val alice = room.addPlayer("Alice", isHost = true)
+        val bob = room.addPlayer("Bob")
+        room.addPlayer("Carol")
+        room.addPlayer("Dave")
+        assertTrue(room.startGame(fillWithBots = false))
+        assertEquals(RoomPhase.IN_PROGRESS, room.phase)
+
+        // Whoever holds the turn claims the next unclaimed half-suit with all
+        // six cards assigned to themselves. Wrong claims still remove the
+        // cards and award a point, so the game must reach FINISHED (after 8
+        // claims, or earlier if a team runs out of cards).
+        for (halfSuit in HalfSuit.entries) {
+            if (room.phase == RoomPhase.FINISHED) break
+            val current = room.currentPlayerId ?: break
+            room.processClaim(
+                current,
+                ClaimDeclaration(
+                    claimerId = current,
+                    halfSuit = halfSuit,
+                    cardAssignments = mapOf(current to DeckUtils.getAllCardsForHalfSuit(halfSuit))
+                )
+            )
+        }
+        assertEquals(RoomPhase.FINISHED, room.phase)
+
+        // Bob leaves before the rematch
+        room.getPlayerSession(bob)!!.isConnected = false
+
+        assertTrue(room.resetForRematch())
+        assertEquals(RoomPhase.WAITING, room.phase)
+        assertNull(room.currentPlayerId, "game state must be cleared")
+        assertEquals(3, room.getHumanPlayerCount(), "disconnected player dropped")
+        assertNull(room.getPlayerSession(bob))
+        assertTrue(room.isHost(alice), "host retained")
+        assertFalse(room.isAbandoned(), "room must not be cleanable after rematch")
+
+        // And the fresh room can start another game
+        assertTrue(room.startGame(fillWithBots = true))
+        assertEquals(RoomPhase.IN_PROGRESS, room.phase)
+        room.cleanup()
     }
 
     // --- intentional leave: ghost-session regression (production bug) ---
