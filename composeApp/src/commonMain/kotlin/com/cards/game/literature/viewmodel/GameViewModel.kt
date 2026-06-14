@@ -54,10 +54,13 @@ class GameViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        when (repository) {
-            is LocalGameRepository -> repository.cleanup()
-            is OnlineGameRepository -> repository.cleanup()
-        }
+        // Online: do NOT tear down the connection here. This ViewModel is cleared on the
+        // game→result navigation (popUpTo HOME), and disconnecting at that point killed the
+        // socket right as the result screen opened — which broke Rematch (the message never
+        // reached the server). The online connection is closed explicitly when the user
+        // leaves the result screen to Home (ResultViewModel.onCleared) or quits mid-game
+        // (leaveGame()); rematch keeps it alive.
+        if (repository is LocalGameRepository) repository.cleanup()
     }
 
     private val isOnline = repository is OnlineGameRepository

@@ -10,10 +10,11 @@ import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.StatsStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -44,8 +45,14 @@ class ResultViewModel(
     /** Room code for rematch navigation (online only). */
     val roomCode: String get() = onlineRepository?.roomCode ?: ""
 
+    // Set when the host's rematch resets the room, BEFORE the result screen navigates to
+    // the waiting room. onCleared() reads it to keep the connection alive on a rematch
+    // (vs. closing it on a real exit to Home).
+    private var isRematching = false
+
+    private val _rematchStarted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     /** Emits when the host resets the room — everyone navigates back. */
-    val rematchStarted: Flow<Unit> = onlineRepository?.rematchStarted ?: emptyFlow()
+    val rematchStarted: Flow<Unit> = _rematchStarted.asSharedFlow()
 
     fun requestRematch() {
         viewModelScope.launch {
@@ -53,7 +60,25 @@ class ResultViewModel(
         }
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        // Leaving the result screen to Home ends the online session. The game→result
+        // transition deliberately keeps the socket open (so Rematch works), so we close it
+        // here on a genuine exit. On a rematch we navigate to the waiting room instead and
+        // must keep the connection — hence the guard.
+        if (!isRematching) onlineRepository?.cleanup()
+    }
+
     init {
+        // Intercept the repo's rematch signal so isRematching is set BEFORE the result
+        // screen navigates away (onCleared relies on it to keep the connection).
+        viewModelScope.launch {
+            onlineRepository?.rematchStarted?.collect {
+                isRematching = true
+                _rematchStarted.emit(Unit)
+            }
+        }
+
         val state = repository.gameState.value
         if (state != null && state.phase == GamePhase.FINISHED) {
             val myTeam = state.getTeamForPlayer(myPlayerId)
