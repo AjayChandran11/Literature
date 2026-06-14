@@ -1,11 +1,20 @@
 package com.cards.game.literature.ui.stats
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.MatchRecord
@@ -79,6 +88,32 @@ private fun sampleHistory(count: Int): List<MatchRecord> {
             myClaims = 2,
             myClaimsCorrect = 1
         )
+    }
+}
+
+// ---- Streak value (incl. blue flame at multiples of 50) ----
+
+@Preview(showBackground = true, name = "Streak values — 0/1/11/49/50/100")
+@Composable
+private fun StreakValuePreview() {
+    LiteratureTheme {
+        Surface(modifier = Modifier.padding(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf(0, 1, 11, 49, 50, 100).forEach { n ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("n=$n", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        StreakValue(
+                            streak = n,
+                            style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.ExtraBold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

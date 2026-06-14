@@ -31,6 +31,7 @@ import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.stats.PlayerStats
 import com.cards.game.literature.stats.StatsStore
+import com.cards.game.literature.ui.stats.StreakValue
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
 import com.cards.game.literature.ui.theme.CardRed
 import literature.composeapp.generated.resources.Res
@@ -266,7 +267,28 @@ internal fun HomeStatsCard(stats: PlayerStats) {
     ) {
         HomeStatMini("${stats.gamesPlayed}", stringResource(Res.string.stats_games), Modifier.weight(1f))
         HomeStatMini("${(stats.winRate * 100).toInt()}%", stringResource(Res.string.stats_wins), Modifier.weight(1f))
-        HomeStatMini("🔥 ${stats.currentStreak}", stringResource(Res.string.stats_current_streak), Modifier.weight(1f))
+        HomeStreakMini(stats, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun HomeStreakMini(stats: PlayerStats, modifier: Modifier = Modifier) {
+    // Adaptive, no guilt-trip: show the live streak when active, else fall back to the
+    // best streak (a proud number rather than a "-"). The Home strip only shows once
+    // gamesPlayed > 0, so best is always >= 1 here and "-" never appears on Home.
+    val current = stats.displayedDailyStreak()
+    val showingBest = current == 0 && stats.bestDailyStreak > 0
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        StreakValue(
+            streak = if (current > 0) current else stats.bestDailyStreak,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            stringResource(if (showingBest) Res.string.home_streak_best else Res.string.stats_current_streak),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

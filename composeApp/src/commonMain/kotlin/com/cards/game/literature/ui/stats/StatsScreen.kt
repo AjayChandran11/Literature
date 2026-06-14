@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.stats.Achievement
@@ -276,15 +277,38 @@ private fun OverviewTiles(stats: PlayerStats) {
 @Composable
 private fun StreakRow(stats: PlayerStats) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        StatTile(
-            value = "🔥 ${stats.currentStreak}",
+        StreakTile(
+            streak = stats.displayedDailyStreak(),
             label = stringResource(Res.string.stats_current_streak),
             modifier = Modifier.weight(1f)
         )
-        StatTile(
-            value = "${stats.bestStreak}",
+        StreakTile(
+            streak = stats.bestDailyStreak,
             label = stringResource(Res.string.stats_best_streak),
             modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun StreakTile(streak: Int, label: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        StreakValue(
+            streak = streak,
+            style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.ExtraBold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

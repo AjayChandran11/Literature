@@ -106,6 +106,44 @@ class PlayerStatsTest {
     }
 
     @Test
+    fun dailyStreakStateMachine() {
+        assertEquals(1, nextDailyStreak(lastDay = 0, today = 100, current = 0))   // first game ever
+        assertEquals(5, nextDailyStreak(lastDay = 100, today = 100, current = 5)) // same day — unchanged
+        assertEquals(6, nextDailyStreak(lastDay = 100, today = 101, current = 5)) // next day — +1
+        assertEquals(1, nextDailyStreak(lastDay = 100, today = 103, current = 5)) // gap >= 2 — reset
+        assertEquals(5, nextDailyStreak(lastDay = 100, today = 99, current = 5))  // out-of-order — unchanged
+    }
+
+    @Test
+    fun displayedDailyStreakBreaksAfterMissedDay() {
+        val s = PlayerStats(lastPlayedEpochDay = 100, currentDailyStreak = 7)
+        assertEquals(7, s.displayedDailyStreak(today = 100)) // played today
+        assertEquals(7, s.displayedDailyStreak(today = 101)) // played yesterday — still alive
+        assertEquals(0, s.displayedDailyStreak(today = 102)) // missed a full day — broken
+        assertEquals(0, PlayerStats().displayedDailyStreak(today = 100)) // never played
+    }
+
+    @Test
+    fun applyingRecordSeedsDailyStreak() {
+        val stats = PlayerStats().applying(record(Outcome.WIN)) // timestamp = 1L
+        assertEquals(1, stats.currentDailyStreak)
+        assertEquals(1, stats.bestDailyStreak)
+        assertEquals(localEpochDay(1L), stats.lastPlayedEpochDay)
+    }
+
+    @Test
+    fun bestDailyStreakSurvivesAReset() {
+        // On a 20-day streak as of day0...
+        val day0 = localEpochDay(0L)
+        val stats = PlayerStats(lastPlayedEpochDay = day0, currentDailyStreak = 20, bestDailyStreak = 20)
+        // ...then return after a long gap: current resets to 1, best stays 20.
+        val thirtyDaysMs = 30L * 24 * 60 * 60 * 1000
+        val result = stats.applying(record(Outcome.WIN).copy(timestamp = thirtyDaysMs))
+        assertEquals(1, result.currentDailyStreak)
+        assertEquals(20, result.bestDailyStreak)
+    }
+
+    @Test
     fun ratesComputeSafelyFromZero() {
         val empty = PlayerStats()
         assertEquals(0f, empty.winRate)

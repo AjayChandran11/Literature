@@ -17,6 +17,11 @@ data class PlayerStats(
     /** Consecutive wins; any loss or draw resets it. */
     val currentStreak: Int = 0,
     val bestStreak: Int = 0,
+    /** Local epoch-day of the most recent completed game; 0 = never. */
+    val lastPlayedEpochDay: Long = 0,
+    /** Consecutive calendar days with at least one completed game. */
+    val currentDailyStreak: Int = 0,
+    val bestDailyStreak: Int = 0,
     val totalAsks: Int = 0,
     val successfulAsks: Int = 0,
     val totalClaims: Int = 0,
@@ -29,10 +34,19 @@ data class PlayerStats(
     val askSuccessRate: Float get() = if (totalAsks == 0) 0f else successfulAsks.toFloat() / totalAsks
     val claimAccuracy: Float get() = if (totalClaims == 0) 0f else correctClaims.toFloat() / totalClaims
 
+    /**
+     * Streak to show right now: alive only if the last game was today or yesterday.
+     * Missing a full day breaks it (0) even before the next game is played.
+     */
+    fun displayedDailyStreak(today: Long = currentEpochDay()): Int =
+        if (lastPlayedEpochDay != 0L && today - lastPlayedEpochDay <= 1) currentDailyStreak else 0
+
     /** Returns a new [PlayerStats] with [record] folded in. Pure — no I/O. */
     fun applying(record: MatchRecord): PlayerStats {
         val isWin = record.outcome == Outcome.WIN
         val newStreak = if (isWin) currentStreak + 1 else 0
+        val today = localEpochDay(record.timestamp)
+        val newDailyStreak = nextDailyStreak(lastPlayedEpochDay, today, currentDailyStreak)
         val difficulty = record.botDifficulty
         return copy(
             gamesPlayed = gamesPlayed + 1,
@@ -43,6 +57,9 @@ data class PlayerStats(
             onlineWins = onlineWins + if (record.isOnline && isWin) 1 else 0,
             currentStreak = newStreak,
             bestStreak = maxOf(bestStreak, newStreak),
+            lastPlayedEpochDay = maxOf(lastPlayedEpochDay, today),
+            currentDailyStreak = newDailyStreak,
+            bestDailyStreak = maxOf(bestDailyStreak, newDailyStreak),
             totalAsks = totalAsks + record.myAsks,
             successfulAsks = successfulAsks + record.myAsksSuccessful,
             totalClaims = totalClaims + record.myClaims,
