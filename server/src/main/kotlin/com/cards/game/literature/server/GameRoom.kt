@@ -49,6 +49,10 @@ class GameRoom(
     companion object {
         private const val TURN_TIMEOUT_MS = 60_000L
         private const val RECONNECT_WINDOW_MS = 2 * 60_000L
+        // Grace window for a WAITING-room disconnect (e.g. the host briefly leaving
+        // the app to share an invite). The seat is held — not removed — for this long
+        // so a reconnect re-attaches to the same room. Mirrors RECONNECT_WINDOW_MS.
+        private const val WAITING_RECONNECT_WINDOW_MS = 2 * 60_000L
         private const val REACTION_RATE_LIMIT_MS = 2_000L
         private const val ABANDON_GRACE_MS = 60_000L
         private val secureRandom = java.security.SecureRandom()
@@ -71,7 +75,14 @@ class GameRoom(
         )
         players[playerId] = session
         playerTeams[playerId] = if (playerTeams.size % 2 == 0) "team_1" else "team_2"
-        if (isHost) hostPlayerId = playerId
+        // Become host when explicitly created as host, OR when the room currently has
+        // no valid host — e.g. an orphaned room whose previous host was removed after a
+        // disconnect grace timeout, that someone now re-joins via the old code. Without
+        // this, the joiner would be stuck behind a stale hostPlayerId ("waiting for host").
+        val currentHost = hostPlayerId
+        if (isHost || currentHost == null || !players.containsKey(currentHost)) {
+            hostPlayerId = playerId
+        }
         return playerId
     }
 
@@ -304,24 +315,50 @@ class GameRoom(
                 disconnectJobs[playerId] = job
             }
         } else if (phase == RoomPhase.WAITING) {
-            // In waiting room, remove player and transfer host if needed
-            val wasHost = playerId == hostPlayerId
-            removePlayer(playerId)
-            if (wasHost && players.isNotEmpty()) {
-                val newHost = players.values.first()
-                players.values.filter { it.isConnected }.forEach { session ->
-                    botScope?.launch {
-                        session.send(ServerMessage.HostTransferred(newHost.playerId, newHost.playerName))
-                    } ?: run {
-                        // botScope not available in waiting phase, use a temporary scope
-                        CoroutineScope(Dispatchers.Default).launch {
-                            session.send(ServerMessage.HostTransferred(newHost.playerId, newHost.playerName))
-                        }
-                    }
+            // Hold the seat for a grace window instead of removing immediately, so a
+            // brief background (e.g. the host leaving to share the invite) doesn't tear
+            // the room down. The deadline keeps isAbandoned()/cleanup from sweeping the
+            // room meanwhile, and others see the player as disconnected (greyed), not gone.
+            // The host is NOT transferred yet — only if the window elapses without a
+            // reconnect (finalizeWaitingDisconnect). A reconnect cancels this via
+            // handleReconnect(), which clears the deadline and the pending job.
+            playerSession.disconnectDeadline = System.currentTimeMillis() + WAITING_RECONNECT_WINDOW_MS
+            broadcastRoomUpdate()
+
+            // botScope is null until the game starts, so fall back to a transient scope.
+            val scope = botScope ?: CoroutineScope(Dispatchers.Default)
+            disconnectJobs[playerId] = scope.launch {
+                delay(WAITING_RECONNECT_WINDOW_MS)
+                finalizeWaitingDisconnect(playerId)
+            }
+        }
+    }
+
+    /**
+     * Fires when a WAITING-room disconnect grace window elapses with no reconnect:
+     * remove the player, transfer the host if they were it, and update everyone.
+     * If the room is now empty it's left for the normal sweep (isAbandoned/cleanup).
+     * No-op if the player reconnected or the game already started in the meantime.
+     */
+    internal suspend fun finalizeWaitingDisconnect(playerId: String) {
+        val session = players[playerId] ?: return
+        if (session.isConnected) return        // reconnected within the window
+        if (phase != RoomPhase.WAITING) return // game started in the meantime
+        disconnectJobs.remove(playerId)
+
+        val wasHost = playerId == hostPlayerId
+        removePlayer(playerId)                 // also reassigns host if others remain
+        if (players.isEmpty()) return          // empty room → swept by isAbandoned/cleanup
+
+        if (wasHost) {
+            val newHost = hostPlayerId?.let { players[it] }
+            if (newHost != null) {
+                players.values.filter { it.isConnected }.forEach { s ->
+                    s.send(ServerMessage.HostTransferred(newHost.playerId, newHost.playerName))
                 }
             }
-            broadcastRoomUpdate()
         }
+        broadcastRoomUpdate()
     }
 
     /**

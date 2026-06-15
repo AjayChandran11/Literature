@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -161,15 +162,121 @@ class GameRoomTest {
         assertTrue(room().isAbandoned())
     }
 
+    // --- WAITING-room disconnect grace (invite/background regression) ---
+    // Sharing an invite forces the host out of the app, dropping their socket. The
+    // waiting room must HOLD the seat for a grace window (not remove instantly) so the
+    // host reconnects into the same room and guests can still join it. Previously the
+    // player was removed on the spot, which destroyed/orphaned the room.
+
     @Test
-    fun disconnectInWaitingRoomRemovesPlayer() = runBlocking {
+    fun disconnectInWaitingRoomKeepsSeatDuringGrace() = runBlocking {
         val room = room()
         room.addPlayer("Alice", isHost = true)
         val bob = room.addPlayer("Bob")
 
         room.handleDisconnect(bob)
 
+        assertEquals(2, room.getHumanPlayerCount(), "seat held during grace window")
+        val session = room.getPlayerSession(bob)!!
+        assertFalse(session.isConnected, "marked disconnected")
+        assertNotNull(session.disconnectDeadline, "reconnect deadline set")
+        assertFalse(room.isAbandoned(), "room kept alive during the window")
+        room.cleanup()
+    }
+
+    @Test
+    fun reconnectInWaitingRoomRestoresSeat() = runBlocking {
+        val room = room()
+        room.addPlayer("Alice", isHost = true)
+        val bob = room.addPlayer("Bob")
+
+        room.handleDisconnect(bob)
+        val reconnected = room.handleReconnect(bob)
+
+        assertTrue(reconnected)
+        val session = room.getPlayerSession(bob)!!
+        assertTrue(session.isConnected, "seat restored on reconnect")
+        assertNull(session.disconnectDeadline, "deadline cleared")
+        assertEquals(2, room.getHumanPlayerCount())
+        room.cleanup()
+    }
+
+    @Test
+    fun waitingDisconnectFinalizeRemovesAfterGrace() = runBlocking {
+        val room = room()
+        room.addPlayer("Alice", isHost = true)
+        val bob = room.addPlayer("Bob")
+
+        room.handleDisconnect(bob)
+        room.finalizeWaitingDisconnect(bob) // simulate the grace window elapsing
+
+        assertEquals(1, room.getHumanPlayerCount(), "removed after grace with no reconnect")
+        assertNull(room.getPlayerSession(bob))
+        room.cleanup()
+    }
+
+    @Test
+    fun waitingDisconnectFinalizeIsNoOpAfterReconnect() = runBlocking {
+        val room = room()
+        room.addPlayer("Alice", isHost = true)
+        val bob = room.addPlayer("Bob")
+
+        room.handleDisconnect(bob)
+        room.handleReconnect(bob)
+        room.finalizeWaitingDisconnect(bob) // must not remove a reconnected player
+
+        assertEquals(2, room.getHumanPlayerCount())
+        assertTrue(room.getPlayerSession(bob)!!.isConnected)
+        room.cleanup()
+    }
+
+    @Test
+    fun hostKeepsHostWhileDisconnectedThenTransfersAfterGrace() = runBlocking {
+        val room = room()
+        val alice = room.addPlayer("Alice", isHost = true)
+        val bob = room.addPlayer("Bob")
+
+        room.handleDisconnect(alice)
+        assertTrue(room.isHost(alice), "host retained during grace window")
+        assertEquals(2, room.getHumanPlayerCount())
+
+        room.finalizeWaitingDisconnect(alice)
+        assertTrue(room.isHost(bob), "host transferred only after the window elapses")
         assertEquals(1, room.getHumanPlayerCount())
+        room.cleanup()
+    }
+
+    @Test
+    fun guestCanJoinWhileHostBrieflyDisconnected() = runBlocking {
+        // Scenario: host backgrounds to share the invite; guest joins during that window.
+        val room = room()
+        val alice = room.addPlayer("Alice", isHost = true)
+        room.handleDisconnect(alice)         // host backgrounds — socket drops
+
+        val bob = room.addPlayer("Bob")      // guest joins via the code
+
+        assertEquals(2, room.getHumanPlayerCount(), "guest joins the still-alive room")
+        assertTrue(room.isHost(alice), "disconnected host keeps host during grace")
+        assertFalse(room.isHost(bob))
+
+        assertTrue(room.handleReconnect(alice), "host reconnects into the same room")
+        assertTrue(room.getPlayerSession(alice)!!.isConnected)
+        room.cleanup()
+    }
+
+    @Test
+    fun orphanedRoomGivesHostToNextJoiner() = runBlocking {
+        // Host leaves and the grace window elapses, leaving the room with a stale
+        // hostId; a late joiner via the old code must claim host, not get stuck.
+        val room = room()
+        val alice = room.addPlayer("Alice", isHost = true)
+        room.handleDisconnect(alice)
+        room.finalizeWaitingDisconnect(alice) // alice removed; room now empty
+        assertEquals(0, room.getHumanPlayerCount())
+
+        val carol = room.addPlayer("Carol")
+        assertTrue(room.isHost(carol), "joiner claims host when none is valid")
+        room.cleanup()
     }
 
     @Test
