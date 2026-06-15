@@ -12,6 +12,10 @@ package com.cards.game.literature.deeplink
 object InviteLink {
     private const val BASE = "https://ajaychandran11.github.io/Literature/join.html"
 
+    /** Google Play listing — the acquisition CTA for the shareable result card.
+     *  (Not a room link: the room is finished by results time.) */
+    const val PLAY_STORE = "https://play.google.com/store/apps/details?id=com.cards.game.literature"
+
     /** e.g. https://ajaychandran11.github.io/Literature/join.html?room=ABC123 */
     fun forRoom(roomCode: String): String = "$BASE?room=$roomCode"
 }

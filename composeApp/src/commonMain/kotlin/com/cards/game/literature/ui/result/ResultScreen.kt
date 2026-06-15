@@ -33,10 +33,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -78,11 +84,24 @@ import com.cards.game.literature.ui.theme.LightGreen
 import com.cards.game.literature.ui.theme.LiteratureTheme
 import com.cards.game.literature.viewmodel.ResultUiState
 import com.cards.game.literature.viewmodel.ResultViewModel
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import com.cards.game.literature.deeplink.InviteLink
+import com.cards.game.literature.share.Sharer
+import com.cards.game.literature.share.imageBitmapToPng
+import kotlinx.coroutines.launch
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.achievement_unlocked_banner
 import literature.composeapp.generated.resources.button_home
 import literature.composeapp.generated.resources.button_play_again
 import literature.composeapp.generated.resources.button_rematch
+import literature.composeapp.generated.resources.button_share
 import literature.composeapp.generated.resources.label_opponents
 import literature.composeapp.generated.resources.label_your_team
 import literature.composeapp.generated.resources.result_breakdown_title
@@ -92,6 +111,8 @@ import literature.composeapp.generated.resources.result_lose
 import literature.composeapp.generated.resources.result_show_log
 import literature.composeapp.generated.resources.result_unclaimed
 import literature.composeapp.generated.resources.result_win
+import literature.composeapp.generated.resources.result_share
+import literature.composeapp.generated.resources.share_result_caption
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.random.Random
@@ -352,6 +373,11 @@ fun ResultScreenContent(
     val myTeamDisplayName = uiState.myTeamName.ifEmpty { stringResource(Res.string.label_your_team) }
     val opponentTeamDisplayName = uiState.opponentTeamName.ifEmpty { stringResource(Res.string.label_opponents) }
 
+    // ── Shareable result card capture ─────────────────────────────────────
+    val shareLayer = rememberGraphicsLayer()
+    val shareScope = rememberCoroutineScope()
+    val shareCaption = stringResource(Res.string.share_result_caption, InviteLink.PLAY_STORE)
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -482,17 +508,64 @@ fun ResultScreenContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Game Log ──────────────────────────────────────────────────
-            OutlinedButton(
-                onClick = onToggleLog,
-                modifier = Modifier.fillMaxWidth(0.7f),
+            // ── Primary action ────────────────────────────────────────────
+            // Online host gets Rematch (same room, same players); everyone
+            // else keeps the local Play Again behavior.
+            Button(
+                onClick = if (uiState.canRematch) onRematch else onPlayAgain,
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(50.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text(if (showLog) stringResource(Res.string.result_hide_log) else stringResource(Res.string.result_show_log))
+                Text(
+                    stringResource(if (uiState.canRematch) Res.string.button_rematch else Res.string.button_play_again),
+                    fontWeight = FontWeight.Bold
+                )
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ── Secondary actions: Share + Home side by side ──────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(0.7f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        shareScope.launch {
+                            val bitmap = shareLayer.toImageBitmap()
+                            Sharer.shareImage(imageBitmapToPng(bitmap), shareCaption)
+                        }
+                    },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(Res.string.button_share))
+                }
+                OutlinedButton(
+                    onClick = onGoHome,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Filled.Home, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(Res.string.button_home))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // ── Game log (optional, quiet toggle) ─────────────────────────
+            TextButton(onClick = onToggleLog) {
+                Text(
+                    if (showLog) stringResource(Res.string.result_hide_log) else stringResource(Res.string.result_show_log),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             if (showLog) {
-                Spacer(modifier = Modifier.height(8.dp))
                 val displayEvents = uiState.gameLog.filterNot {
                     it is GameEvent.TurnChanged || it is GameEvent.GameStarted
                 }
@@ -508,43 +581,26 @@ fun ResultScreenContent(
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Online host gets Rematch (same room, same players); everyone
-            // else keeps the local Play Again behavior.
-            if (uiState.canRematch) {
-                Button(
-                    onClick = onRematch,
+        // ── Off-screen shareable card, captured on demand into shareLayer ──
+        // Pushed far off-screen (not size 0 / alpha 0) so it's measured & drawn —
+        // and thus recorded — but never visible. Fixed density => ~1080px PNG on
+        // any device, regardless of the user's light/dark setting.
+        CompositionLocalProvider(LocalDensity provides Density(density = 3f, fontScale = 1f)) {
+            LiteratureTheme(darkTheme = true) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(10.dp)
+                        .size(360.dp)
+                        .offset(x = 10_000.dp)
+                        .drawWithContent {
+                            // record (not draw) — populates the layer for toImageBitmap();
+                            // the box is off-screen so nothing needs to paint to the canvas.
+                            shareLayer.record { this@drawWithContent.drawContent() }
+                        }
                 ) {
-                    Text(stringResource(Res.string.button_rematch), fontWeight = FontWeight.Bold)
+                    ResultShareCard(uiState, Modifier.fillMaxSize())
                 }
-            } else {
-                Button(
-                    onClick = onPlayAgain,
-                    modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(stringResource(Res.string.button_play_again), fontWeight = FontWeight.Bold)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = onGoHome,
-                modifier = Modifier
-                    .fillMaxWidth(0.7f)
-                    .height(48.dp),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Text(stringResource(Res.string.button_home))
             }
         }
 

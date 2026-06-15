@@ -18,6 +18,7 @@
     <string name="button_leave_room">Leave Room</string>
     <string name="button_review">Review</string>
     <string name="button_claim">CLAIM!</string>
+    <string name="button_share">Share</string>
 
     <!-- Common labels -->
     <string name="label_your_team">Your Team</string>
@@ -163,6 +164,10 @@
     <string name="result_unclaimed">Unclaimed</string>
     <string name="result_show_log">Show Game Log</string>
     <string name="result_hide_log">Hide Game Log</string>
+    <string name="result_share">Share Result</string>
+    <string name="result_card_tagline">Think. Ask. Claim. Win.</string>
+    <string name="result_card_cta">Get it on Google Play</string>
+    <string name="share_result_caption">I just played Literature ♠♥♦♣ — beat my score! Get the app: %1$s</string>
 
     <!-- Onboarding -->
     <string name="onboarding_skip">Skip</string>
