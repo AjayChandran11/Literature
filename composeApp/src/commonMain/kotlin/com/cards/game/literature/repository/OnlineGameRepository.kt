@@ -273,7 +273,15 @@ class OnlineGameRepository(
                 throw e
             } catch (e: Exception) {
                 log.e(e) { "Connection error" }
-                _errors.emit("Connection error: ${e.message}")
+                // Surface to the user only on the INITIAL connect (lobby create/join),
+                // i.e. before the server has admitted us to a room. Once a session is
+                // established (roomCode + myPlayerId set), a failure here is a transient
+                // drop handled by auto-reconnect + the "Reconnecting…" banner; spamming
+                // raw socket errors then is just noise. Terminal give-up is still reported
+                // via "Failed to reconnect after N attempts" in scheduleReconnect().
+                if (myPlayerId.isEmpty() || roomCode.isEmpty()) {
+                    _errors.emit("Connection error: ${e.message}")
+                }
             } finally {
                 webSocketSession = null
                 if (shouldAutoReconnect && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
