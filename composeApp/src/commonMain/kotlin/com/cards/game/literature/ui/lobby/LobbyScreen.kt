@@ -28,15 +28,25 @@ fun LobbyScreen(
     playerName: String,
     onNavigateToWaitingRoom: (roomCode: String) -> Unit,
     onBack: () -> Unit,
+    initialRoomCode: String? = null,
     viewModel: LobbyViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isNetworkAvailable by NetworkMonitor.isNetworkAvailable.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
-    var joinRoomCode by remember { mutableStateOf("") }
+    // Prefill the code from a deep-link invite so it stays visible if the auto-join fails.
+    var joinRoomCode by remember { mutableStateOf(initialRoomCode.orEmpty()) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     RequestNotificationPermissionOnce()
+
+    // Auto-join when arriving via an invite link. joinRoom() waits for the server warm-up
+    // internally, so it's safe to fire immediately; the Join button shows its spinner.
+    LaunchedEffect(Unit) {
+        if (!initialRoomCode.isNullOrBlank() && playerName.isNotBlank()) {
+            viewModel.joinRoom(initialRoomCode, playerName)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.navigateToWaitingRoom.collect { roomCode ->

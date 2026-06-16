@@ -162,22 +162,20 @@ fun GameBoardContent(
         }
     }
 
-    // Auto-switch to Hand tab when it becomes the player's turn
-    // Suppressed during tutorial and in side-by-side layout (both panels always visible)
+    // Rising edge of "my turn": play the chime and auto-switch to the Hand tab.
+    // Gating on the rising edge (not just isMyTurn == true) prevents a double chime
+    // when this effect re-runs while isMyTurn stays true — e.g. the initial turn
+    // assignment when a game starts on your turn. Tab-switch stays suppressed during
+    // the tutorial and in side-by-side layout (both panels are already visible).
     val autoSwitchWindowInfo = currentWindowAdaptiveInfo()
     LaunchedEffect(uiState.isMyTurn, tutorialState?.isActive) {
-        if (uiState.isMyTurn && !previouslyMyTurn
-            && tutorialState?.isActive != true
-            && !autoSwitchWindowInfo.useSideBySide
-        ) {
-            selectedTab = GameTab.HAND
+        if (uiState.isMyTurn && !previouslyMyTurn) {
+            SoundPlayer.play(SoundEvent.YOUR_TURN)
+            if (tutorialState?.isActive != true && !autoSwitchWindowInfo.useSideBySide) {
+                selectedTab = GameTab.HAND
+            }
         }
         previouslyMyTurn = uiState.isMyTurn
-    }
-
-    // Sound: your turn notification
-    LaunchedEffect(uiState.isMyTurn) {
-        if (uiState.isMyTurn) SoundPlayer.play(SoundEvent.YOUR_TURN)
     }
 
     // Sounds + haptics for game events

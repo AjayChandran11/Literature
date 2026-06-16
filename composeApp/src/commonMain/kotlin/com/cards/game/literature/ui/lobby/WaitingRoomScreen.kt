@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,7 +21,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.bot.BotDifficulty
+import com.cards.game.literature.deeplink.InviteLink
 import com.cards.game.literature.repository.PlayerConnectionEvent
+import com.cards.game.literature.share.Sharer
 import com.cards.game.literature.ui.common.ConnectionBanner
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
@@ -158,6 +162,33 @@ fun WaitingRoomScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Invite friends via the system share sheet (deep-link room invite).
+        val inviteText = stringResource(
+            Res.string.invite_share_text,
+            uiState.roomCode,
+            InviteLink.forRoom(uiState.roomCode)
+        )
+        OutlinedButton(
+            onClick = { Sharer.shareText(inviteText) },
+            enabled = uiState.roomCode.isNotBlank(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Share,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(Res.string.waiting_room_invite),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
