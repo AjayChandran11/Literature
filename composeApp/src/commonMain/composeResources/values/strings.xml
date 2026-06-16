@@ -164,6 +164,8 @@
     <string name="result_unclaimed">Unclaimed</string>
     <string name="result_show_log">Show Game Log</string>
     <string name="result_hide_log">Hide Game Log</string>
+    <string name="result_log_title">Game Log</string>
+    <string name="cd_close_log">Close game log</string>
     <string name="result_share">Share Result</string>
     <string name="result_card_tagline">Think. Ask. Claim. Win.</string>
     <string name="result_card_cta">Get it on Google Play</string>
@@ -337,6 +339,7 @@
     <string name="achievements_title">Achievements</string>
     <string name="achievements_progress">%1$d / %2$d</string>
     <string name="achievement_unlocked_banner">Achievement unlocked!</string>
+    <string name="achievement_unlocked_more">+%1$d more</string>
     <string name="achievement_locked">Locked</string>
     <string name="cd_achievement_locked">%1$s — locked</string>
     <string name="ach_first_win">First Victory</string>

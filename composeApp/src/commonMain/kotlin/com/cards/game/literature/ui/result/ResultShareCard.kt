@@ -38,7 +38,7 @@ private val DimWhite = Color(0xFFB9BBD0)
  * Branded, self-contained end-of-game card rendered to an image for social sharing.
  * Matches the Play Store poster (navy + gold "Literature" + suits + tagline) and leads
  * with the player's result as the hook. No scroll / buttons / animations — captures as a
- * single stable frame. Laid out at a fixed square size (~360.dp → 1080px at 3x density).
+ * single stable frame. Laid out at a fixed 4:5 size (360x450.dp → ~1080x1350px at 3x density).
  */
 @Composable
 fun ResultShareCard(uiState: ResultUiState, modifier: Modifier = Modifier) {

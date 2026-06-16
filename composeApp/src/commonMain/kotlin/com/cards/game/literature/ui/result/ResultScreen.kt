@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -34,14 +35,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -98,15 +104,17 @@ import com.cards.game.literature.share.imageBitmapToPng
 import kotlinx.coroutines.launch
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.achievement_unlocked_banner
+import literature.composeapp.generated.resources.achievement_unlocked_more
 import literature.composeapp.generated.resources.button_home
 import literature.composeapp.generated.resources.button_play_again
 import literature.composeapp.generated.resources.button_rematch
 import literature.composeapp.generated.resources.button_share
+import literature.composeapp.generated.resources.cd_close_log
 import literature.composeapp.generated.resources.label_opponents
 import literature.composeapp.generated.resources.label_your_team
 import literature.composeapp.generated.resources.result_breakdown_title
 import literature.composeapp.generated.resources.result_draw
-import literature.composeapp.generated.resources.result_hide_log
+import literature.composeapp.generated.resources.result_log_title
 import literature.composeapp.generated.resources.result_lose
 import literature.composeapp.generated.resources.result_show_log
 import literature.composeapp.generated.resources.result_unclaimed
@@ -300,6 +308,7 @@ fun ResultScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultScreenContent(
     uiState: ResultUiState,
@@ -531,6 +540,8 @@ fun ResultScreenContent(
                 modifier = Modifier.fillMaxWidth(0.7f),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Tight content padding + single-line labels so the icon + text
+                // fit without wrapping ("Hom"/"e") at the narrow weight(1f) width.
                 OutlinedButton(
                     onClick = {
                         shareScope.launch {
@@ -539,45 +550,82 @@ fun ResultScreenContent(
                         }
                     },
                     modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
                     Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(Res.string.button_share))
+                    Text(stringResource(Res.string.button_share), maxLines = 1)
                 }
                 OutlinedButton(
                     onClick = onGoHome,
                     modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
                     Icon(Icons.Filled.Home, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(Res.string.button_home))
+                    Text(stringResource(Res.string.button_home), maxLines = 1)
                 }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // ── Game log (optional, quiet toggle) ─────────────────────────
+            // ── Game log (opens in a bottom sheet — see below) ────────────
             TextButton(onClick = onToggleLog) {
                 Text(
-                    if (showLog) stringResource(Res.string.result_hide_log) else stringResource(Res.string.result_show_log),
+                    stringResource(Res.string.result_show_log),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (showLog) {
-                val displayEvents = uiState.gameLog.filterNot {
-                    it is GameEvent.TurnChanged || it is GameEvent.GameStarted
-                }
-                LazyColumn(
+        }
+
+        // ── Game log in a modal bottom sheet ──────────────────────────────
+        // A sheet keeps the result layout stable — opening the log no longer
+        // reflows the whole screen the way the old inline expansion did.
+        if (showLog) {
+            val logSheetState = rememberModalBottomSheetState(
+                skipPartiallyExpanded = true
+            )
+            val displayEvents = uiState.gameLog.filterNot {
+                it is GameEvent.TurnChanged || it is GameEvent.GameStarted
+            }
+            ModalBottomSheet(
+                onDismissRequest = onToggleLog,
+                sheetState = logSheetState,
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                        .padding(12.dp)
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 24.dp)
                 ) {
-                    items(displayEvents) { event ->
-                        GameLogEntry(event = event, fontSize = 13.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            stringResource(Res.string.result_log_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(onClick = onToggleLog) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = stringResource(Res.string.cd_close_log)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 360.dp)
+                    ) {
+                        items(displayEvents) { event ->
+                            GameLogEntry(event = event, fontSize = 13.sp)
+                        }
                     }
                 }
             }
@@ -591,7 +639,9 @@ fun ResultScreenContent(
             LiteratureTheme(darkTheme = true) {
                 Box(
                     modifier = Modifier
-                        .size(360.dp)
+                        // 4:5 portrait (~1080x1350 at 3x) — must match the aspect the
+                        // card is laid out/previewed at, or SpaceBetween crams the blocks.
+                        .size(width = 360.dp, height = 450.dp)
                         .offset(x = 10_000.dp)
                         .drawWithContent {
                             // record (not draw) — populates the layer for toImageBitmap();
@@ -630,7 +680,7 @@ private fun AchievementUnlockCard(achievements: List<Achievement>) {
             color = MaterialTheme.colorScheme.secondary
         )
         Spacer(modifier = Modifier.height(8.dp))
-        achievements.forEach { achievement ->
+        achievements.take(MAX_UNLOCKS_SHOWN).forEach { achievement ->
             val ui = achievement.ui
             Row(
                 modifier = Modifier
@@ -654,8 +704,21 @@ private fun AchievementUnlockCard(achievements: List<Achievement>) {
                 }
             }
         }
+        // Overflow collapses into a "+N more" line so a big multi-unlock doesn't
+        // push the primary action far below the fold. Full list is on the Stats screen.
+        if (achievements.size > MAX_UNLOCKS_SHOWN) {
+            Text(
+                stringResource(Res.string.achievement_unlocked_more, achievements.size - MAX_UNLOCKS_SHOWN),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        }
     }
 }
+
+private const val MAX_UNLOCKS_SHOWN = 3
 
 // ─── Preview data ──────────────────────────────────────────────────────────
 
@@ -741,6 +804,51 @@ private fun PreviewResultWinWithAchievements() {
             onPlayAgain = {},
             onGoHome = {}
         )
+    }
+}
+
+// More than MAX_UNLOCKS_SHOWN unlocks at once — exercises the "+N more" cap.
+// NOTE: the unlock card animates in after a delay, so use *interactive* preview
+// to see it on the full screen; the isolated card preview below shows it statically.
+@Preview(name = "Result — Win, capped achievements", showBackground = true)
+@Composable
+private fun PreviewResultWinWithManyAchievements() {
+    LiteratureTheme {
+        ResultScreenContent(
+            uiState = previewWinState.copy(
+                unlockedAchievements = listOf(
+                    Achievement.FIRST_WIN,
+                    Achievement.HAT_TRICK,
+                    Achievement.ON_FIRE,
+                    Achievement.PERFECT_GAME,
+                    Achievement.CLAIM_MASTER
+                )
+            ),
+            showLog = false,
+            onToggleLog = {},
+            onPlayAgain = {},
+            onGoHome = {}
+        )
+    }
+}
+
+// Isolated unlock card with 5 unlocks → renders "3 rows + '+2 more'" immediately
+// (no animation gate), so the cap is visible in a static preview.
+@Preview(name = "Achievement card — capped (+N more)", showBackground = true)
+@Composable
+private fun PreviewAchievementUnlockCardCapped() {
+    LiteratureTheme {
+        Box(modifier = Modifier.padding(24.dp)) {
+            AchievementUnlockCard(
+                listOf(
+                    Achievement.FIRST_WIN,
+                    Achievement.HAT_TRICK,
+                    Achievement.ON_FIRE,
+                    Achievement.PERFECT_GAME,
+                    Achievement.CLAIM_MASTER
+                )
+            )
+        }
     }
 }
 
