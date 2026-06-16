@@ -21,12 +21,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.cards.game.literature.bot.BotDifficulty
+import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.stats.PlayerStats
@@ -44,10 +47,12 @@ import org.koin.compose.koinInject
 fun HomeScreen(
     onStartGame: (playerName: String, playerCount: Int, difficulty: BotDifficulty) -> Unit,
     onPlayOnline: (playerName: String) -> Unit = {},
+    onJoinRoom: (playerName: String, roomCode: String) -> Unit = { _, _ -> },
     onOpenStats: () -> Unit = {}
 ) {
     val session = koinInject<SessionStore>()
     var playerName by rememberSaveable { mutableStateOf(session.playerName) }
+    val pendingInvite by DeepLinkHandler.pendingRoomCode.collectAsState()
     var showSetupDialog by remember { mutableStateOf(false) }
     var showOnlineGateDialog by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
@@ -104,6 +109,20 @@ fun HomeScreen(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            // Room invite from a deep link — prompt the player to join.
+            pendingInvite?.let { code ->
+                Spacer(modifier = Modifier.height(24.dp))
+                RoomInviteCard(
+                    roomCode = code,
+                    canJoin = playerName.isNotBlank(),
+                    onJoin = {
+                        DeepLinkHandler.consume()
+                        onJoinRoom(playerName.trim(), code)
+                    },
+                    onDismiss = { DeepLinkHandler.consume() }
+                )
+            }
 
             val stats by StatsStore.stats.collectAsState()
             if (stats.gamesPlayed > 0) {
@@ -249,6 +268,84 @@ fun HomeScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun RoomInviteCard(
+    roomCode: String,
+    canJoin: Boolean,
+    onJoin: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    Column(
+        modifier = Modifier
+            .fillMaxWidth(0.85f)
+            .clip(RoundedCornerShape(16.dp))
+            .background(primary.copy(alpha = 0.10f))
+            .border(1.dp, primary.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = stringResource(Res.string.home_invite_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = primary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.Center)
+            )
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(Res.string.cd_dismiss_invite),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(Res.string.home_invite_room_code, roomCode),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 2.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(
+            onClick = onJoin,
+            enabled = canJoin,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = primary,
+                disabledContainerColor = MaterialTheme.colorScheme.outline
+            )
+        ) {
+            Text(
+                stringResource(Res.string.home_invite_join),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        if (!canJoin) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = stringResource(Res.string.home_invite_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

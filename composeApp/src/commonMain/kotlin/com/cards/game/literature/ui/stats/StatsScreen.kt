@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
@@ -226,22 +227,34 @@ private fun AchievementDetailDialog(
         onDismissRequest = onDismiss,
         icon = { Text(if (unlockedAt != null) ui.emoji else "🔒", fontSize = 36.sp) },
         title = {
-            Text(stringResource(ui.title), fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(ui.title),
+                modifier = Modifier.fillMaxWidth(),
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
         },
         text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     stringResource(ui.description),
-                    style = MaterialTheme.typography.bodyMedium
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
                     if (unlockedAt != null) relativeDate(unlockedAt, now)
                     else stringResource(Res.string.achievement_locked),
+                    modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.labelMedium,
                     color = if (unlockedAt != null) LightGreen
                     else MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
                 )
             }
         },

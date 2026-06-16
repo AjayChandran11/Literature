@@ -18,6 +18,7 @@
     <string name="button_leave_room">Leave Room</string>
     <string name="button_review">Review</string>
     <string name="button_claim">CLAIM!</string>
+    <string name="button_share">Share</string>
 
     <!-- Common labels -->
     <string name="label_your_team">Your Team</string>
@@ -41,6 +42,13 @@
     <string name="home_new_game">New Game</string>
     <string name="home_play_online">Play Online</string>
 
+    <!-- Room invite (deep link) -->
+    <string name="home_invite_title">You're invited!</string>
+    <string name="home_invite_room_code">Room %1$s</string>
+    <string name="home_invite_hint">Enter your name to join</string>
+    <string name="home_invite_join">Join Game</string>
+    <string name="cd_dismiss_invite">Dismiss invite</string>
+
     <!-- Game Setup Dialog -->
     <string name="game_setup_title">Game Setup</string>
     <string name="game_setup_players_question">How many players?</string>
@@ -61,6 +69,8 @@
     <string name="waiting_room_title">Waiting Room</string>
     <string name="waiting_room_code_label">Room Code</string>
     <string name="waiting_room_share_code">Share this code with friends</string>
+    <string name="waiting_room_invite">Invite Friends</string>
+    <string name="invite_share_text">Join my Literature game! 🃏\nRoom code: %1$s\n%2$s</string>
     <string name="waiting_room_players_count">Players (%1$d/%2$d)</string>
     <string name="waiting_room_team_1">Team 1</string>
     <string name="waiting_room_team_2">Team 2</string>
@@ -154,6 +164,12 @@
     <string name="result_unclaimed">Unclaimed</string>
     <string name="result_show_log">Show Game Log</string>
     <string name="result_hide_log">Hide Game Log</string>
+    <string name="result_log_title">Game Log</string>
+    <string name="cd_close_log">Close game log</string>
+    <string name="result_share">Share Result</string>
+    <string name="result_card_tagline">Think. Ask. Claim. Win.</string>
+    <string name="result_card_cta">Get it on Google Play</string>
+    <string name="share_result_caption">I just played Literature ♠♥♦♣ — beat my score! Get the app: %1$s</string>
 
     <!-- Onboarding -->
     <string name="onboarding_skip">Skip</string>
@@ -323,6 +339,7 @@
     <string name="achievements_title">Achievements</string>
     <string name="achievements_progress">%1$d / %2$d</string>
     <string name="achievement_unlocked_banner">Achievement unlocked!</string>
+    <string name="achievement_unlocked_more">+%1$d more</string>
     <string name="achievement_locked">Locked</string>
     <string name="cd_achievement_locked">%1$s — locked</string>
     <string name="ach_first_win">First Victory</string>

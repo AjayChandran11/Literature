@@ -53,6 +53,10 @@ class WaitingRoomViewModel(
         viewModelScope.launch {
             onlineRepository.roomState.filterNotNull().collect { room ->
                 updateFromRoom(room)
+                // A fresh room state means we're validly (re)connected. Drop any stale
+                // transient error (e.g. a "room not found" from a racy reconnect attempt)
+                // so it can't linger under the green "Reconnected" banner.
+                _uiState.update { if (it.errorMessage != null) it.copy(errorMessage = null) else it }
             }
         }
 
