@@ -5,7 +5,9 @@ import com.cards.game.literature.logic.GameEngine
 import com.cards.game.literature.notifications.NotificationCoordinator
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.LocalGameRepository
+import com.cards.game.literature.repository.DailyPuzzleRepository
 import com.cards.game.literature.repository.OnlineGameRepository
+import com.cards.game.literature.viewmodel.DailyPuzzleViewModel
 import com.cards.game.literature.viewmodel.GameViewModel
 import com.cards.game.literature.viewmodel.LobbyViewModel
 import com.cards.game.literature.viewmodel.ResultViewModel
@@ -44,4 +46,7 @@ val appModule = module {
     }
     viewModel { LobbyViewModel(get()) }
     viewModel { WaitingRoomViewModel(get()) }
+
+    single { DailyPuzzleRepository() }
+    viewModel { DailyPuzzleViewModel(get()) }
 }

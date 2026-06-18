@@ -33,6 +33,7 @@ import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.stats.PlayerStats
+import com.cards.game.literature.stats.PuzzleStore
 import com.cards.game.literature.stats.StatsStore
 import com.cards.game.literature.ui.stats.StreakValue
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
@@ -48,7 +49,8 @@ fun HomeScreen(
     onStartGame: (playerName: String, playerCount: Int, difficulty: BotDifficulty) -> Unit,
     onPlayOnline: (playerName: String) -> Unit = {},
     onJoinRoom: (playerName: String, roomCode: String) -> Unit = { _, _ -> },
-    onOpenStats: () -> Unit = {}
+    onOpenStats: () -> Unit = {},
+    onOpenDailyPuzzle: () -> Unit = {}
 ) {
     val session = koinInject<SessionStore>()
     var playerName by rememberSaveable { mutableStateOf(session.playerName) }
@@ -183,6 +185,26 @@ fun HomeScreen(
                 )
             ) {
                 Text(stringResource(Res.string.home_play_online), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val puzzleStreak = PuzzleStore.progress.collectAsState().value.displayedStreak()
+            OutlinedButton(
+                onClick = onOpenDailyPuzzle,
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text(stringResource(Res.string.home_daily_puzzle), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                if (puzzleStreak > 0) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("🔥$puzzleStreak", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
