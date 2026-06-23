@@ -4,6 +4,7 @@ import com.cards.game.literature.logic.CardTracker
 import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.CardValue
+import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.Player
 import com.cards.game.literature.model.Suit
 import kotlin.test.Test
@@ -76,5 +77,38 @@ class DailyPuzzleGeneratorTest {
         for (day in 0L until 50L) {
             assertNotNull(DailyPuzzleGenerator.generateForDay(day * 1000L), "day=$day")
         }
+    }
+
+    @Test
+    fun logIsNotASingleSuitGiveaway() {
+        var checked = 0
+        for (seed in 0L until 200L) {
+            val p = DailyPuzzleGenerator.generate(seed) ?: continue
+            checked++
+            val suitsInLog = p.events
+                .filterIsInstance<GameEvent.CardAsked>()
+                .map { DeckUtils.getHalfSuit(it.card) }
+                .toSet()
+            assertTrue(p.answer.halfSuit in suitsInLog, "seed=$seed answer suit must appear in the log")
+            assertTrue(
+                suitsInLog.size >= 2,
+                "seed=$seed log should span >=2 half-suits (decoys), not just the answer; got $suitsInLog"
+            )
+        }
+        assertTrue(checked >= 10, "expected several puzzles from 200 seeds, got $checked")
+    }
+
+    @Test
+    fun decoysCanBeDisabledForEasierTiers() {
+        // decoySuits = 0 reproduces the old single-suit log — the easy end of the future ramp.
+        var checked = 0
+        for (seed in 0L until 200L) {
+            val p = DailyPuzzleGenerator.generate(seed, decoySuits = 0) ?: continue
+            checked++
+            val suits = p.events.filterIsInstance<GameEvent.CardAsked>()
+                .map { DeckUtils.getHalfSuit(it.card) }.toSet()
+            assertEquals(setOf(p.answer.halfSuit), suits, "seed=$seed decoys off → single suit")
+        }
+        assertTrue(checked >= 10, "expected several puzzles, got $checked")
     }
 }

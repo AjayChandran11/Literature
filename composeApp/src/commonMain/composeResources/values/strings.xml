@@ -185,6 +185,15 @@
     <string name="daily_puzzle_step1">Step 1 · Which half-suit can your team claim?</string>
     <string name="daily_puzzle_step2">Step 2 · Which card is %1$s hiding?</string>
     <string name="daily_puzzle_step2_hint">You saw the others change hands — this one never did.</string>
+    <!-- Case Board redesign -->
+    <string name="daily_puzzle_case_line">Your team can claim one half-suit. Find the card %1$s is hiding.</string>
+    <string name="daily_puzzle_evidence">Evidence</string>
+    <string name="daily_puzzle_evidence_collapsed">%1$d moves · tap to review</string>
+    <string name="daily_puzzle_step1_q">One half-suit is fully on your team. Which is it?</string>
+    <string name="daily_puzzle_board_title">Who holds %1$s?</string>
+    <string name="daily_puzzle_ruled_out">%1$s and %2$s said no — it must be %3$s.</string>
+    <string name="daily_puzzle_rail_prompt">%1$s is hiding one of these — which?</string>
+    <string name="daily_puzzle_streak_chip">%1$d-day streak</string>
     <string name="daily_puzzle_claiming">Claiming %1$s</string>
     <string name="daily_puzzle_change">Change</string>
     <string name="daily_puzzle_you_badge">You</string>

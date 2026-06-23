@@ -23,6 +23,8 @@ data class PuzzleProgress(
     val totalStars: Int = 0,
     /** One-time: the player has seen the how-to-play explainer. */
     val howToSeen: Boolean = false,
+    /** Local epoch-day we last flashed the Home "puzzle ready" highlight (a once-per-day nudge). */
+    val readyHintShownDay: Long = 0,
     // ── Today's attempt state (valid for [dayEpoch]) ──
     val dayEpoch: Long = 0,
     val attemptsUsed: Int = 0,

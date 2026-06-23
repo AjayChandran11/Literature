@@ -41,6 +41,14 @@ object PuzzleStore {
         StatsPrefs.setPuzzleJson(json.encodeToString(updated))
     }
 
+    /** Remember we flashed the Home "puzzle ready" highlight for [today] (a once-per-day nudge). */
+    suspend fun markReadyHintShown(today: Long = currentEpochDay()): Unit = mutex.withLock {
+        if (_progress.value.readyHintShownDay == today) return@withLock
+        val updated = _progress.value.copy(readyHintShownDay = today)
+        _progress.value = updated
+        StatsPrefs.setPuzzleJson(json.encodeToString(updated))
+    }
+
     private fun load(): PuzzleProgress = runCatching {
         StatsPrefs.getPuzzleJson()?.let { json.decodeFromString<PuzzleProgress>(it) }
     }.getOrNull() ?: PuzzleProgress()

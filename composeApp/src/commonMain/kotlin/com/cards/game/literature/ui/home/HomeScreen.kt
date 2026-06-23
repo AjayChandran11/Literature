@@ -12,7 +12,19 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,7 +45,10 @@ import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.stats.PlayerStats
+import com.cards.game.literature.stats.PuzzleStatus
+import com.cards.game.literature.stats.PuzzleStore
 import com.cards.game.literature.stats.StatsStore
+import com.cards.game.literature.stats.currentEpochDay
 import com.cards.game.literature.ui.stats.StreakValue
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
 import com.cards.game.literature.ui.theme.CardRed
@@ -58,6 +73,18 @@ fun HomeScreen(
     var showOnlineGateDialog by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
     val onBackground = MaterialTheme.colorScheme.onBackground
+
+    // Flag the Daily Puzzle button with a running highlight border on the FIRST Home open of the
+    // day only — and never again that day (even after visiting another screen and coming back).
+    // Decided once per Home entry from a snapshot via plain remember (NOT rememberSaveable, which
+    // NavHost would restore): returning from another destination recomposes Home fresh and re-reads
+    // the now-persisted flag, so it stays off. We mark the day shown as soon as it's displayed.
+    val today = currentEpochDay()
+    val showPuzzleHighlight = remember {
+        val p = PuzzleStore.today(today)
+        p.status != PuzzleStatus.SOLVED && p.status != PuzzleStatus.FAILED && p.readyHintShownDay != today
+    }
+    LaunchedEffect(Unit) { if (showPuzzleHighlight) PuzzleStore.markReadyHintShown(today) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Corner suit symbols
@@ -192,7 +219,8 @@ fun HomeScreen(
                 onClick = onOpenDailyPuzzle,
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
-                    .height(56.dp),
+                    .height(56.dp)
+                    .dailyPuzzleReadyHighlight(showPuzzleHighlight),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.secondary
@@ -283,6 +311,35 @@ fun HomeScreen(
                     Text(stringResource(Res.string.dialog_online_gate_continue))
                 }
             }
+        )
+    }
+}
+
+/**
+ * A gold "marching ants" border that runs around a button while [active] — used to flag that
+ * today's Daily Puzzle is unsolved. Drawn over the content (so it sits above the button's own
+ * outline) and inset slightly so it isn't clipped by the rounded shape. No-op when inactive.
+ */
+@Composable
+private fun Modifier.dailyPuzzleReadyHighlight(active: Boolean): Modifier {
+    if (!active) return this
+    val gold = MaterialTheme.colorScheme.secondary
+    val transition = rememberInfiniteTransition(label = "puzzle-ready")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 40f, // dash + gap, so the march loops seamlessly
+        animationSpec = infiniteRepeatable(tween(durationMillis = 900, easing = LinearEasing), RepeatMode.Restart),
+        label = "march"
+    )
+    return drawWithContent {
+        drawContent()
+        val inset = 2.dp.toPx()
+        drawRoundRect(
+            color = gold,
+            topLeft = Offset(inset, inset),
+            size = Size(size.width - inset * 2, size.height - inset * 2),
+            cornerRadius = CornerRadius(12.dp.toPx()),
+            style = Stroke(width = 2.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(22f, 18f), phase))
         )
     }
 }

@@ -33,7 +33,17 @@ import kotlin.random.Random
 object DailyPuzzleGenerator {
 
     /** Bump deliberately if generator heuristics change (keeps "same for everyone" within a version). */
-    const val PUZZLE_SEASON = 1
+    const val PUZZLE_SEASON = 2
+
+    /**
+     * How many OTHER half-suits get decoy moves in the log. Without this, every logged move is in
+     * the answer's half-suit, so Step 1 ("which half-suit can your team claim?") is a giveaway —
+     * you'd just pick the only suit shown. Decoys add truthful, legal asks in unrelated half-suits
+     * (failed asks, plus the occasional success that moves a card toward the opponents) so the
+     * solver must actually verify which suit's six cards are all on their team. This is also the
+     * natural difficulty lever for a future ramp: more decoy suits → a noisier, harder log.
+     */
+    const val DEFAULT_DECOY_SUITS = 2
 
     private const val PLAYER_COUNT = 4
     private const val HUMAN = "player_0"
@@ -47,13 +57,13 @@ object DailyPuzzleGenerator {
     private fun teamOf(id: String) = if (id in TEAM1) "team_1" else "team_2"
 
     /** First solvable puzzle at or after [seed] — the on-device forward-search. */
-    fun generateForDay(seed: Long, maxAttempts: Int = 200): DailyPuzzle? {
-        for (i in 0 until maxAttempts) generate(seed + i)?.let { return it }
+    fun generateForDay(seed: Long, maxAttempts: Int = 300, decoySuits: Int = DEFAULT_DECOY_SUITS): DailyPuzzle? {
+        for (i in 0 until maxAttempts) generate(seed + i, decoySuits)?.let { return it }
         return null
     }
 
     /** One deterministic attempt for [seed]; null if this seed yields no good puzzle. */
-    fun generate(seed: Long): DailyPuzzle? {
+    fun generate(seed: Long, decoySuits: Int = DEFAULT_DECOY_SUITS): DailyPuzzle? {
         val rng = Random(seed xor (PUZZLE_SEASON.toLong() * -0x61c8864680b583ebL))
         val dealt = CardDealer.dealCards(PLAYER_COUNT, seed)
         val hands: Map<String, MutableList<Card>> =
@@ -104,6 +114,60 @@ object DailyPuzzleGenerator {
                 card = hiddenCard, success = false, timestamp = ts++
             )
         }
+
+        // ── Decoy phase: truthful, legal asks in OTHER half-suits ──────────────
+        // These never touch [targetCards], so the answer deduction is untouched; they only add
+        // texture so the log isn't a single-suit giveaway. We prefer a success that moves a card
+        // TOWARD team_2 (can never help a team_1 claim), else a failed ask (no movement). The
+        // final uniqueness check below still rejects any decoy that accidentally completes another
+        // half-suit on team_1.
+        var decoysAdded = 0
+        for (hs in HalfSuit.entries.filter { it != target }.shuffled(rng)) {
+            if (decoysAdded >= decoySuits) break
+            val hsCards = DeckUtils.getAllCardsForHalfSuit(hs).toSet()
+
+            // Success moving toward team_2: a team_2 asker (holding another suit card) takes a
+            // suit card off a team_1 holder. Legal (opponents), truthful, and anti-claim for team_1.
+            var added = false
+            for (askerId in TEAM2) {
+                val askerHand = hands.getValue(askerId)
+                if (askerHand.none { it in hsCards }) continue
+                val victim = TEAM1.firstNotNullOfOrNull { t ->
+                    hands.getValue(t).firstOrNull { it in hsCards && it !in askerHand }?.let { t to it }
+                } ?: continue
+                val (targetId, card) = victim
+                hands.getValue(targetId).remove(card)
+                hands.getValue(askerId).add(card)
+                events += GameEvent.CardAsked(
+                    askerId = askerId, askerName = SEAT_NAMES.getValue(askerId),
+                    targetId = targetId, targetName = SEAT_NAMES.getValue(targetId),
+                    card = card, success = true, timestamp = ts++
+                )
+                added = true
+                break
+            }
+
+            // Fallback: a truthful failed ask (no card moves) against an opponent who lacks it.
+            if (!added) {
+                for (askerId in SEAT_IDS) {
+                    val askerHand = hands.getValue(askerId)
+                    if (askerHand.none { it in hsCards }) continue // legal: holds a card of the suit
+                    val askCard = hsCards.firstOrNull { it !in askerHand } ?: continue
+                    val opponents = if (askerId in TEAM1) TEAM2 else TEAM1
+                    val targetId = opponents.firstOrNull { askCard !in hands.getValue(it) } ?: continue
+                    events += GameEvent.CardAsked(
+                        askerId = askerId, askerName = SEAT_NAMES.getValue(askerId),
+                        targetId = targetId, targetName = SEAT_NAMES.getValue(targetId),
+                        card = askCard, success = false, timestamp = ts++
+                    )
+                    added = true
+                    break
+                }
+            }
+            if (added) decoysAdded++
+        }
+        // Never ship a single-suit giveaway: if we couldn't add any decoy, reject this seed.
+        if (decoySuits > 0 && decoysAdded == 0) return null
 
         // ── Validate from the human's POV with the real deduction oracle ──────
         val players = SEAT_IDS.map { id ->
