@@ -30,7 +30,12 @@ data class CardHolder(val card: Card, val playerId: String)
 @Serializable
 data class PuzzleAnswer(
     val halfSuit: HalfSuit,
-    val holders: List<CardHolder>
+    val holders: List<CardHolder>,
+    /**
+     * The single card the solver must *deduce*: held by the teammate and never shown
+     * being acquired in the log (the others changed hands on-screen). Step 2 asks for it.
+     */
+    val hiddenCard: Card
 ) {
     /** Holder seat id for a given card, or null if the card isn't part of this half-suit. */
     fun holderOf(card: Card): String? = holders.firstOrNull { it.card == card }?.playerId

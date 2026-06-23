@@ -8,13 +8,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -84,32 +93,51 @@ fun GameLogPanel(events: List<GameEvent>, modifier: Modifier = Modifier) {
 
 @Composable
 fun GameLogEntry(event: GameEvent, fontSize: TextUnit = 14.sp) {
-    val (text, color) = when (event) {
+    val color: Color
+    val icon: ImageVector?
+    val text: String
+    val highlight: String?   // card or half-suit name, emphasized in the sentence
+    when (event) {
         is GameEvent.CardAsked -> {
-            if (event.success) {
-                stringResource(Res.string.game_log_got_card, event.askerName, event.card.displayName, event.targetName) to LightGreen
-            } else {
-                stringResource(Res.string.game_log_asked_no, event.askerName, event.targetName, event.card.displayName) to CardRed
-            }
+            color = if (event.success) LightGreen else CardRed
+            icon = if (event.success) Icons.Filled.Check else Icons.Filled.Close
+            highlight = event.card.displayName
+            text = if (event.success)
+                stringResource(Res.string.game_log_got_card, event.askerName, event.card.displayName, event.targetName)
+            else
+                stringResource(Res.string.game_log_asked_no, event.askerName, event.targetName, event.card.displayName)
         }
         is GameEvent.DeckClaimed -> {
-            if (event.correct) {
-                stringResource(Res.string.game_log_claimed_correctly, event.claimerName, event.halfSuit.displayName) to LightGreen
-            } else {
-                stringResource(Res.string.game_log_claimed_incorrectly, event.claimerName, event.halfSuit.displayName) to CardRed
-            }
+            color = if (event.correct) LightGreen else CardRed
+            icon = if (event.correct) Icons.Filled.Check else Icons.Filled.Close
+            highlight = event.halfSuit.displayName
+            text = if (event.correct)
+                stringResource(Res.string.game_log_claimed_correctly, event.claimerName, event.halfSuit.displayName)
+            else
+                stringResource(Res.string.game_log_claimed_incorrectly, event.claimerName, event.halfSuit.displayName)
         }
         is GameEvent.GameEnded -> {
-            stringResource(Res.string.game_log_game_over) to MaterialTheme.colorScheme.secondary
+            color = MaterialTheme.colorScheme.secondary; icon = null; highlight = null
+            text = stringResource(Res.string.game_log_game_over)
         }
-        else -> "" to Color.Gray
+        else -> return
     }
-    if (text.isNotEmpty()) {
-        Text(
-            text = text,
-            fontSize = fontSize,
-            color = color,
-            modifier = Modifier.padding(vertical = 1.dp)
-        )
+    val annotated = if (highlight == null) AnnotatedString(text) else {
+        val idx = text.indexOf(highlight)
+        if (idx < 0) AnnotatedString(text) else buildAnnotatedString {
+            append(text.substring(0, idx))
+            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(highlight) }
+            append(text.substring(idx + highlight.length))
+        }
+    }
+    Row(
+        modifier = Modifier.padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(text = annotated, fontSize = fontSize, color = color)
     }
 }

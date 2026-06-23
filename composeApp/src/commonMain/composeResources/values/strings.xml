@@ -173,20 +173,25 @@
     <string name="share_result_caption">I just played Literature ♠♥♦♣ — beat my score! Get the app: %1$s</string>
 
     <!-- Daily Claim Puzzle -->
-    <string name="daily_puzzle_subtitle">Find the half-suit your team can claim, then place all six cards.</string>
+    <string name="daily_puzzle_subtitle">Claim the half-suit your team fully holds — then spot your teammate's hidden card.</string>
     <string name="daily_puzzle_number">Puzzle #%1$d</string>
-    <string name="daily_puzzle_section_table">The table</string>
-    <string name="daily_puzzle_section_moves">Recent moves</string>
+    <string name="daily_puzzle_section_players">Players</string>
+    <string name="daily_puzzle_section_moves">The moves</string>
+    <string name="daily_puzzle_move_got">%1$s got it from %2$s</string>
+    <string name="daily_puzzle_move_missed">%1$s asked %2$s — no</string>
     <string name="daily_puzzle_section_hand">Your hand</string>
     <string name="daily_puzzle_loading">Loading today's puzzle…</string>
     <string name="daily_puzzle_load_error">Couldn't load today's puzzle.</string>
-    <string name="daily_puzzle_pick_halfsuit">Which half-suit can you claim?</string>
-    <string name="daily_puzzle_assign">Who holds each %1$s card?</string>
-    <string name="daily_puzzle_assign_all">Assign all six cards first.</string>
+    <string name="daily_puzzle_step1">Step 1 · Which half-suit can your team claim?</string>
+    <string name="daily_puzzle_step2">Step 2 · Which card is %1$s hiding?</string>
+    <string name="daily_puzzle_step2_hint">You saw the others change hands — this one never did.</string>
+    <string name="daily_puzzle_claiming">Claiming %1$s</string>
+    <string name="daily_puzzle_change">Change</string>
+    <string name="daily_puzzle_you_badge">You</string>
     <string name="daily_puzzle_attempt">Attempt %1$d of %2$d</string>
-    <string name="daily_puzzle_submit">Submit Claim</string>
-    <string name="daily_puzzle_feedback_halfsuit">That half-suit isn't fully claimable yet.</string>
-    <string name="daily_puzzle_feedback_count">%1$d of 6 placements are wrong.</string>
+    <string name="daily_puzzle_submit">Claim</string>
+    <string name="daily_puzzle_feedback_halfsuit">Those aren't all on your team — try another half-suit.</string>
+    <string name="daily_puzzle_feedback_card">Not the hidden card — look again at the moves.</string>
     <string name="daily_puzzle_solved">Solved!</string>
     <string name="daily_puzzle_failed">Out of tries</string>
     <string name="daily_puzzle_answer">Answer: %1$s</string>
@@ -194,7 +199,14 @@
     <string name="daily_puzzle_come_back">Come back tomorrow for a new puzzle.</string>
     <string name="daily_puzzle_share_solved">Literature Daily #%1$d — solved %2$d/%3$d%4$s</string>
     <string name="daily_puzzle_share_failed">Literature Daily #%1$d — couldn't crack it today</string>
+    <string name="daily_puzzle_howto_title">How to play</string>
+    <string name="daily_puzzle_howto_intro">Each day, your team can fully claim exactly one half-suit.</string>
+    <string name="daily_puzzle_howto_s1">1. Read the moves and your hand.</string>
+    <string name="daily_puzzle_howto_s2">2. Pick the half-suit your team holds all six of.</string>
+    <string name="daily_puzzle_howto_s3">3. Your teammate is hiding one of those cards — find the one you never saw change hands.</string>
+    <string name="daily_puzzle_howto_outro">Fewer tries earn more stars. Solve daily to grow your streak.</string>
     <string name="cd_back">Back</string>
+    <string name="cd_how_to_play">How to play</string>
 
     <!-- Onboarding -->
     <string name="onboarding_skip">Skip</string>

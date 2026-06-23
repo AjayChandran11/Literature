@@ -2,7 +2,6 @@ package com.cards.game.literature.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.puzzle.DailyPuzzle
@@ -17,7 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /** Outcome of a submit, mapped to localized text by the screen (the VM has no resources). */
-enum class PuzzleFeedback { NONE, ASSIGN_ALL, WRONG_HALF_SUIT, WRONG_PLACEMENTS }
+enum class PuzzleFeedback { NONE, NEED_CARD, WRONG_HALF_SUIT, WRONG_CARD }
 
 data class DailyPuzzleUiState(
     val loading: Boolean = true,
@@ -28,21 +27,20 @@ data class DailyPuzzleUiState(
     val attemptsUsed: Int = 0,
     val attemptsMax: Int = PuzzleProgress.MAX_ATTEMPTS,
     val stars: Int = 0,
-    /** The half-suit the player is currently claiming. */
+    /** Step 1: the half-suit the player thinks their team can claim. */
     val selectedHalfSuit: HalfSuit? = null,
-    /** Target card -> chosen holder seat id. */
-    val assignments: Map<Card, String> = emptyMap(),
+    /** Step 2: the card the player thinks the teammate is hiding. */
+    val selectedCard: Card? = null,
     val feedback: PuzzleFeedback = PuzzleFeedback.NONE,
-    val wrongCount: Int = 0,
     /** True once the day is over (solved/failed) — the screen reveals the solution. */
-    val revealed: Boolean = false
+    val revealed: Boolean = false,
+    val howToSeen: Boolean = true
 )
 
 /**
- * Drives the Daily Claim Puzzle solve screen: loads today's deterministic puzzle,
- * tracks the in-progress claim (selected half-suit + card→holder assignments), and
- * validates a submission locally against the answer, recording the result (and the
- * separate puzzle streak) via [PuzzleStore].
+ * Drives the Daily Claim Puzzle solve screen. Two taps: pick the claimable half-suit,
+ * then the one card the teammate is hiding. Validates locally against the answer and
+ * records the result (+ the separate puzzle streak) via [PuzzleStore].
  */
 class DailyPuzzleViewModel(
     private val repository: DailyPuzzleRepository
@@ -62,22 +60,29 @@ class DailyPuzzleViewModel(
             status = progress.status,
             attemptsUsed = progress.attemptsUsed,
             stars = progress.stars,
-            revealed = progress.status.isTerminal()
+            revealed = progress.status.isTerminal(),
+            howToSeen = progress.howToSeen
         )
     }
 
     fun selectHalfSuit(halfSuit: HalfSuit) {
         if (terminal()) return
         _uiState.value = _uiState.value.copy(
-            selectedHalfSuit = halfSuit, assignments = emptyMap(), feedback = PuzzleFeedback.NONE
+            selectedHalfSuit = halfSuit, selectedCard = null, feedback = PuzzleFeedback.NONE
         )
     }
 
-    fun assign(card: Card, holderId: String) {
+    /** Re-open the half-suit picker (step 1). */
+    fun clearHalfSuit() {
         if (terminal()) return
         _uiState.value = _uiState.value.copy(
-            assignments = _uiState.value.assignments + (card to holderId), feedback = PuzzleFeedback.NONE
+            selectedHalfSuit = null, selectedCard = null, feedback = PuzzleFeedback.NONE
         )
+    }
+
+    fun selectCard(card: Card) {
+        if (terminal()) return
+        _uiState.value = _uiState.value.copy(selectedCard = card, feedback = PuzzleFeedback.NONE)
     }
 
     fun submit() {
@@ -85,27 +90,21 @@ class DailyPuzzleViewModel(
         val puzzle = s.puzzle ?: return
         val halfSuit = s.selectedHalfSuit ?: return
         if (terminal()) return
-
-        val cards = DeckUtils.getAllCardsForHalfSuit(halfSuit)
-        if (cards.any { it !in s.assignments }) {
-            _uiState.value = s.copy(feedback = PuzzleFeedback.ASSIGN_ALL)
+        val card = s.selectedCard ?: run {
+            _uiState.value = s.copy(feedback = PuzzleFeedback.NEED_CARD)
             return
         }
+
         val rightHalfSuit = halfSuit == puzzle.answer.halfSuit
-        val correct = rightHalfSuit && cards.all { s.assignments[it] == puzzle.answer.holderOf(it) }
+        val correct = rightHalfSuit && card == puzzle.answer.hiddenCard
 
         viewModelScope.launch {
             val today = currentEpochDay()
             val progress = PuzzleStore.recordAttempt(correct, today)
-            val feedback: PuzzleFeedback
-            var wrongCount = 0
-            when {
-                correct -> feedback = PuzzleFeedback.NONE
-                !rightHalfSuit -> feedback = PuzzleFeedback.WRONG_HALF_SUIT
-                else -> {
-                    feedback = PuzzleFeedback.WRONG_PLACEMENTS
-                    wrongCount = cards.count { s.assignments[it] != puzzle.answer.holderOf(it) }
-                }
+            val feedback = when {
+                correct -> PuzzleFeedback.NONE
+                !rightHalfSuit -> PuzzleFeedback.WRONG_HALF_SUIT
+                else -> PuzzleFeedback.WRONG_CARD
             }
             _uiState.value = _uiState.value.copy(
                 status = progress.status,
@@ -113,10 +112,15 @@ class DailyPuzzleViewModel(
                 stars = progress.stars,
                 streak = progress.displayedStreak(today),
                 feedback = feedback,
-                wrongCount = wrongCount,
                 revealed = progress.status.isTerminal()
             )
         }
+    }
+
+    fun markHowToSeen() {
+        if (_uiState.value.howToSeen) return
+        _uiState.value = _uiState.value.copy(howToSeen = true)
+        viewModelScope.launch { PuzzleStore.markHowToSeen() }
     }
 
     private fun terminal(): Boolean = _uiState.value.status.isTerminal()

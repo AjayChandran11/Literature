@@ -33,7 +33,6 @@ import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.stats.PlayerStats
-import com.cards.game.literature.stats.PuzzleStore
 import com.cards.game.literature.stats.StatsStore
 import com.cards.game.literature.ui.stats.StreakValue
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
@@ -189,7 +188,6 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val puzzleStreak = PuzzleStore.progress.collectAsState().value.displayedStreak()
             OutlinedButton(
                 onClick = onOpenDailyPuzzle,
                 modifier = Modifier
@@ -201,10 +199,6 @@ fun HomeScreen(
                 )
             ) {
                 Text(stringResource(Res.string.home_daily_puzzle), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (puzzleStreak > 0) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("🔥$puzzleStreak", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

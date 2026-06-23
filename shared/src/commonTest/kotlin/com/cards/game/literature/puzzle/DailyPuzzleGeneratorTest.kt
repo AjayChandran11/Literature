@@ -48,6 +48,14 @@ class DailyPuzzleGeneratorTest {
                 assertEquals(h.playerId, known[h.card], "seed=$seed deduce ${h.card}")
             }
             assertTrue(p.answer.holders.any { it.card !in p.myHand }, "seed=$seed needs deduction")
+
+            // The single deduced card (step 2): teammate's, not in your hand, in the half-suit,
+            // with >=2 non-hand cards so the pick is a real choice (>=1 distractor + the answer).
+            val hidden = p.answer.hiddenCard
+            assertTrue(hidden in hsCards, "seed=$seed hidden in half-suit")
+            assertTrue(hidden !in p.myHand, "seed=$seed hidden not in hand")
+            assertEquals("player_2", p.answer.holderOf(hidden), "seed=$seed hidden is teammate's")
+            assertTrue(hsCards.count { it !in p.myHand } >= 2, "seed=$seed step-2 real choice")
         }
         assertTrue(produced >= 10, "expected several puzzles from 80 seeds, got $produced")
     }

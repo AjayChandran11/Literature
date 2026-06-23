@@ -21,6 +21,8 @@ data class PuzzleProgress(
     val lastSolvedEpochDay: Long = 0,
     val totalSolved: Int = 0,
     val totalStars: Int = 0,
+    /** One-time: the player has seen the how-to-play explainer. */
+    val howToSeen: Boolean = false,
     // ── Today's attempt state (valid for [dayEpoch]) ──
     val dayEpoch: Long = 0,
     val attemptsUsed: Int = 0,

@@ -33,6 +33,14 @@ object PuzzleStore {
             updated
         }
 
+    /** Remember that the player has seen the how-to-play explainer. */
+    suspend fun markHowToSeen(): Unit = mutex.withLock {
+        if (_progress.value.howToSeen) return@withLock
+        val updated = _progress.value.copy(howToSeen = true)
+        _progress.value = updated
+        StatsPrefs.setPuzzleJson(json.encodeToString(updated))
+    }
+
     private fun load(): PuzzleProgress = runCatching {
         StatsPrefs.getPuzzleJson()?.let { json.decodeFromString<PuzzleProgress>(it) }
     }.getOrNull() ?: PuzzleProgress()

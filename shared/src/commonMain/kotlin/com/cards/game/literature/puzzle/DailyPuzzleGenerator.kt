@@ -83,8 +83,10 @@ object DailyPuzzleGenerator {
             if (loot.isEmpty()) break
             if (guard++ > 12) return null
             val (owner, card) = loot[rng.nextInt(loot.size)]
-            val legalAskers = TEAM1.filter { a -> hands.getValue(a).any { it in targetCards } && card !in hands.getValue(a) }
-            val asker = legalAskers[rng.nextInt(legalAskers.size)]
+            // The teammate (player_2) does the pulling, so their grabbed cards are visible
+            // in the log; that leaves exactly one unseen card — the hidden one — for step 2.
+            // player_2 is always a legal asker here: holds >=1 target card and never the loot.
+            val asker = "player_2"
             hands.getValue(owner).remove(card)
             hands.getValue(asker).add(card)
             events += GameEvent.CardAsked(
@@ -138,7 +140,7 @@ object DailyPuzzleGenerator {
             myHand = hands.getValue(HUMAN).sortedWith(compareBy({ it.suit }, { it.value.rank })),
             halfSuitStatuses = HalfSuit.entries.map { HalfSuitStatus(it) },
             events = events,
-            answer = PuzzleAnswer(target, targetCards.map { CardHolder(it, trueHolder.getValue(it)) })
+            answer = PuzzleAnswer(target, targetCards.map { CardHolder(it, trueHolder.getValue(it)) }, hiddenCard)
         )
     }
 }
