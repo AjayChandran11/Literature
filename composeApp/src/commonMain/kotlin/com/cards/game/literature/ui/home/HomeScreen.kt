@@ -22,18 +22,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +59,7 @@ import com.cards.game.literature.stats.currentEpochDay
 import com.cards.game.literature.ui.stats.StreakValue
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
 import com.cards.game.literature.ui.theme.CardRed
+import com.cards.game.literature.ui.theme.LiteratureTheme
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -74,8 +82,8 @@ fun HomeScreen(
     var showSettingsSheet by remember { mutableStateOf(false) }
     val onBackground = MaterialTheme.colorScheme.onBackground
 
-    // Flag the Daily Puzzle button with a running highlight border on the FIRST Home open of the
-    // day only — and never again that day (even after visiting another screen and coming back).
+    // Flag the Daily Puzzle button with a "NEW" corner badge on the FIRST Home open of the day
+    // only — and never again that day (even after visiting another screen and coming back).
     // Decided once per Home entry from a snapshot via plain remember (NOT rememberSaveable, which
     // NavHost would restore): returning from another destination recomposes Home fresh and re-reads
     // the now-persisted flag, so it stays off. We mark the day shown as soon as it's displayed.
@@ -154,11 +162,11 @@ fun HomeScreen(
 
             val stats by StatsStore.stats.collectAsState()
             if (stats.gamesPlayed > 0) {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 HomeStatsCard(stats = stats)
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             } else {
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(40.dp))
             }
 
             OutlinedTextField(
@@ -174,7 +182,7 @@ fun HomeScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = { showSetupDialog = true },
@@ -193,40 +201,44 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedButton(
-                onClick = {
-                    if (!TutorialPrefs.isFirstGameCompleted()) {
-                        showOnlineGateDialog = true
-                    } else {
-                        onPlayOnline(playerName.trim())
+            // Two secondary "modes" side by side, below the primary New Game CTA.
+            Row(
+                modifier = Modifier.fillMaxWidth(0.8f),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                HomeModeTile(
+                    icon = Icons.Filled.Public,
+                    label = stringResource(Res.string.home_play_online),
+                    enabled = playerName.isNotBlank(),
+                    onClick = {
+                        if (!TutorialPrefs.isFirstGameCompleted()) {
+                            showOnlineGateDialog = true
+                        } else {
+                            onPlayOnline(playerName.trim())
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                BadgedBox(
+                    modifier = Modifier.weight(1f),
+                    badge = {
+                        if (showPuzzleHighlight) {
+                            Badge(
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                contentColor = MaterialTheme.colorScheme.onSecondary
+                            ) {
+                                Text(stringResource(Res.string.daily_puzzle_badge_new))
+                            }
+                        }
                     }
-                },
-                enabled = playerName.isNotBlank(),
-                modifier = Modifier
-                    .fillMaxWidth(0.8f)
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Text(stringResource(Res.string.home_play_online), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedButton(
-                onClick = onOpenDailyPuzzle,
-                modifier = Modifier
-                    .fillMaxWidth(0.8f)
-                    .height(56.dp)
-                    .dailyPuzzleReadyHighlight(showPuzzleHighlight),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Text(stringResource(Res.string.home_daily_puzzle), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                ) {
+                    HomeModeTile(
+                        icon = Icons.Filled.Extension,
+                        label = stringResource(Res.string.home_daily_puzzle),
+                        onClick = onOpenDailyPuzzle,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -316,31 +328,130 @@ fun HomeScreen(
 }
 
 /**
- * A gold "marching ants" border that runs around a button while [active] — used to flag that
- * today's Daily Puzzle is unsolved. Drawn over the content (so it sits above the button's own
- * outline) and inset slightly so it isn't clipped by the rounded shape. No-op when inactive.
+ * A single golden line that travels around the button's rounded border while [active], with a
+ * sparkle at its leading point. Drawn over the content (above the button's own outline) and inset
+ * so it isn't clipped. No-op when inactive.
+ *
+ * NOTE: not currently wired into the Home button (replaced by a simpler "NEW" corner badge because
+ * the motion felt too busy) — kept, together with [DailyPuzzleReadyHighlightPreview], for reuse.
  */
 @Composable
 private fun Modifier.dailyPuzzleReadyHighlight(active: Boolean): Modifier {
     if (!active) return this
     val gold = MaterialTheme.colorScheme.secondary
     val transition = rememberInfiniteTransition(label = "puzzle-ready")
-    val phase by transition.animateFloat(
+    val progress by transition.animateFloat(
         initialValue = 0f,
-        targetValue = 40f, // dash + gap, so the march loops seamlessly
-        animationSpec = infiniteRepeatable(tween(durationMillis = 900, easing = LinearEasing), RepeatMode.Restart),
-        label = "march"
+        targetValue = 1f, // fraction of the perimeter the line's head has travelled
+        animationSpec = infiniteRepeatable(tween(durationMillis = 2200, easing = LinearEasing), RepeatMode.Restart),
+        label = "orbit"
     )
+    val sparkle by transition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 650, easing = LinearEasing), RepeatMode.Reverse),
+        label = "sparkle"
+    )
+    val borderPath = remember { Path() }
+    val linePath = remember { Path() }
+    val measure = remember { PathMeasure() }
     return drawWithContent {
         drawContent()
-        val inset = 2.dp.toPx()
-        drawRoundRect(
-            color = gold,
-            topLeft = Offset(inset, inset),
-            size = Size(size.width - inset * 2, size.height - inset * 2),
-            cornerRadius = CornerRadius(12.dp.toPx()),
-            style = Stroke(width = 2.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(22f, 18f), phase))
+        val strokePx = 3.dp.toPx()
+        val inset = strokePx / 2f + 1.dp.toPx()
+        val corner = (12.dp.toPx() - inset).coerceAtLeast(0f)
+        borderPath.reset()
+        borderPath.addRoundRect(
+            RoundRect(inset, inset, size.width - inset, size.height - inset, CornerRadius(corner, corner))
         )
+        measure.setPath(borderPath, true)
+        val total = measure.length
+        if (total <= 0f) return@drawWithContent
+
+        val lineLen = total * 0.22f          // a single short arc, ~22% of the perimeter
+        val head = (progress * total).coerceIn(0f, total)
+        val tailStart = head - lineLen
+        linePath.reset()
+        if (tailStart >= 0f) {
+            measure.getSegment(tailStart, head, linePath, true)
+        } else {
+            // wrap across the 0/total seam
+            measure.getSegment(total + tailStart, total, linePath, true)
+            measure.getSegment(0f, head, linePath, true)
+        }
+        // soft glow under the line, then the crisp golden line itself
+        drawPath(linePath, color = gold.copy(alpha = 0.22f), style = Stroke(width = strokePx * 2.6f, cap = StrokeCap.Round))
+        drawPath(linePath, color = gold, style = Stroke(width = strokePx, cap = StrokeCap.Round))
+
+        // sparkle at the leading point
+        val headPos = measure.getPosition(head)
+        val rayLen = strokePx * 3.2f * sparkle
+        drawCircle(color = gold.copy(alpha = 0.28f), radius = strokePx * 3.0f * sparkle, center = headPos)
+        drawCircle(color = Color.White, radius = strokePx * 0.95f, center = headPos)
+        val ray = gold.copy(alpha = 0.9f)
+        drawLine(ray, Offset(headPos.x - rayLen, headPos.y), Offset(headPos.x + rayLen, headPos.y), strokeWidth = strokePx * 0.5f, cap = StrokeCap.Round)
+        drawLine(ray, Offset(headPos.x, headPos.y - rayLen), Offset(headPos.x, headPos.y + rayLen), strokeWidth = strokePx * 0.5f, cap = StrokeCap.Round)
+    }
+}
+
+/**
+ * Preview of the moving golden line + sparkle. Open Android Studio's *Interactive Preview*
+ * (or the Animation Preview) on this to watch the line travel around the border.
+ */
+@Preview(name = "Daily Puzzle button — ready highlight", showBackground = true)
+@Composable
+private fun DailyPuzzleReadyHighlightPreview() {
+    LiteratureTheme {
+        Box(Modifier.padding(24.dp)) {
+            OutlinedButton(
+                onClick = {},
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .dailyPuzzleReadyHighlight(active = true),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text(stringResource(Res.string.home_daily_puzzle), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+/** Preview of the two secondary mode tiles, with the "NEW" badge on Daily Puzzle. */
+@Preview(name = "Home mode tiles — Online + Daily (NEW)", showBackground = true)
+@Composable
+private fun HomeModeTilesPreview() {
+    LiteratureTheme {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            HomeModeTile(
+                icon = Icons.Filled.Public,
+                label = stringResource(Res.string.home_play_online),
+                onClick = {},
+                modifier = Modifier.weight(1f)
+            )
+            BadgedBox(
+                modifier = Modifier.weight(1f),
+                badge = {
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onSecondary
+                    ) {
+                        Text(stringResource(Res.string.daily_puzzle_badge_new))
+                    }
+                }
+            ) {
+                HomeModeTile(
+                    icon = Icons.Filled.Extension,
+                    label = stringResource(Res.string.home_daily_puzzle),
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
     }
 }
 
@@ -475,6 +586,45 @@ private fun HomeStatMini(value: String, label: String, modifier: Modifier = Modi
             label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** A compact, icon-over-label secondary action tile (Play Online / Daily Puzzle). */
+@Composable
+private fun HomeModeTile(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    // Mirror Material's disabled OutlinedButton: muted grey content + very faint border when
+    // disabled (NOT colorScheme.outline, which is a vivid green in the light theme and reads active).
+    val contentColor =
+        if (enabled) MaterialTheme.colorScheme.secondary
+        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    val borderColor =
+        if (enabled) MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
+        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+    Column(
+        modifier = modifier
+            .height(76.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(26.dp))
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = contentColor,
+            maxLines = 1
         )
     }
 }

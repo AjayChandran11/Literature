@@ -194,6 +194,7 @@
     <string name="daily_puzzle_ruled_out">%1$s and %2$s said no — it must be %3$s.</string>
     <string name="daily_puzzle_rail_prompt">%1$s is hiding one of these — which?</string>
     <string name="daily_puzzle_streak_chip">%1$d-day streak</string>
+    <string name="daily_puzzle_badge_new">NEW</string>
     <string name="daily_puzzle_claiming">Claiming %1$s</string>
     <string name="daily_puzzle_change">Change</string>
     <string name="daily_puzzle_you_badge">You</string>
