@@ -1,6 +1,7 @@
 package com.cards.game.literature.stats
 
 import com.cards.game.literature.preferences.StatsPrefs
+import com.cards.game.literature.puzzle.PuzzleKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,10 +34,11 @@ object PuzzleStore {
             updated
         }
 
-    /** Remember that the player has seen the how-to-play explainer. */
-    suspend fun markHowToSeen(): Unit = mutex.withLock {
-        if (_progress.value.howToSeen) return@withLock
-        val updated = _progress.value.copy(howToSeen = true)
+    /** Remember that the player has seen the how-to-play explainer for [kind]. */
+    suspend fun markHowToSeen(kind: PuzzleKind): Unit = mutex.withLock {
+        val current = _progress.value
+        if (current.hasSeenHowTo(kind)) return@withLock
+        val updated = current.withHowToSeen(kind)
         _progress.value = updated
         StatsPrefs.setPuzzleJson(json.encodeToString(updated))
     }

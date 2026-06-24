@@ -1,5 +1,6 @@
 package com.cards.game.literature.stats
 
+import com.cards.game.literature.puzzle.PuzzleKind
 import kotlinx.serialization.Serializable
 
 enum class PuzzleStatus { NOT_STARTED, IN_PROGRESS, SOLVED, FAILED }
@@ -21,8 +22,10 @@ data class PuzzleProgress(
     val lastSolvedEpochDay: Long = 0,
     val totalSolved: Int = 0,
     val totalStars: Int = 0,
-    /** One-time: the player has seen the how-to-play explainer. */
+    /** Legacy one-time how-to flag (pre-variety). Read as "the CLAIM how-to was seen". */
     val howToSeen: Boolean = false,
+    /** Per-kind: which puzzle types' how-to explainers the player has seen (one fires per new type). */
+    val howToSeenKinds: Set<PuzzleKind> = emptySet(),
     /** Local epoch-day we last flashed the Home "puzzle ready" highlight (a once-per-day nudge). */
     val readyHintShownDay: Long = 0,
     // ── Today's attempt state (valid for [dayEpoch]) ──
@@ -65,6 +68,17 @@ data class PuzzleProgress(
             )
         }
     }
+
+    /**
+     * Has the player seen the how-to for [kind]? The legacy [howToSeen] flag counts as the CLAIM
+     * how-to (so existing players don't re-see it), and each kind's explainer fires once thereafter.
+     */
+    fun hasSeenHowTo(kind: PuzzleKind): Boolean =
+        kind in howToSeenKinds || (howToSeen && kind == PuzzleKind.CLAIM)
+
+    /** Mark [kind]'s how-to as seen. */
+    fun withHowToSeen(kind: PuzzleKind): PuzzleProgress =
+        copy(howToSeenKinds = howToSeenKinds + kind)
 
     /** Streak to show now: alive if solved today, or solved yesterday and today isn't failed. */
     fun displayedStreak(today: Long = currentEpochDay()): Int {

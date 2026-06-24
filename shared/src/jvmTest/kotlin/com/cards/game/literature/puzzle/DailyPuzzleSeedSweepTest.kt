@@ -4,25 +4,36 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Proof harness (JVM only, not shipped): sweeps many seeds to confirm the generator
- * has a healthy hit-rate — so the on-device forward-search terminates in a few tries —
- * and that every day's search lands a puzzle within the cap.
+ * Proof harness (JVM only, not shipped): sweeps many seeds to confirm each puzzle kind has a
+ * healthy hit-rate — so the on-device forward-search terminates in a few tries — and that every
+ * real calendar day (its scheduled kind + production seed) lands a puzzle within the cap.
  */
 class DailyPuzzleSeedSweepTest {
 
+    /** Mirror of DailyPuzzleRepository.seedForDay (its stride is private). */
+    private fun seedForDay(epochDay: Long): Long = epochDay * 1_000_003L
+
     @Test
-    fun healthyHitRate() {
+    fun healthyHitRatePerKind() {
         val n = 5000
-        var hits = 0
-        for (seed in 0L until n) if (DailyPuzzleGenerator.generate(seed) != null) hits++
-        val rate = hits.toDouble() / n
-        assertTrue(rate > 0.10, "hit rate $rate too low — on-device forward-search would be slow")
+        for (kind in PuzzleKind.entries) {
+            var hits = 0
+            for (seed in 0L until n) if (DailyPuzzleGenerator.generate(kind, seed) != null) hits++
+            val rate = hits.toDouble() / n
+            assertTrue(rate > 0.10, "kind=$kind hit rate $rate too low — on-device forward-search would be slow")
+        }
     }
 
     @Test
-    fun everyDayResolvesWithinCap() {
-        for (day in 0L until 1000L) {
-            assertTrue(DailyPuzzleGenerator.generateForDay(day * 7919L) != null, "no puzzle for day=$day")
+    fun everyScheduledDayResolvesWithinCap() {
+        // ~5.5 years of days, each with its scheduled kind and the production seed.
+        for (day in 0L until 2000L) {
+            val epochDay = PuzzleSchedule.BASE_EPOCH_DAY + day
+            val kind = PuzzleSchedule.kindForDay(epochDay)
+            assertTrue(
+                DailyPuzzleGenerator.generateForDay(kind, seedForDay(epochDay)) != null,
+                "no puzzle for day=$day kind=$kind"
+            )
         }
     }
 }

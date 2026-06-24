@@ -4,6 +4,7 @@ import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.HalfSuitStatus
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -24,22 +25,51 @@ data class PuzzlePlayer(
 data class CardHolder(val card: Card, val playerId: String)
 
 /**
- * The correct solution: which half-suit is now fully claimable by the human's
- * team, and who holds each of its six cards.
+ * The correct solution for a puzzle. One subtype per [PuzzleKind]; the solve screen and
+ * the [com.cards.game.literature.viewmodel.DailyPuzzleViewModel] branch on the concrete
+ * type. Sealed (closed polymorphism) so kotlinx-serialization needs no module registration.
  */
 @Serializable
-data class PuzzleAnswer(
+sealed interface PuzzleAnswer
+
+/**
+ * [PuzzleKind.CLAIM]: the half-suit now fully claimable by the human's team, who holds each
+ * of its six cards, and the single card the solver must *deduce* — held by the teammate and
+ * never shown being acquired in the log (the others changed hands on-screen). Step 2 asks for it.
+ */
+@Serializable
+@SerialName("claim")
+data class HalfSuitClaim(
     val halfSuit: HalfSuit,
     val holders: List<CardHolder>,
-    /**
-     * The single card the solver must *deduce*: held by the teammate and never shown
-     * being acquired in the log (the others changed hands on-screen). Step 2 asks for it.
-     */
     val hiddenCard: Card
-) {
+) : PuzzleAnswer {
     /** Holder seat id for a given card, or null if the card isn't part of this half-suit. */
     fun holderOf(card: Card): String? = holders.firstOrNull { it.card == card }?.playerId
 }
+
+/**
+ * [PuzzleKind.LOCATE]: a named [card] whose holder ([seatId]) is forced by the public log
+ * (the 5-of-6 deduction). The solver taps the seat that must hold it.
+ */
+@Serializable
+@SerialName("locate")
+data class LocateCard(
+    val card: Card,
+    val seatId: String
+) : PuzzleAnswer
+
+/**
+ * [PuzzleKind.WASTED_ASK]: a [card] the human could legally ask for, and the one opponent
+ * ([seatId]) provably unable to hold it — so asking them would be wasted. The solver taps
+ * that opponent.
+ */
+@Serializable
+@SerialName("wasted")
+data class WastedAsk(
+    val card: Card,
+    val seatId: String
+) : PuzzleAnswer
 
 /**
  * A self-contained daily deduction puzzle, produced deterministically from [seed]
@@ -53,6 +83,7 @@ data class PuzzleAnswer(
 @Serializable
 data class DailyPuzzle(
     val seed: Long,
+    val kind: PuzzleKind,
     val playerCount: Int,
     val players: List<PuzzlePlayer>,
     val humanSeatId: String,

@@ -1,7 +1,10 @@
 package com.cards.game.literature.stats
 
+import com.cards.game.literature.puzzle.PuzzleKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class PuzzleProgressTest {
 
@@ -55,6 +58,27 @@ class PuzzleProgressTest {
         // a further attempt the same day is a no-op
         assertEquals(solved, solved.recordAttempt(1, correct = true))
         assertEquals(1, solved.totalSolved)
+    }
+
+    @Test
+    fun perKindHowToWithLegacyMigration() {
+        // A fresh player has seen nothing.
+        val fresh = PuzzleProgress()
+        assertFalse(fresh.hasSeenHowTo(PuzzleKind.CLAIM))
+        assertFalse(fresh.hasSeenHowTo(PuzzleKind.LOCATE))
+
+        // The legacy boolean counts as the CLAIM how-to (existing players don't re-see it),
+        // but the new kinds still get their own one-time explainer.
+        val legacy = PuzzleProgress(howToSeen = true)
+        assertTrue(legacy.hasSeenHowTo(PuzzleKind.CLAIM))
+        assertFalse(legacy.hasSeenHowTo(PuzzleKind.LOCATE))
+        assertFalse(legacy.hasSeenHowTo(PuzzleKind.WASTED_ASK))
+
+        // Marking a kind seen is additive and leaves the others alone.
+        val afterLocate = legacy.withHowToSeen(PuzzleKind.LOCATE)
+        assertTrue(afterLocate.hasSeenHowTo(PuzzleKind.LOCATE))
+        assertTrue(afterLocate.hasSeenHowTo(PuzzleKind.CLAIM))
+        assertFalse(afterLocate.hasSeenHowTo(PuzzleKind.WASTED_ASK))
     }
 
     @Test
