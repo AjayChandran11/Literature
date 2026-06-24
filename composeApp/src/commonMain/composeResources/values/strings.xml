@@ -173,18 +173,11 @@
     <string name="share_result_caption">I just played Literature ♠♥♦♣ — beat my score! Get the app: %1$s</string>
 
     <!-- Daily Claim Puzzle -->
-    <string name="daily_puzzle_subtitle">Claim the half-suit your team fully holds — then spot your teammate's hidden card.</string>
     <string name="daily_puzzle_number">Puzzle #%1$d</string>
-    <string name="daily_puzzle_section_players">Players</string>
-    <string name="daily_puzzle_section_moves">The moves</string>
     <string name="daily_puzzle_move_got">%1$s got it from %2$s</string>
     <string name="daily_puzzle_move_missed">%1$s asked %2$s — no</string>
-    <string name="daily_puzzle_section_hand">Your hand</string>
     <string name="daily_puzzle_loading">Loading today's puzzle…</string>
     <string name="daily_puzzle_load_error">Couldn't load today's puzzle.</string>
-    <string name="daily_puzzle_step1">Step 1 · Which half-suit can your team claim?</string>
-    <string name="daily_puzzle_step2">Step 2 · Which card is %1$s hiding?</string>
-    <string name="daily_puzzle_step2_hint">You saw the others change hands — this one never did.</string>
     <!-- Case Board redesign -->
     <string name="daily_puzzle_case_line">Your team can claim one half-suit. Find the card %1$s is hiding.</string>
     <string name="daily_puzzle_evidence">Evidence</string>
@@ -205,7 +198,6 @@
     <string name="daily_puzzle_solved">Solved!</string>
     <string name="daily_puzzle_failed">Out of tries</string>
     <string name="daily_puzzle_answer">Answer: %1$s</string>
-    <string name="daily_puzzle_holder">%1$s → %2$s</string>
     <string name="daily_puzzle_come_back">Come back tomorrow for a new puzzle.</string>
     <string name="daily_puzzle_share_solved">Literature Daily #%1$d — solved %2$d/%3$d%4$s</string>
     <string name="daily_puzzle_share_failed">Literature Daily #%1$d — couldn't crack it today</string>
