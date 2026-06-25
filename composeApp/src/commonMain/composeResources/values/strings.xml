@@ -187,7 +187,7 @@
     <string name="daily_puzzle_ruled_out">%1$s and %2$s said no — it must be %3$s.</string>
     <string name="daily_puzzle_rail_prompt">%1$s is hiding one of these — which?</string>
     <string name="daily_puzzle_streak_chip">%1$d-day streak</string>
-    <string name="daily_puzzle_badge_new">NEW</string>
+    <string name="daily_puzzle_badge_alert">!</string>
     <string name="daily_puzzle_claiming">Claiming %1$s</string>
     <string name="daily_puzzle_change">Change</string>
     <string name="daily_puzzle_you_badge">You</string>
@@ -378,6 +378,12 @@
     <string name="home_streak_best">Best</string>
     <string name="stats_ask_success">Ask success</string>
     <string name="stats_claim_accuracy">Claim accuracy</string>
+    <!-- Daily Puzzle stats (My Stats section) -->
+    <string name="stats_puzzle_title">Daily Puzzle</string>
+    <string name="stats_puzzle_streak">Streak</string>
+    <string name="stats_puzzle_best">Best</string>
+    <string name="stats_puzzle_solved">Solved</string>
+    <string name="stats_puzzle_stars">Stars</string>
     <string name="stats_online_title">Online</string>
     <string name="stats_online_record">%1$d wins in %2$d games</string>
     <string name="stats_vs_bots_title">Vs Bots</string>

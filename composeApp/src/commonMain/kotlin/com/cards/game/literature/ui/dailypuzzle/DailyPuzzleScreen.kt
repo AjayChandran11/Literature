@@ -73,6 +73,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -146,11 +150,15 @@ internal fun DailyPuzzleScreenContent(
         }
     }
 
-    // Evidence starts open so the player reads the story, then folds away once they
-    // commit to a half-suit so the board has room — purely presentational state.
-    var evidenceExpanded by remember { mutableStateOf(true) }
+    // Evidence starts open so a first-time solver reads the story, then folds away once they
+    // commit (Claim step 1) or finish the day. On re-entry to an already solved/failed puzzle it
+    // starts folded so the result + Share are visible without scrolling — purely presentational.
+    var evidenceExpanded by remember { mutableStateOf(!uiState.revealed) }
     LaunchedEffect(uiState.selectedHalfSuit) {
         if (uiState.selectedHalfSuit != null) evidenceExpanded = false
+    }
+    LaunchedEffect(uiState.revealed) {
+        if (uiState.revealed) evidenceExpanded = false
     }
 
     Scaffold(
@@ -462,7 +470,7 @@ private fun SeatPickStep(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
         ) {
-            CardView(card = answerCard, isSelected = false, onClick = {})
+            FocusCard(answerCard)
         }
         Text(
             pickHint,
@@ -514,6 +522,7 @@ private fun SeatPickRow(
                     .background(tint.copy(alpha = if (selected) 0.28f else 0.10f))
                     .border(if (selected) 2.dp else 1.dp, tint.copy(alpha = if (selected) 1f else 0.4f), RoundedCornerShape(50))
                     .clickable { onSelect(p.id) }
+                    .semantics(mergeDescendants = true) { this.selected = p.id == selectedSeatId }
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -695,10 +704,37 @@ private fun RuledOutRow(puzzle: DailyPuzzle) {
 
 // ─── Reusable mini playing card ──────────────────────────────────────────────
 
+/** Localized screen-reader label for a card, e.g. "9 of Hearts" (matches CardView's). */
+@Composable
+private fun cardContentDescription(card: Card): String =
+    stringResource(Res.string.cd_card, card.value.displayName, card.suit.name.lowercase().replaceFirstChar { it.uppercase() })
+
+/** A larger, NON-interactive playing card presenting the card in question (LOCATE / WASTED_ASK). */
+@Composable
+private fun FocusCard(card: Card) {
+    val ink = if (card.suit.isRed) CardRed else CardInk
+    val desc = cardContentDescription(card)
+    Column(
+        modifier = Modifier
+            .width(60.dp)
+            .height(80.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White)
+            .border(1.5.dp, Color(0x1F000000), RoundedCornerShape(8.dp))
+            .clearAndSetSemantics { contentDescription = desc },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(card.value.displayName, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = ink, lineHeight = 28.sp)
+        Text(card.suit.symbol, fontSize = 22.sp, color = ink, lineHeight = 24.sp)
+    }
+}
+
 @Composable
 private fun MiniCard(card: Card, modifier: Modifier = Modifier, dimmed: Boolean = false, placedTint: Color? = null) {
     val ink = if (card.suit.isRed) CardRed else CardInk
     val border = placedTint?.copy(alpha = 0.6f) ?: Color(0x1F000000)
+    val desc = cardContentDescription(card)
     Column(
         modifier = modifier
             .alpha(if (dimmed) 0.35f else 1f)
@@ -706,7 +742,8 @@ private fun MiniCard(card: Card, modifier: Modifier = Modifier, dimmed: Boolean 
             .height(40.dp)
             .clip(RoundedCornerShape(6.dp))
             .background(Color.White)
-            .border(if (placedTint != null) 1.5.dp else 1.dp, border, RoundedCornerShape(6.dp)),
+            .border(if (placedTint != null) 1.5.dp else 1.dp, border, RoundedCornerShape(6.dp))
+            .clearAndSetSemantics { contentDescription = desc },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {

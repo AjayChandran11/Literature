@@ -20,10 +20,20 @@ import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.MatchRecord
 import com.cards.game.literature.stats.Outcome
 import com.cards.game.literature.stats.PlayerStats
+import com.cards.game.literature.stats.PuzzleProgress
+import com.cards.game.literature.stats.currentEpochDay
 import com.cards.game.literature.ui.home.HomeStatsCard
 import com.cards.game.literature.ui.theme.LiteratureTheme
 
 // ---- Sample data ----
+
+private val samplePuzzleProgress = PuzzleProgress(
+    currentStreak = 6,
+    bestStreak = 9,
+    totalSolved = 23,
+    totalStars = 51,
+    lastSolvedEpochDay = currentEpochDay()
+)
 
 private val typicalStats = PlayerStats(
     gamesPlayed = 27,
@@ -159,6 +169,7 @@ private fun StatsScreenPreview() {
             stats = typicalStats,
             history = sampleHistory(8),
             achievements = someAchievements,
+            puzzle = samplePuzzleProgress,
             onBack = {}
         )
     }
@@ -193,6 +204,7 @@ private fun StatsScreenDarkPreview() {
             stats = typicalStats,
             history = sampleHistory(8),
             achievements = someAchievements,
+            puzzle = samplePuzzleProgress,
             onBack = {}
         )
     }

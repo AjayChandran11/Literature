@@ -82,7 +82,7 @@ fun HomeScreen(
     var showSettingsSheet by remember { mutableStateOf(false) }
     val onBackground = MaterialTheme.colorScheme.onBackground
 
-    // Flag the Daily Puzzle button with a "NEW" corner badge on the FIRST Home open of the day
+    // Flag the Daily Puzzle button with a "!" alert badge on the FIRST Home open of the day
     // only — and never again that day (even after visiting another screen and coming back).
     // Decided once per Home entry from a snapshot via plain remember (NOT rememberSaveable, which
     // NavHost would restore): returning from another destination recomposes Home fresh and re-reads
@@ -227,7 +227,7 @@ fun HomeScreen(
                                 containerColor = MaterialTheme.colorScheme.secondary,
                                 contentColor = MaterialTheme.colorScheme.onSecondary
                             ) {
-                                Text(stringResource(Res.string.daily_puzzle_badge_new))
+                                Text(stringResource(Res.string.daily_puzzle_badge_alert))
                             }
                         }
                     }
@@ -332,7 +332,7 @@ fun HomeScreen(
  * sparkle at its leading point. Drawn over the content (above the button's own outline) and inset
  * so it isn't clipped. No-op when inactive.
  *
- * NOTE: not currently wired into the Home button (replaced by a simpler "NEW" corner badge because
+ * NOTE: not currently wired into the Home button (replaced by a simpler "!" alert badge because
  * the motion felt too busy) — kept, together with [DailyPuzzleReadyHighlightPreview], for reuse.
  */
 @Composable
@@ -418,8 +418,8 @@ private fun DailyPuzzleReadyHighlightPreview() {
     }
 }
 
-/** Preview of the two secondary mode tiles, with the "NEW" badge on Daily Puzzle. */
-@Preview(name = "Home mode tiles — Online + Daily (NEW)", showBackground = true)
+/** Preview of the two secondary mode tiles, with the "!" badge on Daily Puzzle. */
+@Preview(name = "Home mode tiles — Online + Daily (!)", showBackground = true)
 @Composable
 private fun HomeModeTilesPreview() {
     LiteratureTheme {
@@ -440,7 +440,7 @@ private fun HomeModeTilesPreview() {
                         containerColor = MaterialTheme.colorScheme.secondary,
                         contentColor = MaterialTheme.colorScheme.onSecondary
                     ) {
-                        Text(stringResource(Res.string.daily_puzzle_badge_new))
+                        Text(stringResource(Res.string.daily_puzzle_badge_alert))
                     }
                 }
             ) {
