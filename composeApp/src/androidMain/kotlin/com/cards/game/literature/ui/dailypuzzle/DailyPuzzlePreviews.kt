@@ -15,6 +15,7 @@ import com.cards.game.literature.puzzle.HalfSuitClaim
 import com.cards.game.literature.puzzle.LocateCard
 import com.cards.game.literature.puzzle.PuzzleKind
 import com.cards.game.literature.puzzle.WastedAsk
+import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.PuzzleProgress
 import com.cards.game.literature.stats.PuzzleStatus
 import com.cards.game.literature.ui.theme.LiteratureTheme
@@ -68,7 +69,8 @@ private fun state(
     feedback: PuzzleFeedback = PuzzleFeedback.NONE,
     revealed: Boolean = false,
     streak: Int = 7,
-    loading: Boolean = false
+    loading: Boolean = false,
+    newlyUnlocked: List<Achievement> = emptyList()
 ) = DailyPuzzleUiState(
     loading = loading,
     puzzle = puzzle,
@@ -82,7 +84,8 @@ private fun state(
     selectedSeatId = selectedSeatId,
     feedback = feedback,
     revealed = revealed,
-    howToSeen = true // keep the auto how-to dialog out of previews
+    howToSeen = true, // keep the auto how-to dialog out of previews
+    newlyUnlocked = newlyUnlocked
 )
 
 @Composable
@@ -142,6 +145,22 @@ private fun Solved3Preview() =
             stars = 3,
             streak = 8,
             revealed = true
+        )
+    )
+
+@Preview(name = "5b · Solved + achievement unlock", showBackground = true, heightDp = 1000)
+@Composable
+private fun SolvedWithAchievementPreview() =
+    Render(
+        state(
+            selectedHalfSuit = sampleHalfSuit,
+            selectedCard = sampleHidden,
+            status = PuzzleStatus.SOLVED,
+            attemptsUsed = 1,
+            stars = 3,
+            streak = 7,
+            revealed = true,
+            newlyUnlocked = listOf(Achievement.PUZZLE_ROOKIE, Achievement.PUZZLE_FLAWLESS)
         )
     )
 
