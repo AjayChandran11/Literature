@@ -7,9 +7,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.cards.game.literature.notifications.PuzzleReminderScheduler
 import com.cards.game.literature.preferences.GamePrefs
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.button_done
+import literature.composeapp.generated.resources.settings_daily_reminder
 import literature.composeapp.generated.resources.settings_haptic_feedback
 import literature.composeapp.generated.resources.settings_notifications
 import literature.composeapp.generated.resources.settings_sound_effects
@@ -22,6 +24,7 @@ fun SettingsBottomSheet(onDismiss: () -> Unit) {
     var soundEnabled by remember { mutableStateOf(GamePrefs.isSoundEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(GamePrefs.isHapticsEnabled()) }
     var notificationsEnabled by remember { mutableStateOf(GamePrefs.isNotificationsEnabled()) }
+    var puzzleReminderEnabled by remember { mutableStateOf(GamePrefs.isPuzzleReminderEnabled()) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(onDismissRequest = onDismiss,
@@ -64,6 +67,16 @@ fun SettingsBottomSheet(onDismiss: () -> Unit) {
                 onCheckedChange = {
                     notificationsEnabled = it
                     GamePrefs.setNotificationsEnabled(it)
+                }
+            )
+
+            SettingsToggleRow(
+                label = stringResource(Res.string.settings_daily_reminder),
+                checked = puzzleReminderEnabled,
+                onCheckedChange = {
+                    puzzleReminderEnabled = it
+                    GamePrefs.setPuzzleReminderEnabled(it)
+                    if (it) PuzzleReminderScheduler.schedule() else PuzzleReminderScheduler.cancel()
                 }
             )
 

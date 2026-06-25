@@ -107,6 +107,7 @@ import com.cards.game.literature.viewmodel.PuzzleFeedback
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import com.cards.game.literature.notifications.RequestNotificationPermissionOnce
 import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -119,6 +120,9 @@ fun DailyPuzzleScreen(
     viewModel: DailyPuzzleViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    // A daily-puzzle player may never open the online lobby, so prompt for the notification grant
+    // here too — the reminder can't be delivered without it on Android 13+ / iOS.
+    RequestNotificationPermissionOnce()
     DailyPuzzleScreenContent(
         uiState = uiState,
         onBack = onBack,
