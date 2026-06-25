@@ -42,7 +42,24 @@ enum class Achievement {
     PERFECT_GAME,
 
     /** Make 3 correct claims in a single game. */
-    CLAIM_MASTER
+    CLAIM_MASTER,
+
+    // ── Daily Puzzle (appended; keep existing ordinals stable) ──
+
+    /** Solve your first daily puzzle. */
+    PUZZLE_ROOKIE,
+
+    /** Reach a 7-day daily-puzzle streak. */
+    PUZZLE_STREAK_7,
+
+    /** Reach a 30-day daily-puzzle streak. */
+    PUZZLE_STREAK_30,
+
+    /** Solve 50 daily puzzles. */
+    PUZZLE_FIFTY,
+
+    /** Solve a daily puzzle on the first try (all 3 stars). */
+    PUZZLE_FLAWLESS
 }
 
 object AchievementEvaluator {
@@ -67,5 +84,22 @@ object AchievementEvaluator {
             record.myAsksSuccessful == record.myAsks
         ) add(Achievement.PERFECT_GAME)
         if (record.myClaimsCorrect >= 3) add(Achievement.CLAIM_MASTER)
+    }
+}
+
+object PuzzleAchievementEvaluator {
+
+    /**
+     * Every Daily Puzzle achievement whose condition holds after a solve. Pure and idempotent —
+     * the caller subtracts already-unlocked entries. [progress] is the day-scoped [PuzzleProgress]
+     * right after the solve, so [PuzzleProgress.stars] is today's star count and
+     * [PuzzleProgress.currentStreak]/[PuzzleProgress.totalSolved] include today.
+     */
+    fun satisfiedBy(progress: PuzzleProgress): Set<Achievement> = buildSet {
+        if (progress.totalSolved >= 1) add(Achievement.PUZZLE_ROOKIE)
+        if (progress.currentStreak >= 7) add(Achievement.PUZZLE_STREAK_7)
+        if (progress.currentStreak >= 30) add(Achievement.PUZZLE_STREAK_30)
+        if (progress.totalSolved >= 50) add(Achievement.PUZZLE_FIFTY)
+        if (progress.stars >= 3) add(Achievement.PUZZLE_FLAWLESS)
     }
 }

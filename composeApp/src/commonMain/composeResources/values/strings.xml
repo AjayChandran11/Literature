@@ -430,4 +430,15 @@
     <string name="ach_perfect_game_desc">Win a game where every ask succeeds (at least 5 asks)</string>
     <string name="ach_claim_master">Claim Master</string>
     <string name="ach_claim_master_desc">Make 3 correct claims in a single game</string>
+    <!-- Daily Puzzle achievements -->
+    <string name="ach_puzzle_rookie">Rookie Detective</string>
+    <string name="ach_puzzle_rookie_desc">Solve your first daily puzzle</string>
+    <string name="ach_puzzle_streak_7">Week of Wits</string>
+    <string name="ach_puzzle_streak_7_desc">Solve the daily puzzle 7 days in a row</string>
+    <string name="ach_puzzle_streak_30">Daily Devotee</string>
+    <string name="ach_puzzle_streak_30_desc">Solve the daily puzzle 30 days in a row</string>
+    <string name="ach_puzzle_fifty">Case Master</string>
+    <string name="ach_puzzle_fifty_desc">Solve 50 daily puzzles</string>
+    <string name="ach_puzzle_flawless">First Glance</string>
+    <string name="ach_puzzle_flawless_desc">Solve a daily puzzle on your first guess</string>
 </resources>

@@ -9,9 +9,11 @@ import com.cards.game.literature.puzzle.HalfSuitClaim
 import com.cards.game.literature.puzzle.LocateCard
 import com.cards.game.literature.puzzle.WastedAsk
 import com.cards.game.literature.repository.DailyPuzzleRepository
+import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.PuzzleProgress
 import com.cards.game.literature.stats.PuzzleStatus
 import com.cards.game.literature.stats.PuzzleStore
+import com.cards.game.literature.stats.StatsStore
 import com.cards.game.literature.stats.currentEpochDay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +41,9 @@ data class DailyPuzzleUiState(
     val feedback: PuzzleFeedback = PuzzleFeedback.NONE,
     /** True once the day is over (solved/failed) — the screen reveals the solution. */
     val revealed: Boolean = false,
-    val howToSeen: Boolean = true
+    val howToSeen: Boolean = true,
+    /** Achievements unlocked by THIS solve — celebrated once on the result; empty on re-entry. */
+    val newlyUnlocked: List<Achievement> = emptyList()
 )
 
 /**
@@ -132,13 +136,18 @@ class DailyPuzzleViewModel(
         viewModelScope.launch {
             val today = currentEpochDay()
             val progress = PuzzleStore.recordAttempt(correct, today)
+            // Unlock + celebrate puzzle achievements only on the solve that earns them.
+            val unlocked = if (progress.status == PuzzleStatus.SOLVED) {
+                StatsStore.recordPuzzleAchievements(progress)
+            } else emptyList()
             _uiState.value = _uiState.value.copy(
                 status = progress.status,
                 attemptsUsed = progress.attemptsUsed,
                 stars = progress.stars,
                 streak = progress.displayedStreak(today),
                 feedback = if (correct) PuzzleFeedback.NONE else wrongFeedback,
-                revealed = progress.status.isTerminal()
+                revealed = progress.status.isTerminal(),
+                newlyUnlocked = unlocked
             )
         }
     }

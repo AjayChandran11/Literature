@@ -97,6 +97,7 @@ import com.cards.game.literature.puzzle.WastedAsk
 import com.cards.game.literature.share.Sharer
 import com.cards.game.literature.stats.PuzzleStatus
 import com.cards.game.literature.ui.game.CardView
+import com.cards.game.literature.ui.stats.AchievementUnlockCard
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
@@ -884,6 +885,10 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
         }
         Spacer(Modifier.height(14.dp))
         reveal()
+        if (uiState.newlyUnlocked.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            AchievementUnlockCard(uiState.newlyUnlocked)
+        }
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = { Sharer.shareText(caption) }, shape = RoundedCornerShape(10.dp)) {
             Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
