@@ -209,10 +209,10 @@
     <string name="daily_puzzle_howto_outro">Fewer tries earn more stars. Solve daily to grow your streak.</string>
     <!-- Puzzle variety: Locate the Card + The Wasted Ask (1-tap seat picks) -->
     <string name="daily_puzzle_submit_seat">Lock it in</string>
-    <string name="daily_puzzle_feedback_seat">Not that seat — read the moves again.</string>
+    <string name="daily_puzzle_feedback_seat">Not that one — read the moves again.</string>
     <string name="daily_puzzle_locate_case_line">Track the table. One card is named below — work out who is holding it.</string>
-    <string name="daily_puzzle_locate_q">Which seat must be holding this card?</string>
-    <string name="daily_puzzle_locate_pick">Tap the one seat it has to be with.</string>
+    <string name="daily_puzzle_locate_q">Who must be holding this card?</string>
+    <string name="daily_puzzle_locate_pick">Tap the one player it has to be with.</string>
     <string name="daily_puzzle_locate_answer">The %1$s is with %2$s.</string>
     <string name="daily_puzzle_wasted_case_line">One opponent has already given themselves away. Which ask would be wasted?</string>
     <string name="daily_puzzle_wasted_q">You want this card. Which opponent is guaranteed NOT to have it?</string>
@@ -222,7 +222,7 @@
     <string name="daily_puzzle_howto_locate_intro">You are You. One card is named — work out who must be holding it.</string>
     <string name="daily_puzzle_howto_locate_s1">1. Read the moves: a hit shows where a card went; a miss rules a player out.</string>
     <string name="daily_puzzle_howto_locate_s2">2. When five of a half-suit's six cards are placed, the sixth sits wherever no one has been ruled out.</string>
-    <string name="daily_puzzle_howto_locate_outro">Tap the one seat that must hold it. Fewer tries earn more stars.</string>
+    <string name="daily_puzzle_howto_locate_outro">Tap the one player that must hold it. Fewer tries earn more stars.</string>
     <string name="daily_puzzle_howto_wasted_title">The wasted ask</string>
     <string name="daily_puzzle_howto_wasted_intro">You need a card. One opponent definitely can't help — asking them wastes the turn.</string>
     <string name="daily_puzzle_howto_wasted_s1">1. Asking for a card proves you don't hold it; a missed ask proves the target doesn't either.</string>
