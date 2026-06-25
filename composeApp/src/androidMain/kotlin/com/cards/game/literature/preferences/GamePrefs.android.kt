@@ -26,6 +26,11 @@ actual object GamePrefs {
         prefs()?.edit()?.putBoolean("notifications_enabled", enabled)?.apply()
     }
 
+    actual fun isPuzzleReminderEnabled(): Boolean = prefs()?.getBoolean("puzzle_reminder_enabled", true) ?: true
+    actual fun setPuzzleReminderEnabled(enabled: Boolean) {
+        prefs()?.edit()?.putBoolean("puzzle_reminder_enabled", enabled)?.apply()
+    }
+
     actual fun hasRequestedNotificationPermission(): Boolean =
         prefs()?.getBoolean("notif_perm_requested", false) ?: false
     actual fun setRequestedNotificationPermission(requested: Boolean) {

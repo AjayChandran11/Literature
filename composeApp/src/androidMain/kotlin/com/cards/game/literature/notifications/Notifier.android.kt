@@ -18,10 +18,12 @@ actual object Notifier {
     private const val CHANNEL_TURN = "lit_turn"
     private const val CHANNEL_GAME_STATE = "lit_game_state"
     private const val CHANNEL_RESULT = "lit_result"
+    private const val CHANNEL_REMINDER = "lit_puzzle_reminder"
 
     private const val ID_YOUR_TURN = 1001
     private const val ID_GAME_STARTING = 1002
     private const val ID_GAME_OVER = 1003
+    private const val ID_PUZZLE_READY = 1004
 
     const val EXTRA_FROM_NOTIFICATION = "from_notification"
 
@@ -61,6 +63,15 @@ actual object Notifier {
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Quietly tells you when your online game has ended."
+            }
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_REMINDER,
+                "Daily puzzle reminder",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "A once-a-day nudge that a fresh Daily Puzzle is ready."
             }
         )
     }
@@ -119,6 +130,11 @@ actual object Notifier {
         post(ID_GAME_OVER, CHANNEL_RESULT, "Game over", body)
     }
 
+    /** Daily re-engagement nudge, fired by [PuzzleReminderReceiver] (not in the common contract). */
+    fun notifyPuzzleReady() {
+        post(ID_PUZZLE_READY, CHANNEL_REMINDER, "Today's puzzle is ready ⭐", "A fresh Literature puzzle is waiting — keep your streak alive.")
+    }
+
     actual fun clearYourTurn() {
         val ctx = appContext ?: return
         val manager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -131,5 +147,13 @@ actual object Notifier {
         manager.cancel(ID_YOUR_TURN)
         manager.cancel(ID_GAME_STARTING)
         manager.cancel(ID_GAME_OVER)
+        manager.cancel(ID_PUZZLE_READY)
+    }
+
+    /** Dismiss only the daily reminder (e.g. when the player turns the setting off). */
+    fun clearPuzzleReady() {
+        val ctx = appContext ?: return
+        val manager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(ID_PUZZLE_READY)
     }
 }

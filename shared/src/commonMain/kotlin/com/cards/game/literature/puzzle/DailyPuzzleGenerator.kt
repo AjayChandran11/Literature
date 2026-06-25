@@ -27,7 +27,7 @@ import kotlin.random.Random
 object DailyPuzzleGenerator {
 
     /** Bump deliberately if generator heuristics change (keeps "same for everyone" within a version). */
-    const val PUZZLE_SEASON = 3
+    const val PUZZLE_SEASON = 4
 
     /**
      * How many OTHER half-suits get decoy moves in the log. Without this, [PuzzleKind.CLAIM]'s
@@ -335,10 +335,12 @@ object DailyPuzzleGenerator {
         val events = mutableListOf<GameEvent>()
         var ts = 0L
         events += asked(pick.asker, pick.ruledOut, pick.card, success = false, ts = ts++)
-        ts = addDecoys(
-            hands, events, rng,
-            exclude = setOf(DeckUtils.getHalfSuit(pick.card)), max = DEFAULT_DECOY_SUITS, startTs = ts
-        )
+        // Liven the log with a couple of cards visibly changing hands in OTHER suits (a Wasted-Ask
+        // log is otherwise all misses, which reads dead), then one failed ask for texture. Both stay
+        // out of the answer's suit, so they can't disturb the deduction; the oracle re-checks below.
+        val exclude = setOf(DeckUtils.getHalfSuit(pick.card))
+        ts = addTransferDecoys(hands, events, rng, exclude = exclude, maxSuits = 2, startTs = ts)
+        ts = addDecoys(hands, events, rng, exclude = exclude, max = 1, startTs = ts)
 
         val players = buildPlayers(hands)
         val tracker = CardTracker().buildState(events, players, HUMAN)
@@ -398,6 +400,45 @@ object DailyPuzzleGenerator {
                 val targets = if (askerId in TEAM1) TEAM2 else TEAM1
                 val targetId = targets.firstOrNull { askCard !in hands.getValue(it) } ?: continue
                 events += asked(askerId, targetId, askCard, success = false, ts = ts++)
+                added++
+                break
+            }
+        }
+        return ts
+    }
+
+    /**
+     * Add up to [maxSuits] truthful, legal *successful* asks in half-suits outside [exclude] — cards
+     * visibly changing hands between seats — so a log that would otherwise be all misses reads like a
+     * live game. One transfer per suit: an asker that holds a suit-mate (a legal ask) pulls a card it
+     * lacks from an opposite-team holder. Confined to excluded suits so it never disturbs the answer's
+     * deduction (which lives in an excluded suit); mutates [hands] to reflect each move.
+     */
+    private fun addTransferDecoys(
+        hands: Map<String, MutableList<Card>>,
+        events: MutableList<GameEvent>,
+        rng: Random,
+        exclude: Set<HalfSuit>,
+        maxSuits: Int,
+        startTs: Long
+    ): Long {
+        var ts = startTs
+        var added = 0
+        for (hs in HalfSuit.entries.filter { it !in exclude }.shuffled(rng)) {
+            if (added >= maxSuits) break
+            val hsCards = DeckUtils.getAllCardsForHalfSuit(hs).toSet()
+            for (askerId in SEAT_IDS.shuffled(rng)) {
+                val askerHand = hands.getValue(askerId)
+                if (askerHand.none { it in hsCards }) continue // asker must hold a suit-mate to ask
+                val loot = SEAT_IDS.firstNotNullOfOrNull { holderId ->
+                    if (teamOf(holderId) == teamOf(askerId)) return@firstNotNullOfOrNull null
+                    hands.getValue(holderId).firstOrNull { it in hsCards && it !in askerHand }
+                        ?.let { holderId to it }
+                } ?: continue
+                val (holderId, card) = loot
+                hands.getValue(holderId).remove(card)
+                hands.getValue(askerId).add(card)
+                events += asked(askerId, holderId, card, success = true, ts = ts++)
                 added++
                 break
             }

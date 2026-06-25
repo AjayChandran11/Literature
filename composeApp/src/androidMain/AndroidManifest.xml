@@ -54,6 +54,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Posts the once-a-day "puzzle ready" reminder when the daily alarm fires. -->
+        <receiver
+            android:name=".notifications.PuzzleReminderReceiver"
+            android:exported="false" />
+
         <!-- Shares the generated result-card PNG from cacheDir via a content:// URI. -->
         <provider
             android:name="androidx.core.content.FileProvider"

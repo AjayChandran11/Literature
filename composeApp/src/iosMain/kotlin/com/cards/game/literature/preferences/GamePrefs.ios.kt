@@ -27,6 +27,14 @@ actual object GamePrefs {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = "notifications_enabled")
     }
 
+    actual fun isPuzzleReminderEnabled(): Boolean =
+        if (NSUserDefaults.standardUserDefaults.objectForKey("puzzle_reminder_enabled") == null) true
+        else NSUserDefaults.standardUserDefaults.boolForKey("puzzle_reminder_enabled")
+
+    actual fun setPuzzleReminderEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = "puzzle_reminder_enabled")
+    }
+
     actual fun hasRequestedNotificationPermission(): Boolean =
         NSUserDefaults.standardUserDefaults.boolForKey("notif_perm_requested")
 
