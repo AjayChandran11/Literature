@@ -41,6 +41,7 @@
     <string name="home_player_name_hint">Your Name</string>
     <string name="home_new_game">New Game</string>
     <string name="home_play_online">Play Online</string>
+    <string name="home_daily_puzzle">Daily Puzzle</string>
 
     <!-- Room invite (deep link) -->
     <string name="home_invite_title">You're invited!</string>
@@ -171,6 +172,65 @@
     <string name="result_card_cta">Get it on Google Play</string>
     <string name="share_result_caption">I just played Literature ♠♥♦♣ — beat my score! Get the app: %1$s</string>
 
+    <!-- Daily Claim Puzzle -->
+    <string name="daily_puzzle_number">Puzzle #%1$d</string>
+    <string name="daily_puzzle_move_got">%1$s got it from %2$s</string>
+    <string name="daily_puzzle_move_missed">%1$s asked %2$s — no</string>
+    <string name="daily_puzzle_loading">Loading today's puzzle…</string>
+    <string name="daily_puzzle_load_error">Couldn't load today's puzzle.</string>
+    <!-- Case Board redesign -->
+    <string name="daily_puzzle_case_line">Your team can claim one half-suit. Find the card %1$s is hiding.</string>
+    <string name="daily_puzzle_evidence">Evidence</string>
+    <string name="daily_puzzle_evidence_collapsed">%1$d moves · tap to review</string>
+    <string name="daily_puzzle_step1_q">One half-suit is fully on your team. Which is it?</string>
+    <string name="daily_puzzle_board_title">Who holds %1$s?</string>
+    <string name="daily_puzzle_ruled_out">%1$s and %2$s said no — it must be %3$s.</string>
+    <string name="daily_puzzle_rail_prompt">%1$s is hiding one of these — which?</string>
+    <string name="daily_puzzle_streak_chip">%1$d-day streak</string>
+    <string name="daily_puzzle_badge_alert">!</string>
+    <string name="daily_puzzle_claiming">Claiming %1$s</string>
+    <string name="daily_puzzle_change">Change</string>
+    <string name="daily_puzzle_you_badge">You</string>
+    <string name="daily_puzzle_attempt">Attempt %1$d of %2$d</string>
+    <string name="daily_puzzle_submit">Claim</string>
+    <string name="daily_puzzle_feedback_halfsuit">Those aren't all on your team — try another half-suit.</string>
+    <string name="daily_puzzle_feedback_card">Not the hidden card — look again at the moves.</string>
+    <string name="daily_puzzle_solved">Solved!</string>
+    <string name="daily_puzzle_failed">Out of tries</string>
+    <string name="daily_puzzle_answer">Answer: %1$s</string>
+    <string name="daily_puzzle_come_back">Come back tomorrow for a new puzzle.</string>
+    <string name="daily_puzzle_share_solved">Literature Daily #%1$d — solved %2$d/%3$d%4$s</string>
+    <string name="daily_puzzle_share_failed">Literature Daily #%1$d — couldn't crack it today</string>
+    <string name="daily_puzzle_howto_title">How to play</string>
+    <string name="daily_puzzle_howto_intro">Each day, your team can fully claim exactly one half-suit.</string>
+    <string name="daily_puzzle_howto_s1">1. Read the moves and your hand.</string>
+    <string name="daily_puzzle_howto_s2">2. Pick the half-suit your team holds all six of.</string>
+    <string name="daily_puzzle_howto_s3">3. Your teammate is hiding one of those cards — find the one you never saw change hands.</string>
+    <string name="daily_puzzle_howto_outro">Fewer tries earn more stars. Solve daily to grow your streak.</string>
+    <!-- Puzzle variety: Locate the Card + The Wasted Ask (1-tap seat picks) -->
+    <string name="daily_puzzle_submit_seat">Lock it in</string>
+    <string name="daily_puzzle_feedback_seat">Not that seat — read the moves again.</string>
+    <string name="daily_puzzle_locate_case_line">Track the table. One card is named below — work out who is holding it.</string>
+    <string name="daily_puzzle_locate_q">Which seat must be holding this card?</string>
+    <string name="daily_puzzle_locate_pick">Tap the one seat it has to be with.</string>
+    <string name="daily_puzzle_locate_answer">The %1$s is with %2$s.</string>
+    <string name="daily_puzzle_wasted_case_line">One opponent has already given themselves away. Which ask would be wasted?</string>
+    <string name="daily_puzzle_wasted_q">You want this card. Which opponent is guaranteed NOT to have it?</string>
+    <string name="daily_puzzle_wasted_pick">Tap the opponent it would be wasted to ask.</string>
+    <string name="daily_puzzle_wasted_answer">%1$s can't have the %2$s — asking them would be wasted.</string>
+    <string name="daily_puzzle_howto_locate_title">Locate the card</string>
+    <string name="daily_puzzle_howto_locate_intro">You are You. One card is named — work out who must be holding it.</string>
+    <string name="daily_puzzle_howto_locate_s1">1. Read the moves: a hit shows where a card went; a miss rules a player out.</string>
+    <string name="daily_puzzle_howto_locate_s2">2. When five of a half-suit's six cards are placed, the sixth sits wherever no one has been ruled out.</string>
+    <string name="daily_puzzle_howto_locate_outro">Tap the one seat that must hold it. Fewer tries earn more stars.</string>
+    <string name="daily_puzzle_howto_wasted_title">The wasted ask</string>
+    <string name="daily_puzzle_howto_wasted_intro">You need a card. One opponent definitely can't help — asking them wastes the turn.</string>
+    <string name="daily_puzzle_howto_wasted_s1">1. Asking for a card proves you don't hold it; a missed ask proves the target doesn't either.</string>
+    <string name="daily_puzzle_howto_wasted_s2">2. Find the opponent already proven not to hold the card.</string>
+    <string name="daily_puzzle_howto_wasted_outro">Tap that opponent — the other one might still have it.</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_how_to_play">How to play</string>
+
     <!-- Onboarding -->
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_next">Next  →</string>
@@ -283,6 +343,7 @@
     <string name="settings_sound_effects">Sound Effects</string>
     <string name="settings_haptic_feedback">Haptic Feedback</string>
     <string name="settings_notifications">Notifications</string>
+    <string name="settings_daily_reminder">Daily puzzle reminder</string>
     <string name="home_settings">Settings</string>
     <string name="button_done">Done</string>
 
@@ -318,6 +379,12 @@
     <string name="home_streak_best">Best</string>
     <string name="stats_ask_success">Ask success</string>
     <string name="stats_claim_accuracy">Claim accuracy</string>
+    <!-- Daily Puzzle stats (My Stats section) -->
+    <string name="stats_puzzle_title">Daily Puzzle</string>
+    <string name="stats_puzzle_streak">Streak</string>
+    <string name="stats_puzzle_best">Best</string>
+    <string name="stats_puzzle_solved">Solved</string>
+    <string name="stats_puzzle_stars">Stars</string>
     <string name="stats_online_title">Online</string>
     <string name="stats_online_record">%1$d wins in %2$d games</string>
     <string name="stats_vs_bots_title">Vs Bots</string>
@@ -364,4 +431,15 @@
     <string name="ach_perfect_game_desc">Win a game where every ask succeeds (at least 5 asks)</string>
     <string name="ach_claim_master">Claim Master</string>
     <string name="ach_claim_master_desc">Make 3 correct claims in a single game</string>
+    <!-- Daily Puzzle achievements -->
+    <string name="ach_puzzle_rookie">Rookie Detective</string>
+    <string name="ach_puzzle_rookie_desc">Solve your first daily puzzle</string>
+    <string name="ach_puzzle_streak_7">Week of Wits</string>
+    <string name="ach_puzzle_streak_7_desc">Solve the daily puzzle 7 days in a row</string>
+    <string name="ach_puzzle_streak_30">Daily Devotee</string>
+    <string name="ach_puzzle_streak_30_desc">Solve the daily puzzle 30 days in a row</string>
+    <string name="ach_puzzle_fifty">Case Master</string>
+    <string name="ach_puzzle_fifty_desc">Solve 50 daily puzzles</string>
+    <string name="ach_puzzle_flawless">First Glance</string>
+    <string name="ach_puzzle_flawless_desc">Solve a daily puzzle on your first guess</string>
 </resources>

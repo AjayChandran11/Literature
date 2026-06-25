@@ -30,4 +30,9 @@ actual object StatsPrefs {
     actual fun setAchievementsJson(json: String) {
         prefs()?.edit()?.putString("achievements_json", json)?.apply()
     }
+
+    actual fun getPuzzleJson(): String? = prefs()?.getString("puzzle_json", null)
+    actual fun setPuzzleJson(json: String) {
+        prefs()?.edit()?.putString("puzzle_json", json)?.apply()
+    }
 }

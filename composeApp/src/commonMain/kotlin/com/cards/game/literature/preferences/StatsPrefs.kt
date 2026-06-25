@@ -10,4 +10,6 @@ expect object StatsPrefs {
     fun setLastRecordedGameId(id: String)
     fun getAchievementsJson(): String?
     fun setAchievementsJson(json: String)
+    fun getPuzzleJson(): String?
+    fun setPuzzleJson(json: String)
 }

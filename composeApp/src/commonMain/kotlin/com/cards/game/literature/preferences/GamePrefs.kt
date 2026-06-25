@@ -7,6 +7,8 @@ expect object GamePrefs {
     fun setHapticsEnabled(enabled: Boolean)
     fun isNotificationsEnabled(): Boolean
     fun setNotificationsEnabled(enabled: Boolean)
+    fun isPuzzleReminderEnabled(): Boolean
+    fun setPuzzleReminderEnabled(enabled: Boolean)
     fun hasRequestedNotificationPermission(): Boolean
     fun setRequestedNotificationPermission(requested: Boolean)
 }

@@ -24,4 +24,9 @@ actual object StatsPrefs {
     actual fun setAchievementsJson(json: String) {
         defaults.setObject(json, forKey = "achievements_json")
     }
+
+    actual fun getPuzzleJson(): String? = defaults.stringForKey("puzzle_json")
+    actual fun setPuzzleJson(json: String) {
+        defaults.setObject(json, forKey = "puzzle_json")
+    }
 }
