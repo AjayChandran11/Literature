@@ -25,4 +25,9 @@ val Achievement.ui: AchievementUi
         Achievement.SHARP_CALLER -> AchievementUi("🧠", Res.string.ach_sharp_caller, Res.string.ach_sharp_caller_desc)
         Achievement.PERFECT_GAME -> AchievementUi("✨", Res.string.ach_perfect_game, Res.string.ach_perfect_game_desc)
         Achievement.CLAIM_MASTER -> AchievementUi("🃏", Res.string.ach_claim_master, Res.string.ach_claim_master_desc)
+        Achievement.PUZZLE_ROOKIE -> AchievementUi("🧩", Res.string.ach_puzzle_rookie, Res.string.ach_puzzle_rookie_desc)
+        Achievement.PUZZLE_STREAK_7 -> AchievementUi("📅", Res.string.ach_puzzle_streak_7, Res.string.ach_puzzle_streak_7_desc)
+        Achievement.PUZZLE_STREAK_30 -> AchievementUi("🗓️", Res.string.ach_puzzle_streak_30, Res.string.ach_puzzle_streak_30_desc)
+        Achievement.PUZZLE_FIFTY -> AchievementUi("🏅", Res.string.ach_puzzle_fifty, Res.string.ach_puzzle_fifty_desc)
+        Achievement.PUZZLE_FLAWLESS -> AchievementUi("🌟", Res.string.ach_puzzle_flawless, Res.string.ach_puzzle_flawless_desc)
     }

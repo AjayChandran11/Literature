@@ -1,5 +1,6 @@
 package com.cards.game.literature.stats
 
+import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.preferences.StatsPrefs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,6 +87,26 @@ object StatsStore {
         // re-reads the matching payload instead of losing it.
         _pendingCelebration.value = PendingCelebration(gameId, newlyUnlocked)
         GameRecordResult(updatedStats, newlyUnlocked)
+    }
+
+    /**
+     * Unlock any Daily Puzzle achievements newly satisfied by [progress] (the day-scoped progress
+     * right after a solve), persisting into the SAME achievements map the gameplay ones use.
+     * Idempotent — already-unlocked entries are skipped. Returns the newly-unlocked list (sorted by
+     * ordinal) for the puzzle result screen to celebrate.
+     */
+    suspend fun recordPuzzleAchievements(progress: PuzzleProgress): List<Achievement> = mutex.withLock {
+        val unlocked = _achievements.value
+        val newlyUnlocked = PuzzleAchievementEvaluator.satisfiedBy(progress)
+            .filter { it.name !in unlocked }
+            .sortedBy { it.ordinal }
+        if (newlyUnlocked.isNotEmpty()) {
+            val now = currentTimeMillis()
+            val updated = unlocked + newlyUnlocked.associate { it.name to now }
+            _achievements.value = updated
+            StatsPrefs.setAchievementsJson(json.encodeToString(updated))
+        }
+        newlyUnlocked
     }
 
     private fun loadStats(): PlayerStats = runCatching {
