@@ -14,6 +14,7 @@ import com.cards.game.literature.ui.lobby.LobbyScreen
 import com.cards.game.literature.ui.lobby.WaitingRoomScreen
 import com.cards.game.literature.preferences.OnboardingPrefs
 import com.cards.game.literature.ui.onboarding.OnboardingScreen
+import com.cards.game.literature.ui.dailypuzzle.DailyPuzzleScreen
 import com.cards.game.literature.ui.result.ResultScreen
 import com.cards.game.literature.ui.stats.StatsScreen
 import org.koin.compose.koinInject
@@ -30,6 +31,7 @@ object Routes {
     const val LOBBY = "lobby/{playerName}?room={roomCode}"
     const val WAITING_ROOM = "waiting_room/{roomCode}"
     const val STATS = "stats"
+    const val DAILY_PUZZLE = "daily_puzzle"
 
     fun game(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) = "game/$playerName/$playerCount/${difficulty.name}"
     fun lobby(playerName: String) = "lobby/$playerName"
@@ -67,11 +69,19 @@ fun AppNavigation() {
                 },
                 onOpenStats = {
                     navController.navigate(Routes.STATS)
+                },
+                onOpenDailyPuzzle = {
+                    navController.navigate(Routes.DAILY_PUZZLE)
                 }
             )
         }
         composable(Routes.STATS) {
             StatsScreen(
+                onBack = { navController.popBackStack(Routes.HOME, inclusive = false) }
+            )
+        }
+        composable(Routes.DAILY_PUZZLE) {
+            DailyPuzzleScreen(
                 onBack = { navController.popBackStack(Routes.HOME, inclusive = false) }
             )
         }

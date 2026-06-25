@@ -30,7 +30,10 @@ import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.MatchRecord
 import com.cards.game.literature.stats.Outcome
 import com.cards.game.literature.stats.PlayerStats
+import com.cards.game.literature.stats.PuzzleProgress
+import com.cards.game.literature.stats.PuzzleStore
 import com.cards.game.literature.stats.StatsStore
+import com.cards.game.literature.stats.currentEpochDay
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.LightGreen
 import literature.composeapp.generated.resources.Res
@@ -42,7 +45,8 @@ fun StatsScreen(onBack: () -> Unit) {
     val stats by StatsStore.stats.collectAsState()
     val history by StatsStore.history.collectAsState()
     val achievements by StatsStore.achievements.collectAsState()
-    StatsScreenContent(stats = stats, history = history, achievements = achievements, onBack = onBack)
+    val puzzle by PuzzleStore.progress.collectAsState()
+    StatsScreenContent(stats = stats, history = history, achievements = achievements, puzzle = puzzle, onBack = onBack)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,7 +55,8 @@ internal fun StatsScreenContent(
     stats: PlayerStats,
     history: List<MatchRecord>,
     achievements: Map<String, Long> = emptyMap(),
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    puzzle: PuzzleProgress = PuzzleProgress()
 ) {
     var selectedAchievement by remember { mutableStateOf<Achievement?>(null) }
     Scaffold(
@@ -85,6 +90,9 @@ internal fun StatsScreenContent(
             item { OverviewTiles(stats) }
             item { StreakRow(stats) }
             item { SkillRow(stats) }
+            if (puzzle.totalSolved > 0) {
+                item { PuzzleStatsSection(puzzle) }
+            }
             if (stats.onlineGames > 0) {
                 item { OnlineCard(stats) }
             }
@@ -339,6 +347,44 @@ private fun SkillRow(stats: PlayerStats) {
             label = stringResource(Res.string.stats_claim_accuracy),
             modifier = Modifier.weight(1f)
         )
+    }
+}
+
+@Composable
+private fun PuzzleStatsSection(puzzle: PuzzleProgress) {
+    val today = remember { currentEpochDay() }
+    Column {
+        Text(
+            stringResource(Res.string.stats_puzzle_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 8.dp, bottom = 10.dp)
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StreakTile(
+                streak = puzzle.displayedStreak(today),
+                label = stringResource(Res.string.stats_puzzle_streak),
+                modifier = Modifier.weight(1f)
+            )
+            StreakTile(
+                streak = puzzle.bestStreak,
+                label = stringResource(Res.string.stats_puzzle_best),
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatTile(
+                value = "${puzzle.totalSolved}",
+                label = stringResource(Res.string.stats_puzzle_solved),
+                modifier = Modifier.weight(1f)
+            )
+            StatTile(
+                value = "${puzzle.totalStars}",
+                label = stringResource(Res.string.stats_puzzle_stars),
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
