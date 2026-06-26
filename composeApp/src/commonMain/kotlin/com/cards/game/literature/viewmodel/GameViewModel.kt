@@ -22,7 +22,8 @@ data class PlayerInfo(
     val name: String,
     val cardCount: Int,
     val isActive: Boolean,
-    val isCurrentTurn: Boolean
+    val isCurrentTurn: Boolean,
+    val isBot: Boolean = false
 )
 
 data class GameUiState(
@@ -226,7 +227,8 @@ class GameViewModel(
                 name = player.name,
                 cardCount = player.cardCount,
                 isActive = player.isActive,
-                isCurrentTurn = state.currentPlayer.id == player.id
+                isCurrentTurn = state.currentPlayer.id == player.id,
+                isBot = player.isBot
             )
         }
 
@@ -236,7 +238,8 @@ class GameViewModel(
                 name = player.name,
                 cardCount = player.cardCount,
                 isActive = player.isActive,
-                isCurrentTurn = state.currentPlayer.id == player.id
+                isCurrentTurn = state.currentPlayer.id == player.id,
+                isBot = player.isBot
             )
         }
 
