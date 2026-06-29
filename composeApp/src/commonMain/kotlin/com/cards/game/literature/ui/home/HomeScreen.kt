@@ -12,22 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
@@ -324,97 +309,6 @@ fun HomeScreen(
                 }
             }
         )
-    }
-}
-
-/**
- * A single golden line that travels around the button's rounded border while [active], with a
- * sparkle at its leading point. Drawn over the content (above the button's own outline) and inset
- * so it isn't clipped. No-op when inactive.
- *
- * NOTE: not currently wired into the Home button (replaced by a simpler "!" alert badge because
- * the motion felt too busy) — kept, together with [DailyPuzzleReadyHighlightPreview], for reuse.
- */
-@Composable
-private fun Modifier.dailyPuzzleReadyHighlight(active: Boolean): Modifier {
-    if (!active) return this
-    val gold = MaterialTheme.colorScheme.secondary
-    val transition = rememberInfiniteTransition(label = "puzzle-ready")
-    val progress by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f, // fraction of the perimeter the line's head has travelled
-        animationSpec = infiniteRepeatable(tween(durationMillis = 2200, easing = LinearEasing), RepeatMode.Restart),
-        label = "orbit"
-    )
-    val sparkle by transition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 650, easing = LinearEasing), RepeatMode.Reverse),
-        label = "sparkle"
-    )
-    val borderPath = remember { Path() }
-    val linePath = remember { Path() }
-    val measure = remember { PathMeasure() }
-    return drawWithContent {
-        drawContent()
-        val strokePx = 3.dp.toPx()
-        val inset = strokePx / 2f + 1.dp.toPx()
-        val corner = (12.dp.toPx() - inset).coerceAtLeast(0f)
-        borderPath.reset()
-        borderPath.addRoundRect(
-            RoundRect(inset, inset, size.width - inset, size.height - inset, CornerRadius(corner, corner))
-        )
-        measure.setPath(borderPath, true)
-        val total = measure.length
-        if (total <= 0f) return@drawWithContent
-
-        val lineLen = total * 0.22f          // a single short arc, ~22% of the perimeter
-        val head = (progress * total).coerceIn(0f, total)
-        val tailStart = head - lineLen
-        linePath.reset()
-        if (tailStart >= 0f) {
-            measure.getSegment(tailStart, head, linePath, true)
-        } else {
-            // wrap across the 0/total seam
-            measure.getSegment(total + tailStart, total, linePath, true)
-            measure.getSegment(0f, head, linePath, true)
-        }
-        // soft glow under the line, then the crisp golden line itself
-        drawPath(linePath, color = gold.copy(alpha = 0.22f), style = Stroke(width = strokePx * 2.6f, cap = StrokeCap.Round))
-        drawPath(linePath, color = gold, style = Stroke(width = strokePx, cap = StrokeCap.Round))
-
-        // sparkle at the leading point
-        val headPos = measure.getPosition(head)
-        val rayLen = strokePx * 3.2f * sparkle
-        drawCircle(color = gold.copy(alpha = 0.28f), radius = strokePx * 3.0f * sparkle, center = headPos)
-        drawCircle(color = Color.White, radius = strokePx * 0.95f, center = headPos)
-        val ray = gold.copy(alpha = 0.9f)
-        drawLine(ray, Offset(headPos.x - rayLen, headPos.y), Offset(headPos.x + rayLen, headPos.y), strokeWidth = strokePx * 0.5f, cap = StrokeCap.Round)
-        drawLine(ray, Offset(headPos.x, headPos.y - rayLen), Offset(headPos.x, headPos.y + rayLen), strokeWidth = strokePx * 0.5f, cap = StrokeCap.Round)
-    }
-}
-
-/**
- * Preview of the moving golden line + sparkle. Open Android Studio's *Interactive Preview*
- * (or the Animation Preview) on this to watch the line travel around the border.
- */
-@Preview(name = "Daily Puzzle button — ready highlight", showBackground = true)
-@Composable
-private fun DailyPuzzleReadyHighlightPreview() {
-    LiteratureTheme {
-        Box(Modifier.padding(24.dp)) {
-            OutlinedButton(
-                onClick = {},
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .dailyPuzzleReadyHighlight(active = true),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Text(stringResource(Res.string.home_daily_puzzle), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            }
-        }
     }
 }
 

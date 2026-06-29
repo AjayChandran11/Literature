@@ -1,5 +1,6 @@
 package com.cards.game.literature.logic
 
+import com.cards.game.literature.bot.BotPersonalities
 import com.cards.game.literature.model.*
 
 data class GameResult(
@@ -339,8 +340,6 @@ class GameEngine {
         return state
     }
 
-    private fun getBotName(index: Int): String {
-        val names = listOf("Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace")
-        return names.getOrElse(index - 1) { "Bot $index" }
-    }
+    private fun getBotName(index: Int): String =
+        BotPersonalities.ALL.map { it.name }.getOrElse(index - 1) { "Bot $index" }
 }

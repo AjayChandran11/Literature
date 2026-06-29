@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cards.game.literature.bot.BotPersonalities
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.LiteratureTheme
 import com.cards.game.literature.viewmodel.PlayerInfo
@@ -91,12 +93,20 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
                 .border(2.dp, borderColor, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = player.name.first().uppercase(),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
-            )
+            if (player.isBot) {
+                Text(
+                    text = BotPersonalities.emojiFor(player.name),
+                    fontSize = 30.sp,
+                    modifier = Modifier.alpha(alpha)
+                )
+            } else {
+                Text(
+                    text = player.name.first().uppercase(),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -188,12 +198,20 @@ fun CompactPlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
                 .border(1.5.dp, borderColor, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = player.name.first().uppercase(),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
-            )
+            if (player.isBot) {
+                Text(
+                    text = BotPersonalities.emojiFor(player.name),
+                    fontSize = 16.sp,
+                    modifier = Modifier.alpha(alpha)
+                )
+            } else {
+                Text(
+                    text = player.name.first().uppercase(),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
+                )
+            }
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
@@ -253,6 +271,30 @@ private fun PreviewPlayerAvatarOutOfCards() {
                 PlayerAvatar(
                     player = PlayerInfo("4", "Sneha", cardCount = 0, isActive = false, isCurrentTurn = false),
                     isOpponent = false
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Avatar — bots with personalities")
+@Composable
+private fun PreviewBotAvatars() {
+    LiteratureTheme {
+        Surface {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(16.dp)) {
+                PlayerAvatar(
+                    player = PlayerInfo("b1", "Alice", cardCount = 6, isActive = true, isCurrentTurn = true, isBot = true),
+                    isOpponent = true
+                )
+                PlayerAvatar(
+                    player = PlayerInfo("b2", "Bob", cardCount = 3, isActive = true, isCurrentTurn = false, isBot = true),
+                    isOpponent = false
+                )
+                // Name not in the roster (e.g. a replaced human) → generic 🤖 fallback
+                PlayerAvatar(
+                    player = PlayerInfo("b3", "Ravi", cardCount = 0, isActive = false, isCurrentTurn = false, isBot = true),
+                    isOpponent = true
                 )
             }
         }

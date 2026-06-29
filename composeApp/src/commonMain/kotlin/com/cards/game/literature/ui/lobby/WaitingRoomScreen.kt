@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.bot.BotDifficulty
+import com.cards.game.literature.bot.BotPersonalities
 import com.cards.game.literature.deeplink.InviteLink
 import com.cards.game.literature.repository.PlayerConnectionEvent
 import com.cards.game.literature.share.Sharer
@@ -232,6 +233,14 @@ fun WaitingRoomScreen(
                                 )
                         )
                         Spacer(modifier = Modifier.width(12.dp))
+
+                        if (player.isBot) {
+                            Text(
+                                text = BotPersonalities.emojiFor(player.name),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
 
                         Text(
                             text = player.name,

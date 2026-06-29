@@ -29,7 +29,8 @@ data class WaitingRoomPlayer(
     val name: String,
     val teamId: String,
     val isHost: Boolean,
-    val isConnected: Boolean
+    val isConnected: Boolean,
+    val isBot: Boolean = false
 )
 
 class WaitingRoomViewModel(
@@ -117,7 +118,8 @@ class WaitingRoomViewModel(
                     name = p.name,
                     teamId = p.teamId,
                     isHost = p.isHost,
-                    isConnected = p.isConnected
+                    isConnected = p.isConnected,
+                    isBot = p.isBot
                 )
             },
             isHost = onlineRepository.myPlayerId == room.hostPlayerId,
