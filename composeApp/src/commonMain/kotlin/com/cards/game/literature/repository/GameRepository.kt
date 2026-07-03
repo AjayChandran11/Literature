@@ -13,4 +13,9 @@ interface GameRepository {
     suspend fun submitAsk(askerId: String, targetId: String, card: Card)
     suspend fun submitMultiAsk(askerId: String, targetId: String, cards: List<Card>)
     suspend fun submitClaim(declaration: ClaimDeclaration)
+
+    /** Option C: the claimer's choice of which active teammate takes the turn
+     *  after a correct claim emptied their hand. Only meaningful while
+     *  [gameState]'s pendingPass is set; a no-op otherwise. */
+    suspend fun submitPassTarget(selectedPlayerId: String)
 }
