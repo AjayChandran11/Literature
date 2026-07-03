@@ -13,6 +13,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 class GameRoom(
     val roomCode: String,
@@ -21,6 +22,11 @@ class GameRoom(
     private val log = LoggerFactory.getLogger("GameRoom")
     private val engine = GameEngine()
     private var botPlayer = BotPlayer()
+    // How a bot's move is decided. Defaults to the real strategy; overridable so
+    // tests can drive deterministic (and instant, or deliberately paused) bot
+    // decisions. Called outside the mutex — see executeBotTurns.
+    internal var decideBotMove: suspend (GameState, String) -> BotAction =
+        { state, botId -> botPlayer.decideMove(state, botId) }
     private val players = ConcurrentHashMap<String, PlayerSession>()
     private val playerTeams = ConcurrentHashMap<String, String>()
     private val mutex = Mutex()
@@ -30,6 +36,10 @@ class GameRoom(
     private var playerIdCounter = 0
 
     private var turnTimeoutJob: Job? = null
+    // Guards against more than one executeBotTurns() loop running at once. Set
+    // atomically before a loop is launched (see checkNextTurn) and cleared when
+    // it exits. See executeBotTurns for why concurrent loops are unsafe.
+    private val botTurnActive = AtomicBoolean(false)
     private val disconnectJobs = ConcurrentHashMap<String, Job>()
     private val pendingReclaims = ConcurrentHashMap<String, Boolean>()
     // Tracks the player who gave the current player their turn (via a failed ask)
@@ -55,6 +65,10 @@ class GameRoom(
         private const val WAITING_RECONNECT_WINDOW_MS = 2 * 60_000L
         private const val REACTION_RATE_LIMIT_MS = 2_000L
         private const val ABANDON_GRACE_MS = 60_000L
+        // How many consecutive rejected bot moves to tolerate before giving up the
+        // turn. A bot with cards always has a legal move, so this should never be
+        // hit; it's a backstop so a wedged decision can never spin forever.
+        private const val MAX_BOT_MOVE_FAILURES = 3
         private val secureRandom = java.security.SecureRandom()
 
         /** 128-bit random hex token — proof of identity for reconnects. */
@@ -197,6 +211,7 @@ class GameRoom(
         phase = RoomPhase.IN_PROGRESS
 
         botScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        botTurnActive.set(false) // fresh scope → no loop can be running yet
         log.info("[{}] Game started with {} players ({} human, {} bots)",
             roomCode, setupPlayers.size,
             humanPlayers.size, setupPlayers.size - humanPlayers.size)
@@ -590,8 +605,24 @@ class GameRoom(
 
         if (current.isBot) {
             turnTimeoutJob?.cancel()
-            botScope?.launch {
-                executeBotTurns()
+            // Single-flight: only ever run ONE bot-turn loop at a time. Any
+            // checkNextTurn() that fires while a loop is mid-decision — notably
+            // replaceWithBot() from the disconnect timer — would otherwise launch
+            // a second loop; both decide off the same snapshot and the loser then
+            // applies a now-illegal move (asking a card it was just given, or
+            // claiming a half-suit the other loop just claimed), which the engine
+            // rejects with IllegalArgumentException. The already-running loop picks
+            // up any newly-bot player on its next iteration, so dropping the extra
+            // launch loses nothing.
+            val scope = botScope
+            if (scope != null && botTurnActive.compareAndSet(false, true)) {
+                scope.launch {
+                    try {
+                        executeBotTurns()
+                    } finally {
+                        botTurnActive.set(false)
+                    }
+                }
             }
         } else {
             startTurnTimer()
@@ -631,17 +662,20 @@ class GameRoom(
         }
     }
 
+    /**
+     * Drives consecutive bot turns until the current player is human or the game
+     * ends. MUST run single-flight (see the guard in [checkNextTurn]): the move is
+     * decided outside the lock — including a multi-second "thinking" delay — and
+     * only applied inside it, so two concurrent loops would race and one would
+     * apply a move that became illegal in the meantime.
+     */
     private suspend fun executeBotTurns() {
+        var consecutiveFailures = 0
         while (true) {
             val state = gameState ?: return
             if (state.phase != GamePhase.IN_PROGRESS) return
             val current = state.currentPlayer
             if (!current.isBot) {
-                // Check for pending reclaims before starting human turn timer
-                if (pendingReclaims.containsKey(current.id)) {
-                    // This shouldn't normally happen (reclaim makes player non-bot),
-                    // but handle gracefully
-                }
                 startTurnTimer()
                 return
             }
@@ -653,43 +687,57 @@ class GameRoom(
                 return
             }
 
-            val action = botPlayer.decideMove(state, current.id)
-            when (action) {
-                is BotAction.Ask -> {
-                    mutex.withLock {
-                        val freshState = gameState ?: return
-                        if (freshState.phase != GamePhase.IN_PROGRESS) return
-                        if (freshState.currentPlayer.id != current.id) return
-                        val result = engine.processAsk(freshState, current.id, action.targetId, action.card)
-                        gameState = result.newState
-
-                        if (result.newState.phase == GamePhase.FINISHED) {
-                            phase = RoomPhase.FINISHED
-                            finishedAt = System.currentTimeMillis()
-                        }
-
-                        broadcastGameViews()
-                        broadcastEvents(result.events)
-                    }
-                }
-                is BotAction.Claim -> {
-                    mutex.withLock {
-                        val freshState = gameState ?: return
-                        if (freshState.phase != GamePhase.IN_PROGRESS) return
-                        if (freshState.currentPlayer.id != current.id) return
-                        val result = engine.processClaim(freshState, action.declaration)
-                        gameState = result.newState
-
-                        if (result.newState.phase == GamePhase.FINISHED) {
-                            phase = RoomPhase.FINISHED
-                            finishedAt = System.currentTimeMillis()
-                        }
-
-                        broadcastGameViews()
-                        broadcastEvents(result.events)
-                    }
-                }
+            // Backstop: a bot holding cards always has a legal move and the
+            // single-flight guard keeps state stable across the decision, so a
+            // rejected move is not expected. If it somehow keeps recurring, give
+            // up the turn rather than spin — never wedge, never crash.
+            if (consecutiveFailures >= MAX_BOT_MOVE_FAILURES) {
+                log.error("[{}] Bot '{}' ({}) made {} illegal moves in a row — skipping its turn",
+                    roomCode, current.name, current.id, consecutiveFailures)
+                skipTurn(current.id) // advances the turn; its checkNextTurn() is a
+                                     // no-op while we still hold botTurnActive, and
+                                     // this loop picks up the next player below.
+                if (gameState?.currentPlayer?.id == current.id) return // couldn't pass — bail
+                consecutiveFailures = 0
+                continue
             }
+
+            val action = decideBotMove(state, current.id)
+            val applied = mutex.withLock {
+                val freshState = gameState ?: return
+                if (freshState.phase != GamePhase.IN_PROGRESS) return
+                // Turn moved on under us (e.g. the player was reclaimed): the
+                // decision is stale — loop and re-evaluate rather than apply it.
+                if (freshState.currentPlayer.id != current.id) return@withLock true
+
+                val result = try {
+                    when (action) {
+                        is BotAction.Ask ->
+                            engine.processAsk(freshState, current.id, action.targetId, action.card)
+                        is BotAction.Claim ->
+                            engine.processClaim(freshState, action.declaration)
+                    }
+                } catch (e: IllegalArgumentException) {
+                    // Belt-and-braces against the crash this method used to throw:
+                    // a decision that raced the state is discarded, never escaping
+                    // to kill the coroutine and freeze the game on the bot's turn.
+                    log.warn("[{}] Discarded illegal bot move by '{}' ({}): {}",
+                        roomCode, current.name, current.id, e.message)
+                    return@withLock false
+                }
+
+                gameState = result.newState
+                if (result.newState.phase == GamePhase.FINISHED) {
+                    phase = RoomPhase.FINISHED
+                    finishedAt = System.currentTimeMillis()
+                }
+
+                broadcastGameViews()
+                broadcastEvents(result.events)
+                true
+            }
+
+            if (applied) consecutiveFailures = 0 else consecutiveFailures++
         }
     }
 
