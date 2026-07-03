@@ -26,6 +26,16 @@ data class PlayerInfo(
     val isBot: Boolean = false
 )
 
+/** Option C: surfaced while a correct claim has suspended the game for the
+ *  claimer to choose who plays next. [candidates] is populated only for the
+ *  claimer ([isMine]); everyone else just sees the "[claimerName] is choosing…"
+ *  indicator. */
+data class PassSelectionUiState(
+    val isMine: Boolean,
+    val claimerName: String,
+    val candidates: List<PlayerInfo>
+)
+
 data class GameUiState(
     val isOnline: Boolean = false,
     val isMyTurn: Boolean = false,
@@ -43,7 +53,8 @@ data class GameUiState(
     val isBotThinking: Boolean = false,
     val errorMessage: String? = null,
     val myPlayerId: String = "player_0",
-    val myTeamId: String = "team_1"
+    val myTeamId: String = "team_1",
+    val passSelection: PassSelectionUiState? = null
 )
 
 class GameViewModel(
@@ -246,6 +257,24 @@ class GameViewModel(
         val tracker = cardTracker.buildState(state.events, state.players, myPlayerId)
         _trackerState.value = tracker
 
+        val passSelection = state.pendingPass?.let { pending ->
+            val isMine = pending.claimerId == myPlayerId
+            PassSelectionUiState(
+                isMine = isMine,
+                claimerName = state.getPlayer(pending.claimerId)?.name ?: "",
+                candidates = if (isMine) {
+                    pending.eligibleTeammateIds.mapNotNull { id ->
+                        state.getPlayer(id)?.let { p ->
+                            PlayerInfo(
+                                id = p.id, name = p.name, cardCount = p.cardCount,
+                                isActive = p.isActive, isCurrentTurn = false, isBot = p.isBot
+                            )
+                        }
+                    }
+                } else emptyList()
+            )
+        }
+
         _uiState.value = GameUiState(
             isOnline = isOnline,
             isMyTurn = state.currentPlayer.id == myPlayerId,
@@ -262,7 +291,19 @@ class GameViewModel(
             isLoading = false,
             isBotThinking = state.currentPlayer.isBot && state.phase == GamePhase.IN_PROGRESS,
             myPlayerId = myPlayerId,
-            myTeamId = myTeam?.id ?: "team_1"
+            myTeamId = myTeam?.id ?: "team_1",
+            passSelection = passSelection
         )
+    }
+
+    fun selectPassTarget(playerId: String) {
+        viewModelScope.launch {
+            try {
+                repository.submitPassTarget(playerId)
+            } catch (e: Exception) {
+                log.e(e) { "Pass selection failed" }
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+        }
     }
 }

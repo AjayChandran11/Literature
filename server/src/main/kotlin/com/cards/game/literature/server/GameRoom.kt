@@ -239,6 +239,7 @@ class GameRoom(
             turnTimeoutJob?.cancel()
             var state = gameState ?: return
             if (state.phase != GamePhase.IN_PROGRESS) return
+            if (state.pendingPass != null) return // no moves while a pass is being chosen
             if (state.currentPlayer.id != playerId) return
 
             val batchId = System.currentTimeMillis().toString()

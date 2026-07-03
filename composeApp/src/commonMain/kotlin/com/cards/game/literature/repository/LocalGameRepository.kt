@@ -48,6 +48,7 @@ class LocalGameRepository(
     override suspend fun submitAsk(askerId: String, targetId: String, card: Card) {
         mutex.withLock {
             val currentState = _gameState.value ?: return
+            if (currentState.pendingPass != null) return // suspended for a pass pick
             val result = gameEngine.processAsk(currentState, askerId, targetId, card)
             _gameState.value = result.newState
             result.events.forEach { _gameEvents.emit(it) }
@@ -58,6 +59,7 @@ class LocalGameRepository(
     override suspend fun submitMultiAsk(askerId: String, targetId: String, cards: List<Card>) {
         mutex.withLock {
             var currentState = _gameState.value ?: return
+            if (currentState.pendingPass != null) return // suspended for a pass pick
             val batchId = currentTimeMillis().toString()
             for (card in cards) {
                 if (currentState.phase != GamePhase.IN_PROGRESS) break
@@ -75,6 +77,7 @@ class LocalGameRepository(
     override suspend fun submitClaim(declaration: ClaimDeclaration) {
         mutex.withLock {
             val currentState = _gameState.value ?: return
+            if (currentState.pendingPass != null) return // already suspended awaiting a pick
             // submitClaim is only ever the local human's claim (bots claim via
             // executeBotTurns), so always offer Option C: if this correct claim
             // empties the human with 2+ active teammates, the engine suspends and

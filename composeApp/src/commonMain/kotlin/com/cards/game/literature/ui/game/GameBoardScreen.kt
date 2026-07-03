@@ -521,6 +521,15 @@ fun GameBoardContent(
             onDismiss = { showClaimSheet = false }
         )
     }
+
+    // Option C: pass-target picker for the claimer, "choosing…" indicator for
+    // everyone else. Driven purely by state — resolves and disappears on its own.
+    uiState.passSelection?.let { passSelection ->
+        PassTargetSheet(
+            passSelection = passSelection,
+            onSelect = { viewModel.selectPassTarget(it) }
+        )
+    }
 }
 
 // ─── Last Event Strip ────────────────────────────────────────────────────────
