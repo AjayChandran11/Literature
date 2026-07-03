@@ -97,7 +97,9 @@ fun PassTargetSheet(
 private fun PassCandidateRow(candidate: PlayerInfo, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        // surfaceVariant is a muted tone in BOTH schemes; secondaryContainer maps
+        // to a bright gold in dark mode that glares against the navy sheet.
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Row(
@@ -120,13 +122,13 @@ private fun PassCandidateRow(candidate: PlayerInfo, onClick: () -> Unit) {
                 text = candidate.name,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
             Text(
                 text = stringResource(Res.string.pass_cards_left, candidate.cardCount),
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
         }
     }
