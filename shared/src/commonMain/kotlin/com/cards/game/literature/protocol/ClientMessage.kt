@@ -22,6 +22,12 @@ sealed class ClientMessage {
     @Serializable
     data class ClaimDeck(val declaration: ClaimDeclaration) : ClientMessage()
 
+    /** Option C (protocol v3+): the claimer's choice of which active teammate
+     *  takes the turn after a correct claim emptied their hand. Only valid while
+     *  the server has a pending pass selection for this player. */
+    @Serializable
+    data class SelectPassTarget(val selectedPlayerId: String) : ClientMessage()
+
     @Serializable
     data object LeaveRoom : ClientMessage()
 
