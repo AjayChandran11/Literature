@@ -491,7 +491,8 @@ class OnlineGameRepository(
             playerCount = players.size,
             // Carry the server's Option C suspension through so the ViewModel/UI
             // can show the picker (or, for everyone else, a "choosing…" state).
-            pendingPass = view.pendingPass
+            pendingPass = view.pendingPass,
+            pendingPassDeadlineMs = view.pendingPassDeadlineMs
         )
 
         _gameState.value = syntheticState

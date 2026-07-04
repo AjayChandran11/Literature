@@ -332,6 +332,7 @@ class GameEngine {
         val newState = state.copy(
             currentPlayerIndex = targetIdx,
             pendingPass = null,
+            pendingPassDeadlineMs = null,
             events = state.events + turnEvent
         )
         return GameResult(newState, listOf(turnEvent))

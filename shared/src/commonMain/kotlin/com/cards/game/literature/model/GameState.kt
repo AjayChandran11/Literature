@@ -50,7 +50,11 @@ data class GameState(
     // Non-null while a correct claim has suspended the game for the claimer to
     // pick who plays next (Option C). Defaulted so older serialized states and
     // wire views decode unchanged.
-    val pendingPass: PendingPass? = null
+    val pendingPass: PendingPass? = null,
+    // Epoch-ms deadline for the pending pass selection, for a client countdown.
+    // Set only on the CLIENT's reconstructed state (from PlayerGameView); the
+    // server owns the real timer and sends the deadline via the view.
+    val pendingPassDeadlineMs: Long? = null
 ) {
     val currentPlayer: Player get() = players[currentPlayerIndex]
     val isGameOver: Boolean get() = phase == GamePhase.FINISHED

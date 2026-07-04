@@ -33,7 +33,14 @@ data class PlayerInfo(
 data class PassSelectionUiState(
     val isMine: Boolean,
     val claimerName: String,
-    val candidates: List<PlayerInfo>
+    val candidates: List<PlayerInfo>,
+    // Epoch-ms deadline for the server's auto-pick, so the "choosing…" banner
+    // shown to other players can count down. Null offline (no server timer).
+    val deadlineMs: Long? = null,
+    // Display name of the half-suit the claimer just claimed, for a confirmation
+    // line in the claimer's picker sheet — their own sheet covers the event strip,
+    // so this echoes the claim result they'd otherwise miss.
+    val claimedHalfSuitLabel: String? = null
 )
 
 data class GameUiState(
@@ -271,7 +278,15 @@ class GameViewModel(
                             )
                         }
                     }
-                } else emptyList()
+                } else emptyList(),
+                deadlineMs = state.pendingPassDeadlineMs,
+                // The claim that triggered this pause is the claimer's most recent
+                // DeckClaimed in the event window — echo its half-suit in the sheet.
+                claimedHalfSuitLabel = if (isMine) {
+                    state.events.filterIsInstance<GameEvent.DeckClaimed>()
+                        .lastOrNull { it.claimerId == pending.claimerId }
+                        ?.halfSuit?.displayName
+                } else null
             )
         }
 
