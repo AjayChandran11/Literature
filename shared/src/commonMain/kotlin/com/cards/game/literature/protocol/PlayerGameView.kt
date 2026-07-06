@@ -16,7 +16,14 @@ data class PlayerGameView(
     /** Server-issued unique id for THIS game; lets the client de-dup stats per match
      *  (a rematch reuses the room code, so the room code alone is not unique). Defaulted
      *  for back-compat: older servers omit it and the client falls back to the room code. */
-    val gameId: String = ""
+    val gameId: String = "",
+    /** Option C (protocol v3+): non-null while the game is suspended for a claimer
+     *  to choose who plays next. The claimer's client shows the picker; everyone
+     *  else shows a "choosing…" indicator. Defaulted null so older clients drop it. */
+    val pendingPass: PendingPass? = null,
+    /** Epoch-ms deadline for the pending pass selection; on timeout the server
+     *  auto-picks [PendingPass.defaultTarget]. Null when nothing is pending. */
+    val pendingPassDeadlineMs: Long? = null
 )
 
 @Serializable
@@ -34,7 +41,9 @@ data class PublicPlayerInfo(
 fun GameState.toPlayerView(
     playerId: String,
     connectionStatus: Map<String, Boolean> = emptyMap(),
-    disconnectDeadlines: Map<String, Long?> = emptyMap()
+    disconnectDeadlines: Map<String, Long?> = emptyMap(),
+    // Server-supplied deadline for an in-flight Option C selection (see GameRoom).
+    pendingPassDeadlineMs: Long? = null
 ): PlayerGameView {
     val myPlayer = getPlayer(playerId)
     return PlayerGameView(
@@ -58,6 +67,8 @@ fun GameState.toPlayerView(
         phase = phase,
         halfSuitStatuses = halfSuitStatuses,
         recentEvents = events.takeLast(20),
-        gameId = this.gameId
+        gameId = this.gameId,
+        pendingPass = this.pendingPass,
+        pendingPassDeadlineMs = if (this.pendingPass != null) pendingPassDeadlineMs else null
     )
 }

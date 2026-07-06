@@ -2,7 +2,7 @@ package com.cards.game.literature.ui.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInRoot
@@ -27,6 +28,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.cards.game.literature.audio.SoundEvent
@@ -521,6 +524,16 @@ fun GameBoardContent(
             onDismiss = { showClaimSheet = false }
         )
     }
+
+    // Option C: only the CLAIMER gets the picker sheet. Other players see the
+    // non-blocking "choosing…" state in the turn banner (PassChoosingIndicator).
+    // Driven purely by state — resolves and disappears on its own.
+    uiState.passSelection?.takeIf { it.isMine }?.let { passSelection ->
+        PassTargetSheet(
+            passSelection = passSelection,
+            onSelect = { viewModel.selectPassTarget(it) }
+        )
+    }
 }
 
 // ─── Last Event Strip ────────────────────────────────────────────────────────
@@ -648,9 +661,11 @@ private fun StripEntry(message: StripMessage) {
 private fun LastEventStrip(events: List<GameEvent>) {
     // Every ask emits CardAsked + TurnChanged (even when same player keeps turn).
     // "Current turn" = all events since the last TurnChanged that pointed to a DIFFERENT player.
+    // No TurnChanged yet (e.g. a correct claim that suspends for Option C before any
+    // turn has changed, or an opening-move claim) → anchor at the start so the claim
+    // still shows; don't bail, or other players would see nothing until the pass resolves.
     val lastTurnChange = events.lastOrNull { it is GameEvent.TurnChanged } as? GameEvent.TurnChanged
-        ?: return
-    val currentPlayerId = lastTurnChange.newPlayerId
+    val currentPlayerId = lastTurnChange?.newPlayerId
 
     // Find the last TurnChanged where a DIFFERENT player got the turn
     val lastOtherTurnIdx = events.indexOfLast { event ->
@@ -824,7 +839,10 @@ private fun CompactHeaderRow(
             contentAlignment = Alignment.Center
         ) {
             if (uiState.phase == GamePhase.IN_PROGRESS) {
-                Row(
+                val pass = uiState.passSelection
+                if (pass != null && !pass.isMine) {
+                    PassChoosingIndicator(pass.claimerName, pass.deadlineMs, compact = true)
+                } else Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
@@ -929,9 +947,11 @@ private fun CompactSectionLabel(text: String) {
 /** Single-line last event for landscape right panel. */
 @Composable
 private fun LandscapeLastEventStrip(events: List<GameEvent>) {
+    // See LastEventStrip: don't bail when there's no TurnChanged yet, or an
+    // Option C claim (which defers its TurnChanged) would show nothing until the
+    // pass resolves.
     val lastTurnChange = events.lastOrNull { it is GameEvent.TurnChanged } as? GameEvent.TurnChanged
-        ?: return
-    val currentPlayerId = lastTurnChange.newPlayerId
+    val currentPlayerId = lastTurnChange?.newPlayerId
     val lastOtherTurnIdx = events.indexOfLast { event ->
         event is GameEvent.TurnChanged && event.newPlayerId != currentPlayerId
     }
@@ -1015,6 +1035,70 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
     }
 }
 
+/**
+ * Option C: the non-blocking "X is choosing who plays next…" shown in the turn
+ * banner to players who are NOT the claimer. The game is paused (moves are
+ * state-guarded), so instead of covering their screen we just inform them — a
+ * gentle pulse plus a live countdown to the server's auto-pick deadline signals
+ * "the table is waiting on X". Mirrors the bot-thinking banner it sits beside.
+ */
+@Composable
+private fun PassChoosingIndicator(
+    claimerName: String,
+    deadlineMs: Long?,
+    compact: Boolean
+) {
+    val accent = MaterialTheme.colorScheme.secondary
+    // Gentle attention pulse on the text + countdown (the spinner already moves).
+    val pulse = rememberInfiniteTransition(label = "passPulse")
+    val alpha by pulse.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.4f,
+        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        label = "passPulseAlpha"
+    )
+    // Count down to the server's auto-pick deadline (null offline → no countdown).
+    val remaining = rememberPassCountdownSeconds(deadlineMs)
+    val textStyle = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleMedium
+    Row(
+        // Fill the width and reserve room on the regular banner so the message can
+        // never slide under the help icon (CenterEnd). The message text takes the
+        // space between the spinner and countdown and wraps to a 2nd line on narrow
+        // phones — keeping the full wording readable — while staying one line on
+        // wider landscape/tablet layouts. Ellipsis only if even two lines overflow.
+        modifier = Modifier.fillMaxWidth().padding(horizontal = if (compact) 4.dp else 40.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(if (compact) 12.dp else 16.dp),
+            strokeWidth = if (compact) 1.5.dp else 2.dp,
+            color = accent
+        )
+        Spacer(modifier = Modifier.width(if (compact) 6.dp else 8.dp))
+        Text(
+            text = stringResource(Res.string.pass_waiting, claimerName),
+            style = textStyle,
+            fontWeight = FontWeight.SemiBold,
+            color = accent,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).graphicsLayer { this.alpha = alpha }
+        )
+        remaining?.let { r ->
+            Spacer(modifier = Modifier.width(if (compact) 6.dp else 8.dp))
+            Text(
+                text = stringResource(Res.string.game_timer_seconds, r),
+                style = textStyle,
+                fontWeight = FontWeight.Bold,
+                color = if (r <= 10) CardRed else accent,
+                modifier = Modifier.graphicsLayer { this.alpha = alpha }
+            )
+        }
+    }
+}
+
 @Composable
 private fun TurnIndicatorBanner(
     uiState: GameUiState,
@@ -1046,7 +1130,10 @@ private fun TurnIndicatorBanner(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
-            if (uiState.isMyTurn) {
+            val pass = uiState.passSelection
+            if (pass != null && !pass.isMine) {
+                PassChoosingIndicator(pass.claimerName, pass.deadlineMs, compact = false)
+            } else if (uiState.isMyTurn) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center

@@ -48,6 +48,7 @@ class LocalGameRepository(
     override suspend fun submitAsk(askerId: String, targetId: String, card: Card) {
         mutex.withLock {
             val currentState = _gameState.value ?: return
+            if (currentState.pendingPass != null) return // suspended for a pass pick
             val result = gameEngine.processAsk(currentState, askerId, targetId, card)
             _gameState.value = result.newState
             result.events.forEach { _gameEvents.emit(it) }
@@ -58,6 +59,7 @@ class LocalGameRepository(
     override suspend fun submitMultiAsk(askerId: String, targetId: String, cards: List<Card>) {
         mutex.withLock {
             var currentState = _gameState.value ?: return
+            if (currentState.pendingPass != null) return // suspended for a pass pick
             val batchId = currentTimeMillis().toString()
             for (card in cards) {
                 if (currentState.phase != GamePhase.IN_PROGRESS) break
@@ -75,7 +77,26 @@ class LocalGameRepository(
     override suspend fun submitClaim(declaration: ClaimDeclaration) {
         mutex.withLock {
             val currentState = _gameState.value ?: return
-            val result = gameEngine.processClaim(currentState, declaration)
+            if (currentState.pendingPass != null) return // already suspended awaiting a pick
+            // submitClaim is only ever the local human's claim (bots claim via
+            // executeBotTurns), so always offer Option C: if this correct claim
+            // empties the human with 2+ active teammates, the engine suspends and
+            // the UI shows the picker instead of auto-passing.
+            val result = gameEngine.processClaim(currentState, declaration, pauseForPassSelection = true)
+            _gameState.value = result.newState
+            result.events.forEach { _gameEvents.emit(it) }
+        }
+        triggerBotTurnIfNeeded()
+    }
+
+    override suspend fun submitPassTarget(selectedPlayerId: String) {
+        mutex.withLock {
+            val currentState = _gameState.value ?: return
+            val pending = currentState.pendingPass ?: return
+            // Fall back to the default for a stray/invalid id (e.g. the sheet was
+            // dismissed) so an offline game can never wedge on the suspension.
+            val target = selectedPlayerId.takeIf { it in pending.eligibleTeammateIds } ?: pending.defaultTarget
+            val result = gameEngine.applyPassSelection(currentState, target)
             _gameState.value = result.newState
             result.events.forEach { _gameEvents.emit(it) }
         }
@@ -85,6 +106,7 @@ class LocalGameRepository(
     private fun triggerBotTurnIfNeeded() {
         val state = _gameState.value ?: return
         if (state.phase != GamePhase.IN_PROGRESS) return
+        if (state.pendingPass != null) return // suspended for the human's pass pick
         val current = state.currentPlayer
         if (!current.isBot) return
         if (botJobRunning) return
