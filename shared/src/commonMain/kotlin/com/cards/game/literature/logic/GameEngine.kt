@@ -182,7 +182,13 @@ class GameEngine {
 
     fun processClaim(
         state: GameState,
-        declaration: ClaimDeclaration
+        declaration: ClaimDeclaration,
+        // When true, a correct claim that empties the claimer's hand while 2+
+        // teammates are still active suspends the game (sets pendingPass) instead
+        // of auto-passing, so the claimer can choose who plays next (Option C).
+        // Callers that can't/shouldn't offer the choice — bots, legacy clients —
+        // leave this false and get the original deterministic first-teammate pass.
+        pauseForPassSelection: Boolean = false
     ): GameResult {
         val validation = MoveValidator.validateClaim(state, declaration)
         require(validation.isValid) { validation.errorMessage ?: "Invalid claim" }
@@ -222,17 +228,40 @@ class GameEngine {
 
         // Determine next player
         val claimerIdx = state.players.indexOfFirst { it.id == declaration.claimerId }
+        val claimerNowActive = newPlayers[claimerIdx].isActive
+
+        // Teammates who could take the turn when a correct claim empties the
+        // claimer. Empty in every other case. A correct claim only removes the
+        // claiming team's own cards, so it can never empty the opposing team or
+        // finish the game while these teammates are still active — meaning the
+        // pause branch below is always mid-game with a real turn still to give.
+        val eligibleTeammates: List<Player> = if (result.correct && !claimerNowActive) {
+            val claimerTeam = state.teams.first { it.playerIds.contains(declaration.claimerId) }
+            newPlayers.filter {
+                it.id in claimerTeam.playerIds && it.id != declaration.claimerId && it.isActive
+            }
+        } else emptyList()
+
+        // Option C: suspend instead of auto-passing when there's a real choice.
+        if (pauseForPassSelection && eligibleTeammates.size >= 2) {
+            val pausedState = state.copy(
+                players = newPlayers,
+                teams = newTeams,
+                currentPlayerIndex = claimerIdx, // stays on the now-empty claimer until they pick
+                halfSuitStatuses = newStatuses,
+                events = state.events + newEvents, // DeckClaimed only; TurnChanged comes on resolution
+                pendingPass = PendingPass(declaration.claimerId, eligibleTeammates.map { it.id })
+            )
+            return GameResult(pausedState, newEvents)
+        }
+
         val nextPlayerIndex = if (result.correct) {
             // Claimer keeps turn if they still have cards
-            if (newPlayers[claimerIdx].isActive) claimerIdx
+            if (claimerNowActive) claimerIdx
             else {
                 // Claimer is out of cards — pass to the first active teammate (deterministic)
-                val claimerTeam = state.teams.first { it.playerIds.contains(declaration.claimerId) }
-                val activeTeammates = newPlayers.filter {
-                    it.id in claimerTeam.playerIds && it.id != declaration.claimerId && it.isActive
-                }
-                if (activeTeammates.isNotEmpty()) {
-                    newPlayers.indexOf(activeTeammates.first())
+                if (eligibleTeammates.isNotEmpty()) {
+                    newPlayers.indexOf(eligibleTeammates.first())
                 } else {
                     findNextActivePlayer(newPlayers, claimerIdx)
                 }
@@ -276,6 +305,37 @@ class GameEngine {
         newState = checkForEarlyGameEnd(newState)
 
         return GameResult(newState, newEvents)
+    }
+
+    /**
+     * Resolves an Option C suspension: [selectedPlayerId] (chosen by the claimer,
+     * or the fallback default on timeout/disconnect/bot/legacy) takes the next
+     * turn. Validates the pick against [GameState.pendingPass], moves the turn,
+     * clears the suspension, and emits the deferred TurnChanged. Idempotent by
+     * contract — callers must only invoke it while a pass is pending.
+     */
+    fun applyPassSelection(state: GameState, selectedPlayerId: String): GameResult {
+        val pending = state.pendingPass
+        require(pending != null) { "No pending pass selection to resolve" }
+        require(selectedPlayerId in pending.eligibleTeammateIds) {
+            "Player $selectedPlayerId is not an eligible pass target"
+        }
+        val targetIdx = state.players.indexOfFirst { it.id == selectedPlayerId }
+        require(targetIdx >= 0 && state.players[targetIdx].isActive) {
+            "Player $selectedPlayerId is no longer active"
+        }
+
+        val turnEvent = GameEvent.TurnChanged(
+            newPlayerId = state.players[targetIdx].id,
+            newPlayerName = state.players[targetIdx].name
+        )
+        val newState = state.copy(
+            currentPlayerIndex = targetIdx,
+            pendingPass = null,
+            pendingPassDeadlineMs = null,
+            events = state.events + turnEvent
+        )
+        return GameResult(newState, listOf(turnEvent))
     }
 
     fun findNextActivePlayer(players: List<Player>, fromIndex: Int): Int {

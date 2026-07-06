@@ -36,6 +36,11 @@ class GameRoom(
     private var playerIdCounter = 0
 
     private var turnTimeoutJob: Job? = null
+    // Option C: while a correct claim is suspended for the claimer to pick who
+    // plays next, this timer auto-resolves to the default target on expiry, and
+    // the deadline rides out to clients so they can show a countdown.
+    private var passSelectionJob: Job? = null
+    private var passSelectionDeadline: Long? = null
     // Guards against more than one executeBotTurns() loop running at once. Set
     // atomically before a loop is launched (see checkNextTurn) and cleared when
     // it exits. See executeBotTurns for why concurrent loops are unsafe.
@@ -56,8 +61,14 @@ class GameRoom(
     var finishedAt: Long = 0L
         private set
 
+    // How long the claimer has to pick a pass target before the server auto-picks
+    // the default. A var (not const) so tests can shrink it; production uses the
+    // companion default.
+    internal var passSelectionTimeoutMs: Long = PASS_SELECTION_TIMEOUT_MS
+
     companion object {
         private const val TURN_TIMEOUT_MS = 60_000L
+        private const val PASS_SELECTION_TIMEOUT_MS = 30_000L
         private const val RECONNECT_WINDOW_MS = 2 * 60_000L
         // Grace window for a WAITING-room disconnect (e.g. the host briefly leaving
         // the app to share an invite). The seat is held — not removed — for this long
@@ -109,6 +120,19 @@ class GameRoom(
 
     /** Test visibility: lets server tests drive a real game to completion. */
     internal val currentPlayerId: String? get() = gameState?.currentPlayer?.id
+
+    /** Test visibility: the in-flight Option C pass selection, if any. */
+    internal val pendingPassForTest: PendingPass? get() = gameState?.pendingPass
+
+    /** Test hook: install a running game with [state] so claim/turn/Option C
+     *  orchestration can be exercised without relying on a random deal. Players
+     *  must already have been added via [addPlayer]. */
+    internal fun installRunningGameForTest(state: GameState) {
+        gameState = state
+        phase = RoomPhase.IN_PROGRESS
+        if (botScope == null) botScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        state.teams.forEach { team -> team.playerIds.forEach { playerTeams[it] = team.id } }
+    }
 
     fun getHumanPlayerCount(): Int = players.size
 
@@ -230,6 +254,7 @@ class GameRoom(
             turnTimeoutJob?.cancel()
             var state = gameState ?: return
             if (state.phase != GamePhase.IN_PROGRESS) return
+            if (state.pendingPass != null) return // no moves while a pass is being chosen
             if (state.currentPlayer.id != playerId) return
 
             val batchId = System.currentTimeMillis().toString()
@@ -255,13 +280,20 @@ class GameRoom(
     }
 
     suspend fun processClaim(playerId: String, declaration: ClaimDeclaration) {
+        var suspendedForSelection = false
         mutex.withLock {
             turnTimeoutJob?.cancel()
             val state = gameState ?: return
             if (state.phase != GamePhase.IN_PROGRESS) return
             if (state.currentPlayer.id != playerId) return
+            if (state.pendingPass != null) return // a selection is already in flight
 
-            val result = engine.processClaim(state, declaration)
+            // Option C: offer the pick only to a claimer whose client can render
+            // it and reply with SelectPassTarget (protocol v3+). Bots claim via
+            // executeBotTurns (flag off) and legacy clients fall through to the
+            // deterministic auto-pass, both unchanged.
+            val claimerSupportsOptionC = (players[playerId]?.protocolVersion ?: 1) >= 3
+            val result = engine.processClaim(state, declaration, pauseForPassSelection = claimerSupportsOptionC)
             gameState = result.newState
 
             if (result.newState.phase == GamePhase.FINISHED) {
@@ -278,6 +310,57 @@ class GameRoom(
             // After a claim, there's no meaningful "previous asker" context
             lastAskerId = null
 
+            if (result.newState.pendingPass != null) {
+                suspendedForSelection = true
+                startPassSelectionTimer() // sets the deadline read by broadcastGameViews
+            }
+
+            broadcastGameViews()
+            broadcastEvents(result.events)
+        }
+        // When suspended, the pass-selection timer drives progress — the turn
+        // isn't handed out until the claimer picks (or the timer fires).
+        if (!suspendedForSelection) checkNextTurn()
+    }
+
+    /** Entry for ClientMessage.SelectPassTarget: only the claimer may choose,
+     *  and only while a pass is actually pending. */
+    suspend fun selectPassTarget(playerId: String, selectedPlayerId: String) {
+        val pending = gameState?.pendingPass ?: return
+        if (playerId != pending.claimerId) return
+        resolvePassSelection(selectedPlayerId)
+    }
+
+    private fun startPassSelectionTimer() {
+        passSelectionJob?.cancel()
+        passSelectionDeadline = System.currentTimeMillis() + passSelectionTimeoutMs
+        passSelectionJob = botScope?.launch {
+            delay(passSelectionTimeoutMs)
+            val pending = gameState?.pendingPass ?: return@launch
+            resolvePassSelection(pending.defaultTarget)
+        }
+    }
+
+    /**
+     * Finalises an Option C suspension by handing the turn to [requested] — the
+     * claimer's pick, or the default on timeout/disconnect. Idempotent (a no-op
+     * once resolved), and an invalid/stale pick falls back to the deterministic
+     * default so the game can never wedge on a bad selection.
+     */
+    private suspend fun resolvePassSelection(requested: String) {
+        mutex.withLock {
+            val state = gameState ?: return
+            val pending = state.pendingPass ?: return // already resolved
+            passSelectionJob?.cancel()
+            passSelectionJob = null
+            passSelectionDeadline = null
+
+            val target = requested.takeIf {
+                it in pending.eligibleTeammateIds && state.getPlayer(it)?.isActive == true
+            } ?: pending.defaultTarget
+
+            val result = engine.applyPassSelection(state, target)
+            gameState = result.newState
             broadcastGameViews()
             broadcastEvents(result.events)
         }
@@ -328,6 +411,14 @@ class GameRoom(
             }
             if (job != null) {
                 disconnectJobs[playerId] = job
+            }
+
+            // If the table was waiting on this player to pick a pass target,
+            // resolve it now with the default so nobody is stuck behind a gone
+            // claimer (the empty-handed claimer's own bot replacement above is
+            // then harmless).
+            gameState?.pendingPass?.let { pending ->
+                if (pending.claimerId == playerId) resolvePassSelection(pending.defaultTarget)
             }
         } else if (phase == RoomPhase.WAITING) {
             // Hold the seat for a grace window instead of removing immediately, so a
@@ -387,6 +478,9 @@ class GameRoom(
             if (phase != RoomPhase.FINISHED) return false
 
             turnTimeoutJob?.cancel()
+            passSelectionJob?.cancel()
+            passSelectionJob = null
+            passSelectionDeadline = null
             disconnectJobs.values.forEach { it.cancel() }
             disconnectJobs.clear()
             pendingReclaims.clear()
@@ -434,6 +528,12 @@ class GameRoom(
         disconnectJobs.remove(playerId)?.cancel()
 
         if (phase == RoomPhase.IN_PROGRESS) {
+            // Resolve any pass the leaver was choosing BEFORE replacing them:
+            // replaceWithBot alone would leave the game suspended forever, since
+            // checkNextTurn is a no-op while a pass is pending.
+            gameState?.pendingPass?.let { pending ->
+                if (pending.claimerId == playerId) resolvePassSelection(pending.defaultTarget)
+            }
             // Immediate bot replacement, no grace period
             replaceWithBot(playerId)
         }
@@ -489,7 +589,7 @@ class GameRoom(
             // broadcasting the reconnect event. This ensures the client's event
             // replay (which filters by lastSeenEventTimestamp) processes the
             // GameUpdate before any new events update that timestamp.
-            val view = state.toPlayerView(playerId, getConnectionStatus(), getDisconnectDeadlines())
+            val view = state.toPlayerView(playerId, getConnectionStatus(), getDisconnectDeadlines(), passSelectionDeadline)
             session.send(ServerMessage.GameUpdate(view))
 
             // Now broadcast reconnect event to all players
@@ -534,6 +634,7 @@ class GameRoom(
         mutex.withLock {
             val state = gameState ?: return
             if (state.phase != GamePhase.IN_PROGRESS) return
+            if (state.pendingPass != null) return // never skip while awaiting a pass pick
             if (state.currentPlayer.id != playerId) return
 
             val timedOutPlayer = state.currentPlayer
@@ -580,6 +681,7 @@ class GameRoom(
         turnTimeoutJob?.cancel()
         val state = gameState ?: return
         if (state.phase != GamePhase.IN_PROGRESS) return
+        if (state.pendingPass != null) return // the pass-selection timer owns the clock
         val currentId = state.currentPlayer.id
         if (state.currentPlayer.isBot) return
 
@@ -592,6 +694,7 @@ class GameRoom(
     private fun checkNextTurn() {
         val state = gameState ?: return
         if (state.phase != GamePhase.IN_PROGRESS) return
+        if (state.pendingPass != null) return // suspended for an Option C selection
         val current = state.currentPlayer
 
         // Check if there's a pending reclaim for the current player
@@ -648,8 +751,9 @@ class GameRoom(
         val state = gameState ?: return
         val connectionStatus = getConnectionStatus()
         val deadlines = getDisconnectDeadlines()
+        val passDeadline = passSelectionDeadline
         players.values.filter { it.isConnected }.forEach { session ->
-            val view = state.toPlayerView(session.playerId, connectionStatus, deadlines)
+            val view = state.toPlayerView(session.playerId, connectionStatus, deadlines, passDeadline)
             session.send(ServerMessage.GameUpdate(view))
         }
     }
@@ -760,6 +864,8 @@ class GameRoom(
 
     fun cleanup() {
         turnTimeoutJob?.cancel()
+        passSelectionJob?.cancel()
+        passSelectionDeadline = null
         disconnectJobs.values.forEach { it.cancel() }
         disconnectJobs.clear()
         pendingReclaims.clear()

@@ -21,6 +21,27 @@ object DeepLinkHandler {
     private val _pendingRoomCode = MutableStateFlow<String?>(null)
     val pendingRoomCode: StateFlow<String?> = _pendingRoomCode.asStateFlow()
 
+    /** A screen the app should jump straight to when launched from an external entry point. */
+    enum class LaunchDestination { DAILY_PUZZLE }
+
+    private val _pendingDestination = MutableStateFlow<LaunchDestination?>(null)
+    val pendingDestination: StateFlow<LaunchDestination?> = _pendingDestination.asStateFlow()
+
+    /**
+     * Records that the app was launched with a request to land on a specific screen — e.g. the
+     * daily-puzzle reminder notification. The navigation layer observes [pendingDestination] and
+     * routes there once composed, then [consumeDestination]s it.
+     */
+    fun submitDestination(destination: LaunchDestination?) {
+        if (destination == null) return
+        _pendingDestination.value = destination
+    }
+
+    /** Clears the pending destination once the UI has routed the user to it. */
+    fun consumeDestination() {
+        _pendingDestination.value = null
+    }
+
     /**
      * Records an incoming invite. Accepts either a raw 6-char code or a full deep-link
      * URI string (https App Link or `literature://` scheme); extracts and validates the

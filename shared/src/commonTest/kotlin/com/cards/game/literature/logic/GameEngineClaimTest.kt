@@ -3,7 +3,9 @@ package com.cards.game.literature.logic
 import com.cards.game.literature.model.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -208,6 +210,162 @@ class GameEngineClaimTest {
 
         val ended = newState.events.filterIsInstance<GameEvent.GameEnded>().last()
         assertEquals("t2", ended.winnerTeamId)
+    }
+
+    // ---- Option C: claimer picks who continues after emptying their hand ----
+    //
+    // Uses a 6-player layout so the claimer's team has TWO other teammates left,
+    // t1 = (p1, p3, p5), t2 = (p2, p4, p6), seating p1..p6, p1 is current.
+    // The 6 SPADES_LOW cards are split across p1/p3/p5 so a correct claim empties
+    // p1 while p3 and p5 stay active (each keeps a spare card).
+
+    private val clubTwo = Card(Suit.CLUBS, CardValue.TWO)
+    private val clubThree = Card(Suit.CLUBS, CardValue.THREE)
+    private val clubFour = Card(Suit.CLUBS, CardValue.FOUR)
+
+    private fun buildSixPlayerState(
+        p1Hand: List<Card>,
+        p3Hand: List<Card>,
+        p5Hand: List<Card>,
+        p2Hand: List<Card> = listOf(clubTwo),
+        p4Hand: List<Card> = listOf(clubThree),
+        p6Hand: List<Card> = listOf(clubFour)
+    ): GameState {
+        val players = listOf(
+            Player("p1", "Player 1", "t1", p1Hand),
+            Player("p2", "Player 2", "t2", p2Hand),
+            Player("p3", "Player 3", "t1", p3Hand),
+            Player("p4", "Player 4", "t2", p4Hand),
+            Player("p5", "Player 5", "t1", p5Hand),
+            Player("p6", "Player 6", "t2", p6Hand)
+        )
+        val teams = listOf(
+            Team("t1", "Team 1", listOf("p1", "p3", "p5")),
+            Team("t2", "Team 2", listOf("p2", "p4", "p6"))
+        )
+        return GameState(
+            gameId = "optionc-test",
+            players = players,
+            teams = teams,
+            currentPlayerIndex = 0,
+            phase = GamePhase.IN_PROGRESS,
+            playerCount = 6
+        )
+    }
+
+    // p1 holds 2, p3 & p5 hold 2 each (+ a spare) — correct claim empties only p1.
+    private fun buildTwoEligibleState() = buildSixPlayerState(
+        p1Hand = spadesLow.take(2),
+        p3Hand = spadesLow.subList(2, 4) + heartsTwo,
+        p5Hand = spadesLow.subList(4, 6) + heartsThree
+    )
+
+    private val twoEligibleClaim = ClaimDeclaration(
+        "p1", HalfSuit.SPADES_LOW,
+        mapOf(
+            "p1" to spadesLow.take(2),
+            "p3" to spadesLow.subList(2, 4),
+            "p5" to spadesLow.subList(4, 6)
+        )
+    )
+
+    @Test
+    fun pauseFlagSuspendsForSelectionWhenTwoTeammatesActive() {
+        val result = engine.processClaim(buildTwoEligibleState(), twoEligibleClaim, pauseForPassSelection = true)
+        val newState = result.newState
+
+        // Claim resolved (point awarded, cards removed) but the turn is NOT moved.
+        assertEquals(1, newState.getTeam("t1")!!.score)
+        assertEquals(GamePhase.IN_PROGRESS, newState.phase)
+        assertTrue(newState.isAwaitingPassSelection)
+        assertEquals("p1", newState.currentPlayer.id) // still on the claimer until they pick
+
+        val pending = newState.pendingPass!!
+        assertEquals("p1", pending.claimerId)
+        assertEquals(listOf("p3", "p5"), pending.eligibleTeammateIds) // seating order
+        assertEquals("p3", pending.defaultTarget)
+
+        // DeckClaimed happened; TurnChanged is deferred until resolution.
+        assertEquals(1, result.events.filterIsInstance<GameEvent.DeckClaimed>().size)
+        assertTrue(result.events.none { it is GameEvent.TurnChanged })
+    }
+
+    @Test
+    fun applyPassSelectionMovesTurnToChosenTeammate() {
+        val paused = engine.processClaim(buildTwoEligibleState(), twoEligibleClaim, pauseForPassSelection = true).newState
+
+        val resolved = engine.applyPassSelection(paused, "p5") // pick the non-default teammate
+        val newState = resolved.newState
+
+        assertEquals("p5", newState.currentPlayer.id)
+        assertNull(newState.pendingPass)
+        assertFalse(newState.isAwaitingPassSelection)
+        val turn = resolved.events.filterIsInstance<GameEvent.TurnChanged>().single()
+        assertEquals("p5", turn.newPlayerId)
+    }
+
+    @Test
+    fun defaultTargetReproducesLegacyFirstTeammatePass() {
+        val paused = engine.processClaim(buildTwoEligibleState(), twoEligibleClaim, pauseForPassSelection = true).newState
+
+        // The timeout/disconnect/bot fallback uses defaultTarget == first active teammate.
+        val resolved = engine.applyPassSelection(paused, paused.pendingPass!!.defaultTarget)
+        assertEquals("p3", resolved.newState.currentPlayer.id)
+    }
+
+    @Test
+    fun applyPassSelectionRejectsIneligibleTargets() {
+        val paused = engine.processClaim(buildTwoEligibleState(), twoEligibleClaim, pauseForPassSelection = true).newState
+
+        assertFailsWith<IllegalArgumentException> { engine.applyPassSelection(paused, "p2") } // opponent
+        assertFailsWith<IllegalArgumentException> { engine.applyPassSelection(paused, "p1") } // claimer himself
+    }
+
+    @Test
+    fun applyPassSelectionRequiresAPendingPass() {
+        val plain = buildTwoEligibleState() // nothing pending
+        assertFailsWith<IllegalArgumentException> { engine.applyPassSelection(plain, "p3") }
+    }
+
+    @Test
+    fun pauseFlagOffKeepsDeterministicAutoPass() {
+        // Same scenario, flag defaulted off → behaves exactly as before Option C.
+        val result = engine.processClaim(buildTwoEligibleState(), twoEligibleClaim)
+        val newState = result.newState
+
+        assertNull(newState.pendingPass)
+        assertEquals("p3", newState.currentPlayer.id) // first active teammate
+        assertTrue(result.events.any { it is GameEvent.TurnChanged })
+    }
+
+    @Test
+    fun noPauseWhenOnlyOneTeammateRemainsActive() {
+        // p5 holds only claimed cards, so after the claim p3 is the sole eligible
+        // teammate — no real choice, so no suspension even with the flag on.
+        val state = buildSixPlayerState(
+            p1Hand = spadesLow.take(2),
+            p3Hand = spadesLow.subList(2, 4) + heartsTwo, // stays active
+            p5Hand = spadesLow.subList(4, 6)              // empties with the claim
+        )
+        val result = engine.processClaim(state, twoEligibleClaim, pauseForPassSelection = true)
+
+        assertNull(result.newState.pendingPass)
+        assertEquals("p3", result.newState.currentPlayer.id)
+    }
+
+    @Test
+    fun gameEndingClaimNeverPausesEvenWithFlagOn() {
+        // Whole team's holding is the claimed suit → claim empties t1 and ends the
+        // game; game-over must win over the pause path.
+        val state = buildSixPlayerState(
+            p1Hand = spadesLow.take(2),
+            p3Hand = spadesLow.subList(2, 4),
+            p5Hand = spadesLow.subList(4, 6)
+        )
+        val result = engine.processClaim(state, twoEligibleClaim, pauseForPassSelection = true)
+
+        assertEquals(GamePhase.FINISHED, result.newState.phase)
+        assertNull(result.newState.pendingPass)
     }
 
     @Test

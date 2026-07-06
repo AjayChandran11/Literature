@@ -26,6 +26,8 @@ actual object Notifier {
     private const val ID_PUZZLE_READY = 1004
 
     const val EXTRA_FROM_NOTIFICATION = "from_notification"
+    const val EXTRA_NAVIGATE_TO = "navigate_to"
+    const val NAV_DAILY_PUZZLE = "daily_puzzle"
 
     fun init(context: Context) {
         appContext = context.applicationContext
@@ -85,23 +87,27 @@ actual object Notifier {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun launchIntent(): PendingIntent? {
+    // requestCode is the notification id so each notification type gets its own PendingIntent —
+    // otherwise FLAG_UPDATE_CURRENT (which ignores extras when matching intents) would let one
+    // notification's navigateTo extra bleed onto the others.
+    private fun launchIntent(requestCode: Int, navigateTo: String?): PendingIntent? {
         val ctx = appContext ?: return null
         val intent = ctx.packageManager
             .getLaunchIntentForPackage(ctx.packageName)
             ?.apply {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 putExtra(EXTRA_FROM_NOTIFICATION, true)
+                if (navigateTo != null) putExtra(EXTRA_NAVIGATE_TO, navigateTo)
             } ?: return null
         return PendingIntent.getActivity(
             ctx,
-            0,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
-    private fun post(id: Int, channelId: String, title: String, body: String) {
+    private fun post(id: Int, channelId: String, title: String, body: String, navigateTo: String? = null) {
         if (!canPostNotifications()) return
         val ctx = appContext ?: return
         try {
@@ -110,7 +116,7 @@ actual object Notifier {
                 .setContentTitle(title)
                 .setContentText(body)
                 .setAutoCancel(true)
-                .setContentIntent(launchIntent())
+                .setContentIntent(launchIntent(id, navigateTo))
                 .build()
             val manager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.notify(id, notification)
@@ -132,7 +138,13 @@ actual object Notifier {
 
     /** Daily re-engagement nudge, fired by [PuzzleReminderReceiver] (not in the common contract). */
     fun notifyPuzzleReady() {
-        post(ID_PUZZLE_READY, CHANNEL_REMINDER, "Today's puzzle is ready ⭐", "A fresh Literature puzzle is waiting — keep your streak alive.")
+        post(
+            ID_PUZZLE_READY,
+            CHANNEL_REMINDER,
+            "Today's puzzle is ready ⭐",
+            "A fresh Literature puzzle is waiting — keep your streak alive.",
+            navigateTo = NAV_DAILY_PUZZLE
+        )
     }
 
     actual fun clearYourTurn() {

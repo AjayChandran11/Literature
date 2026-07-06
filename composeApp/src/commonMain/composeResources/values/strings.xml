@@ -152,6 +152,13 @@
     <string name="claim_claiming">Claiming %1$s</string>
     <string name="claim_warning">⚠️ If any assignment is wrong, the opponent gets the point!</string>
 
+    <!-- Option C: pass-target picker (claimer chooses who plays next) -->
+    <string name="pass_select_title">Choose who plays next</string>
+    <string name="pass_select_subtitle">You are out of cards — pick a teammate to take the turn.</string>
+    <string name="pass_select_subtitle_claimed">✓ You claimed %1$s and are out of cards — pick a teammate to take the turn.</string>
+    <string name="pass_cards_left">%1$d cards</string>
+    <string name="pass_waiting">%1$s is choosing who plays next…</string>
+
     <!-- Connection Banner -->
     <string name="connection_reconnecting">Reconnecting…</string>
     <string name="connection_reconnected">Reconnected</string>

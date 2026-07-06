@@ -11,9 +11,13 @@ package com.cards.game.literature.protocol
  * Version history:
  *  1 — implicit baseline (app v1.0.3 and earlier); no version reported.
  *  2 — version reported via query param; groundwork for reconnect tokens.
+ *  3 — Option C: client can render the pass-target picker and send
+ *      [ClientMessage.SelectPassTarget]. The server only suspends a claim for
+ *      selection when the claimer's session reports version >= 3; older
+ *      claimers keep the deterministic auto-pass.
  */
 object Protocol {
-    const val VERSION: Int = 2
+    const val VERSION: Int = 3
 
     /**
      * Oldest client protocol version the server still accepts. Raising this

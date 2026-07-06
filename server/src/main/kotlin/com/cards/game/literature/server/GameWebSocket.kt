@@ -169,6 +169,21 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             }
                         }
 
+                        is ClientMessage.SelectPassTarget -> {
+                            val room = currentRoom
+                            val playerId = currentPlayerId
+                            if (room == null || playerId == null) {
+                                sendError("Not in a room")
+                                continue
+                            }
+                            try {
+                                room.selectPassTarget(playerId, message.selectedPlayerId)
+                            } catch (e: Exception) {
+                                log.warn("[{}] Pass selection failed for {}: {}", room.roomCode, playerId, e.message)
+                                sendError(e.message ?: "Pass selection failed")
+                            }
+                        }
+
                         is ClientMessage.LeaveRoom -> {
                             val room = currentRoom
                             val playerId = currentPlayerId
