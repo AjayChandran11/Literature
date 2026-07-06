@@ -1,12 +1,18 @@
 package com.cards.game.literature.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.cards.game.literature.bot.BotDifficulty
+import com.cards.game.literature.deeplink.DeepLinkHandler
+import com.cards.game.literature.stats.PuzzleStore
+import com.cards.game.literature.stats.currentEpochDay
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.ui.game.GameBoardScreen
 import com.cards.game.literature.ui.home.HomeScreen
@@ -44,6 +50,24 @@ object Routes {
 fun AppNavigation() {
     val navController = rememberNavController()
     val startDestination = if (OnboardingPrefs.isCompleted()) Routes.HOME else Routes.ONBOARDING
+
+    // Jump straight to a screen the app was launched into (e.g. the daily-puzzle reminder tap).
+    val pendingDestination by DeepLinkHandler.pendingDestination.collectAsState()
+    LaunchedEffect(pendingDestination) {
+        when (pendingDestination) {
+            DeepLinkHandler.LaunchDestination.DAILY_PUZZLE -> {
+                // Only if past onboarding — otherwise the puzzle would stack on the onboarding flow.
+                if (OnboardingPrefs.isCompleted()) {
+                    // The reminder already nudged the player and we're taking them to the puzzle,
+                    // so mark the day's ready-hint as shown — no need to badge Home on the way back.
+                    PuzzleStore.markReadyHintShown(currentEpochDay())
+                    navController.navigate(Routes.DAILY_PUZZLE) { launchSingleTop = true }
+                }
+                DeepLinkHandler.consumeDestination()
+            }
+            null -> {}
+        }
+    }
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable(Routes.ONBOARDING) {

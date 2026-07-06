@@ -15,6 +15,7 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.cards.game.literature.audio.SoundPlayer
 import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.network.NetworkMonitor
+import com.cards.game.literature.notifications.Notifier
 import com.cards.game.literature.preferences.GamePrefs
 import com.cards.game.literature.preferences.OnboardingPrefs
 import com.cards.game.literature.preferences.StatsPrefs
@@ -37,8 +38,8 @@ class MainActivity : ComponentActivity() {
         FirebaseApp.initializeApp(this)
         FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = true
 
-        // Handle a room invite that launched the app (cold start).
-        handleDeepLink(intent)
+        // Handle a room invite or notification tap that launched the app (cold start).
+        handleIntent(intent)
 
         enableEdgeToEdge()
         setContent {
@@ -46,17 +47,29 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Handle invites that arrive while the app is already running (singleTop reuses
+    // Handle intents that arrive while the app is already running (singleTop reuses
     // this instance and delivers the intent here instead of a fresh onCreate).
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleDeepLink(intent)
+        handleIntent(intent)
     }
 
-    private fun handleDeepLink(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_VIEW) return
-        DeepLinkHandler.submit(intent.dataString)
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+
+        // Room invite via App Link / custom scheme.
+        if (intent.action == Intent.ACTION_VIEW) {
+            DeepLinkHandler.submit(intent.dataString)
+        }
+
+        // Daily-puzzle reminder tap. Skip when relaunched from Recents (the extra lingers on
+        // the task's root intent) so we only jump to the puzzle on the actual notification tap.
+        val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (!fromHistory && intent.getStringExtra(Notifier.EXTRA_NAVIGATE_TO) == Notifier.NAV_DAILY_PUZZLE) {
+            DeepLinkHandler.submitDestination(DeepLinkHandler.LaunchDestination.DAILY_PUZZLE)
+            intent.removeExtra(Notifier.EXTRA_NAVIGATE_TO)
+        }
     }
 }
 
