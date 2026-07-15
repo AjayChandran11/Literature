@@ -35,6 +35,15 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
             return@webSocket
         }
 
+        // Rollout canary (temporary): a v1 client is one that sent no ?v= param. The
+        // tokenless-reconnect WARN only catches v1 clients that reconnect — this catches
+        // every v1 connect, so we can confirm legacy traffic is gone before raising
+        // Protocol.MIN_SUPPORTED to 2 (which hard-rejects v1 at the handshake above).
+        // Remove once the flip lands.
+        if (clientVersion == 1) {
+            log.warn("Legacy v1 client connected (no ?v= param) from {}", ip)
+        }
+
         var currentRoom: GameRoom? = null
         var currentPlayerId: String? = null
 
