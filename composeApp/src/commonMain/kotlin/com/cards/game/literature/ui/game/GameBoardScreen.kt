@@ -796,11 +796,15 @@ private fun CompactHeaderRow(
     onHelpClick: () -> Unit = {},
     timerPaused: Boolean = false
 ) {
-    var secondsRemaining by remember { mutableStateOf(60) }
+    // Turn timer (Game Variants): the room's per-turn limit in seconds, or null for
+    // Off / offline — in which case no countdown runs or shows. Server enforces the skip.
+    val turnTimerSeconds = uiState.turnTimerSeconds
+    var secondsRemaining by remember { mutableStateOf(turnTimerSeconds ?: 0) }
     val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
 
-    LaunchedEffect(timerKey, timerPaused) {
-        secondsRemaining = 60
+    LaunchedEffect(timerKey, timerPaused, turnTimerSeconds) {
+        if (turnTimerSeconds == null) return@LaunchedEffect
+        secondsRemaining = turnTimerSeconds
         while (secondsRemaining > 0 && !timerPaused) {
             delay(1000L)
             secondsRemaining--
@@ -873,7 +877,7 @@ private fun CompactHeaderRow(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    if (uiState.isOnline && secondsRemaining <= 15) {
+                    if (uiState.isOnline && turnTimerSeconds != null && secondsRemaining <= 15) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             stringResource(Res.string.game_timer_seconds, secondsRemaining),
@@ -1105,14 +1109,17 @@ private fun TurnIndicatorBanner(
     onHelpClick: () -> Unit = {},
     timerPaused: Boolean = false
 ) {
-    // Local 60s countdown, reset on every game state change (ask, claim, turn change)
-    var secondsRemaining by remember { mutableStateOf(60) }
+    // Turn timer (Game Variants): per-turn limit in seconds, or null for Off / offline
+    // (then no countdown runs or shows). Reset on every game state change; server enforces.
+    val turnTimerSeconds = uiState.turnTimerSeconds
+    var secondsRemaining by remember { mutableStateOf(turnTimerSeconds ?: 0) }
 
     // Use activePlayerId + myHand size + scores as a composite key that changes on every action
     val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
 
-    LaunchedEffect(timerKey, timerPaused) {
-        secondsRemaining = 60
+    LaunchedEffect(timerKey, timerPaused, turnTimerSeconds) {
+        if (turnTimerSeconds == null) return@LaunchedEffect
+        secondsRemaining = turnTimerSeconds
         while (secondsRemaining > 0 && !timerPaused) {
             delay(1000L)
             secondsRemaining--
@@ -1144,7 +1151,7 @@ private fun TurnIndicatorBanner(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary
                     )
-                    if (uiState.isOnline && secondsRemaining <= 15) {
+                    if (uiState.isOnline && turnTimerSeconds != null && secondsRemaining <= 15) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             stringResource(Res.string.game_timer_seconds, secondsRemaining),
@@ -1182,7 +1189,7 @@ private fun TurnIndicatorBanner(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (uiState.isOnline && secondsRemaining <= 15) {
+                    if (uiState.isOnline && turnTimerSeconds != null && secondsRemaining <= 15) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             stringResource(Res.string.game_timer_seconds, secondsRemaining),

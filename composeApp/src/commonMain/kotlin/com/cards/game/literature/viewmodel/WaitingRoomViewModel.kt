@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import com.cards.game.literature.bot.BotDifficulty
+import com.cards.game.literature.protocol.GameVariants
 import com.cards.game.literature.protocol.RoomPhase
 import com.cards.game.literature.protocol.RoomState
 import com.cards.game.literature.repository.ConnectionState
@@ -21,7 +22,8 @@ data class WaitingRoomUiState(
     val targetPlayerCount: Int = 6,
     val errorMessage: String? = null,
     val isStarting: Boolean = false,
-    val isStartGameTimedOut: Boolean = false
+    val isStartGameTimedOut: Boolean = false,
+    val variants: GameVariants = GameVariants()
 )
 
 data class WaitingRoomPlayer(
@@ -124,7 +126,16 @@ class WaitingRoomViewModel(
             },
             isHost = onlineRepository.myPlayerId == room.hostPlayerId,
             myPlayerId = onlineRepository.myPlayerId,
-            targetPlayerCount = room.targetPlayerCount
+            targetPlayerCount = room.targetPlayerCount,
+            variants = room.variants
         )
+    }
+
+    /** Host-only: change the per-turn timer (seconds, or null for Off). The server
+     *  broadcasts the new RoomState so all players see it live. */
+    fun updateTurnTimer(seconds: Int?) {
+        viewModelScope.launch {
+            onlineRepository.updateRoomSettings(GameVariants(turnTimerSeconds = seconds))
+        }
     }
 }

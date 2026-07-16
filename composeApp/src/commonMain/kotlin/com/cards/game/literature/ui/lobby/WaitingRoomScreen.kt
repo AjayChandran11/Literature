@@ -375,6 +375,53 @@ fun WaitingRoomScreen(
                 }
             }
 
+            // Turn timer selector (Game Variants) — applies to every online game in
+            // this room; live-synced to joiners via RoomState.
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(Res.string.variant_turn_timer_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(0.8f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val timerOptions = listOf<Int?>(null, 30, 60, 90)
+                val selectedTimer = uiState.variants.turnTimerSeconds
+                val primary = MaterialTheme.colorScheme.primary
+                timerOptions.forEach { option ->
+                    val isSelected = selectedTimer == option
+                    val label = if (option == null) stringResource(Res.string.variant_timer_off)
+                                else stringResource(Res.string.game_timer_seconds, option)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) primary else primary.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable { viewModel.updateTurnTimer(option) }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
             if (teamsUneven) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -406,6 +453,19 @@ fun WaitingRoomScreen(
                 }
             }
         } else {
+            // Joiners see the host's chosen ruleset (read-only), live-synced.
+            val timerValue = uiState.variants.turnTimerSeconds
+            Text(
+                text = stringResource(
+                    Res.string.variant_turn_timer_summary,
+                    if (timerValue == null) stringResource(Res.string.variant_timer_off)
+                    else stringResource(Res.string.game_timer_seconds, timerValue)
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(Res.string.waiting_room_waiting_for_host),
                 style = MaterialTheme.typography.titleMedium,

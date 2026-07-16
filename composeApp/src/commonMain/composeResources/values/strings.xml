@@ -85,6 +85,9 @@
     <string name="snackbar_player_reconnected">%1$s reconnected</string>
     <string name="snackbar_host_changed">%1$s is now the host</string>
     <string name="snackbar_replaced_by_bot">%1$s replaced by bot</string>
+    <string name="variant_turn_timer_label">Turn timer</string>
+    <string name="variant_timer_off">Off</string>
+    <string name="variant_turn_timer_summary">Turn timer: %1$s</string>
 
     <!-- Game Board Screen -->
     <string name="dialog_quit_game_title">Quit Game?</string>
