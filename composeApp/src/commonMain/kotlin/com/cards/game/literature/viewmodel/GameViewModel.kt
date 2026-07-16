@@ -61,7 +61,10 @@ data class GameUiState(
     val errorMessage: String? = null,
     val myPlayerId: String = "player_0",
     val myTeamId: String = "team_1",
-    val passSelection: PassSelectionUiState? = null
+    val passSelection: PassSelectionUiState? = null,
+    // Game Variants: the room's per-turn limit in seconds, or null for Off / offline.
+    // Drives the turn countdown in GameBoardScreen.
+    val turnTimerSeconds: Int? = null
 )
 
 class GameViewModel(
@@ -307,7 +310,8 @@ class GameViewModel(
             isBotThinking = state.currentPlayer.isBot && state.phase == GamePhase.IN_PROGRESS,
             myPlayerId = myPlayerId,
             myTeamId = myTeam?.id ?: "team_1",
-            passSelection = passSelection
+            passSelection = passSelection,
+            turnTimerSeconds = state.turnTimerSeconds
         )
     }
 

@@ -157,6 +157,12 @@ class OnlineGameRepository(
         sendMessage(ClientMessage.StartGame(fillWithBots, botDifficulty))
     }
 
+    /** Host-only: change the room's house-rule settings (Game Variants) while in the
+     *  waiting room. The server re-broadcasts RoomState so every player sees it live. */
+    suspend fun updateRoomSettings(variants: GameVariants) {
+        sendMessage(ClientMessage.UpdateRoomSettings(variants))
+    }
+
     suspend fun switchTeam() {
         sendMessage(ClientMessage.SwitchTeam)
     }
@@ -492,7 +498,10 @@ class OnlineGameRepository(
             // Carry the server's Option C suspension through so the ViewModel/UI
             // can show the picker (or, for everyone else, a "choosing…" state).
             pendingPass = view.pendingPass,
-            pendingPassDeadlineMs = view.pendingPassDeadlineMs
+            pendingPassDeadlineMs = view.pendingPassDeadlineMs,
+            // The room's turn-timer setting rides the view so the in-game countdown
+            // knows its duration (and hides entirely when Off / null).
+            turnTimerSeconds = view.turnTimerSeconds
         )
 
         _gameState.value = syntheticState
