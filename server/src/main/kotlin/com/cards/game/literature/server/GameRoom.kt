@@ -61,13 +61,17 @@ class GameRoom(
     var finishedAt: Long = 0L
         private set
 
+    // House-rule settings for this room (Game Variants). Host-configurable while
+    // WAITING via updateVariants; read at game start for the turn timer.
+    var variants: GameVariants = GameVariants()
+        private set
+
     // How long the claimer has to pick a pass target before the server auto-picks
     // the default. A var (not const) so tests can shrink it; production uses the
     // companion default.
     internal var passSelectionTimeoutMs: Long = PASS_SELECTION_TIMEOUT_MS
 
     companion object {
-        private const val TURN_TIMEOUT_MS = 60_000L
         private const val PASS_SELECTION_TIMEOUT_MS = 30_000L
         private const val RECONNECT_WINDOW_MS = 2 * 60_000L
         // Grace window for a WAITING-room disconnect (e.g. the host briefly leaving
@@ -182,9 +186,23 @@ class GameRoom(
             phase = phase,
             players = roomPlayers,
             hostPlayerId = hostPlayerId ?: "",
-            targetPlayerCount = targetPlayerCount
+            targetPlayerCount = targetPlayerCount,
+            variants = variants
         )
     }
+
+    /**
+     * Host-only, WAITING-phase change to the room's house rules. The WS layer
+     * enforces the host + phase checks; this is a no-op outside the waiting room
+     * so settings can never change mid-game.
+     */
+    fun updateVariants(newVariants: GameVariants) {
+        if (phase != RoomPhase.WAITING) return
+        variants = newVariants.sanitized()
+    }
+
+    /** The current room's per-turn timeout in ms, or null when the timer is Off. */
+    internal fun turnTimeoutMs(): Long? = variants.turnTimerSeconds?.let { it * 1000L }
 
     suspend fun startGame(fillWithBots: Boolean, botDifficultyName: String = "MEDIUM"): Boolean {
         if (phase != RoomPhase.WAITING) return false
@@ -589,7 +607,7 @@ class GameRoom(
             // broadcasting the reconnect event. This ensures the client's event
             // replay (which filters by lastSeenEventTimestamp) processes the
             // GameUpdate before any new events update that timestamp.
-            val view = state.toPlayerView(playerId, getConnectionStatus(), getDisconnectDeadlines(), passSelectionDeadline)
+            val view = state.toPlayerView(playerId, getConnectionStatus(), getDisconnectDeadlines(), passSelectionDeadline, variants.turnTimerSeconds)
             session.send(ServerMessage.GameUpdate(view))
 
             // Now broadcast reconnect event to all players
@@ -684,9 +702,10 @@ class GameRoom(
         if (state.pendingPass != null) return // the pass-selection timer owns the clock
         val currentId = state.currentPlayer.id
         if (state.currentPlayer.isBot) return
+        val timeoutMs = turnTimeoutMs() ?: return // turn timer is Off for this room
 
         turnTimeoutJob = botScope?.launch {
-            delay(TURN_TIMEOUT_MS)
+            delay(timeoutMs)
             skipTurn(currentId)
         }
     }
@@ -752,8 +771,9 @@ class GameRoom(
         val connectionStatus = getConnectionStatus()
         val deadlines = getDisconnectDeadlines()
         val passDeadline = passSelectionDeadline
+        val timerSeconds = variants.turnTimerSeconds
         players.values.filter { it.isConnected }.forEach { session ->
-            val view = state.toPlayerView(session.playerId, connectionStatus, deadlines, passDeadline)
+            val view = state.toPlayerView(session.playerId, connectionStatus, deadlines, passDeadline, timerSeconds)
             session.send(ServerMessage.GameUpdate(view))
         }
     }

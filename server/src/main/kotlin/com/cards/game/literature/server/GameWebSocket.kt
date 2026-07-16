@@ -148,6 +148,25 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             }
                         }
 
+                        is ClientMessage.UpdateRoomSettings -> {
+                            val room = currentRoom
+                            val playerId = currentPlayerId
+                            if (room == null || playerId == null) {
+                                sendError("Not in a room")
+                                continue
+                            }
+                            if (!room.isHost(playerId)) {
+                                sendError("Only the host can change room settings")
+                                continue
+                            }
+                            if (room.phase != com.cards.game.literature.protocol.RoomPhase.WAITING) {
+                                sendError("Cannot change settings after the game has started")
+                                continue
+                            }
+                            room.updateVariants(message.variants)
+                            room.broadcastRoomUpdate()
+                        }
+
                         is ClientMessage.AskCards -> {
                             val room = currentRoom
                             val playerId = currentPlayerId
