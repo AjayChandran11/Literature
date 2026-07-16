@@ -25,5 +25,7 @@ data class RoomState(
     val phase: RoomPhase,
     val players: List<RoomPlayerInfo>,
     val hostPlayerId: String,
-    val targetPlayerCount: Int
+    val targetPlayerCount: Int,
+    /** House-rule settings for this room; defaulted so older payloads decode classic. */
+    val variants: GameVariants = GameVariants()
 )

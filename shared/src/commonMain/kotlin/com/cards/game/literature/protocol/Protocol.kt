@@ -15,9 +15,14 @@ package com.cards.game.literature.protocol
  *      [ClientMessage.SelectPassTarget]. The server only suspends a claim for
  *      selection when the claimer's session reports version >= 3; older
  *      claimers keep the deterministic auto-pass.
+ *  4 — Game Variants: client reads [RoomState.variants] and
+ *      [PlayerGameView.turnDeadlineMs] and can send
+ *      [ClientMessage.UpdateRoomSettings] to configure the per-room turn timer.
+ *      The timer is a room-wide server-enforced setting, so nothing is gated on
+ *      the client version; older clients simply ignore the new fields.
  */
 object Protocol {
-    const val VERSION: Int = 3
+    const val VERSION: Int = 4
 
     /**
      * Oldest client protocol version the server still accepts. Raising this

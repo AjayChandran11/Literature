@@ -23,7 +23,12 @@ data class PlayerGameView(
     val pendingPass: PendingPass? = null,
     /** Epoch-ms deadline for the pending pass selection; on timeout the server
      *  auto-picks [PendingPass.defaultTarget]. Null when nothing is pending. */
-    val pendingPassDeadlineMs: Long? = null
+    val pendingPassDeadlineMs: Long? = null,
+    /** Game Variants (protocol v4+): the room's configured per-turn time limit in
+     *  seconds, or null for Off (no timer). The client seeds its turn countdown from
+     *  this and hides the countdown entirely when null. Defaulted null so older clients
+     *  drop it and offline games (which set no timer) show no countdown. */
+    val turnTimerSeconds: Int? = null
 )
 
 @Serializable
@@ -43,7 +48,9 @@ fun GameState.toPlayerView(
     connectionStatus: Map<String, Boolean> = emptyMap(),
     disconnectDeadlines: Map<String, Long?> = emptyMap(),
     // Server-supplied deadline for an in-flight Option C selection (see GameRoom).
-    pendingPassDeadlineMs: Long? = null
+    pendingPassDeadlineMs: Long? = null,
+    // The room's per-turn time limit in seconds (see GameRoom.variants); null = Off.
+    turnTimerSeconds: Int? = null
 ): PlayerGameView {
     val myPlayer = getPlayer(playerId)
     return PlayerGameView(
@@ -69,6 +76,7 @@ fun GameState.toPlayerView(
         recentEvents = events.takeLast(20),
         gameId = this.gameId,
         pendingPass = this.pendingPass,
-        pendingPassDeadlineMs = if (this.pendingPass != null) pendingPassDeadlineMs else null
+        pendingPassDeadlineMs = if (this.pendingPass != null) pendingPassDeadlineMs else null,
+        turnTimerSeconds = turnTimerSeconds
     )
 }

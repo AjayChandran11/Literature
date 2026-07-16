@@ -53,4 +53,9 @@ sealed class ClientMessage {
      *  room with the same connected players for another game. */
     @Serializable
     data object Rematch : ClientMessage()
+
+    /** Host-only (protocol v4+): change the room's house-rule settings while in the
+     *  waiting room. The server re-broadcasts RoomState so all players see it live. */
+    @Serializable
+    data class UpdateRoomSettings(val variants: GameVariants) : ClientMessage()
 }
