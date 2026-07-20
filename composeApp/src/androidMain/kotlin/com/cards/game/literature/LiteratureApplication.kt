@@ -1,6 +1,7 @@
 package com.cards.game.literature
 
 import android.app.Application
+import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.di.appModule
 import com.cards.game.literature.notifications.AppLifecycleObserver
 import com.cards.game.literature.notifications.NotificationCoordinator
@@ -19,6 +20,7 @@ class LiteratureApplication : Application() {
         }
 
         Notifier.init(this)
+        Analytics.init(this)
         AppLifecycleObserver.init()
         GlobalContext.get().get<NotificationCoordinator>().start()
 

@@ -2,6 +2,8 @@ package com.cards.game.literature.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.puzzle.DailyPuzzle
@@ -73,6 +75,7 @@ class DailyPuzzleViewModel(
             revealed = progress.status.isTerminal(),
             howToSeen = puzzle?.let { progress.hasSeenHowTo(it.kind) } ?: true
         )
+        Analytics.log(AnalyticsEvent.DailyPuzzleOpened)
     }
 
     fun selectHalfSuit(halfSuit: HalfSuit) {
@@ -138,6 +141,14 @@ class DailyPuzzleViewModel(
             val progress = PuzzleStore.recordAttempt(correct, today)
             // Unlock + celebrate puzzle achievements only on the solve that earns them.
             val unlocked = if (progress.status == PuzzleStatus.SOLVED) {
+                Analytics.log(
+                    AnalyticsEvent.DailyPuzzleSolved(
+                        kind = puzzle.kind.name.lowercase(),
+                        stars = progress.stars,
+                        firstTry = progress.attemptsUsed == 1,
+                        streak = progress.displayedStreak(today),
+                    )
+                )
                 StatsStore.recordPuzzleAchievements(progress)
             } else emptyList()
             _uiState.value = _uiState.value.copy(
