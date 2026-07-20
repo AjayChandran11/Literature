@@ -88,6 +88,7 @@
     <string name="variant_turn_timer_label">Turn timer</string>
     <string name="variant_timer_off">Off</string>
     <string name="variant_turn_timer_summary">Turn timer: %1$s</string>
+    <string name="game_settings_title">Game Settings</string>
 
     <!-- Game Board Screen -->
     <string name="dialog_quit_game_title">Quit Game?</string>

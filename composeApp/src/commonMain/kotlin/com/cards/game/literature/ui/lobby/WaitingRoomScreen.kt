@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,6 +44,7 @@ fun WaitingRoomScreen(
     val uiState by viewModel.uiState.collectAsState()
     var fillWithBots by remember { mutableStateOf(true) }
     var selectedDifficulty by remember { mutableStateOf(BotDifficulty.MEDIUM) }
+    var showSettingsSheet by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
 
@@ -119,6 +121,17 @@ fun WaitingRoomScreen(
             )
         }
 
+    if (showSettingsSheet && uiState.isHost) {
+        GameSettingsSheet(
+            fillWithBots = fillWithBots,
+            selectedDifficulty = selectedDifficulty,
+            onDifficultyChange = { selectedDifficulty = it },
+            selectedTimer = uiState.variants.turnTimerSeconds,
+            onTimerChange = { viewModel.updateTurnTimer(it) },
+            onDismiss = { showSettingsSheet = false }
+        )
+    }
+
     val windowInfo = currentWindowAdaptiveInfo()
     val isCompact = windowInfo.isCompactHeight
     Column(
@@ -129,11 +142,27 @@ fun WaitingRoomScreen(
     ) {
         Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 32.dp))
 
-        Text(
-            text = stringResource(Res.string.waiting_room_title),
-            style = if (isCompact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.secondary
-        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = stringResource(Res.string.waiting_room_title),
+                style = if (isCompact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.align(Alignment.Center)
+            )
+            // Host-only: open the Game Settings sheet (bot difficulty + turn timer).
+            if (uiState.isHost) {
+                IconButton(
+                    onClick = { showSettingsSheet = true },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = stringResource(Res.string.game_settings_title),
+                        tint = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
 
         // Room code display
@@ -299,6 +328,7 @@ fun WaitingRoomScreen(
             val team2Count = uiState.players.count { it.teamId == "team_2" }
             val teamsUneven = !fillWithBots && team1Count != team2Count
 
+            // Fill empty slots with bots — the primary host decision, kept inline.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(0.8f)
@@ -314,112 +344,6 @@ fun WaitingRoomScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-            }
-
-            // Bot difficulty selector — shown when filling with bots
-            if (fillWithBots) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(Res.string.game_setup_difficulty_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(0.8f),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val difficultyLabels = mapOf(
-                        BotDifficulty.EASY to Pair(stringResource(Res.string.difficulty_easy), stringResource(Res.string.difficulty_easy_desc)),
-                        BotDifficulty.MEDIUM to Pair(stringResource(Res.string.difficulty_medium), stringResource(Res.string.difficulty_medium_desc)),
-                        BotDifficulty.HARD to Pair(stringResource(Res.string.difficulty_hard), stringResource(Res.string.difficulty_hard_desc))
-                    )
-                    BotDifficulty.entries.forEach { difficulty ->
-                        val isSelected = selectedDifficulty == difficulty
-                        val (label, desc) = difficultyLabels[difficulty] ?: Pair(difficulty.label, "")
-                        val primary = MaterialTheme.colorScheme.primary
-                        val secondary = MaterialTheme.colorScheme.secondary
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (isSelected) primary.copy(alpha = 0.12f)
-                                    else MaterialTheme.colorScheme.surfaceVariant
-                                )
-                                .border(
-                                    width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) primary else primary.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable { selectedDifficulty = difficulty }
-                                .padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = label,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = desc,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (isSelected) secondary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Turn timer selector (Game Variants) — applies to every online game in
-            // this room; live-synced to joiners via RoomState.
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = stringResource(Res.string.variant_turn_timer_label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(0.8f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val timerOptions = listOf<Int?>(null, 30, 60, 90)
-                val selectedTimer = uiState.variants.turnTimerSeconds
-                val primary = MaterialTheme.colorScheme.primary
-                timerOptions.forEach { option ->
-                    val isSelected = selectedTimer == option
-                    val label = if (option == null) stringResource(Res.string.variant_timer_off)
-                                else stringResource(Res.string.game_timer_seconds, option)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) primary.copy(alpha = 0.12f)
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) primary else primary.copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .clickable { viewModel.updateTurnTimer(option) }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
             }
 
             if (teamsUneven) {
@@ -507,4 +431,149 @@ fun WaitingRoomScreen(
     }
     } // Box
     } // Scaffold
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameSettingsSheet(
+    fillWithBots: Boolean,
+    selectedDifficulty: BotDifficulty,
+    onDifficultyChange: (BotDifficulty) -> Unit,
+    selectedTimer: Int?,
+    onTimerChange: (Int?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = stringResource(Res.string.game_settings_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Bot difficulty — only when filling with bots
+            if (fillWithBots) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(Res.string.game_setup_difficulty_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val difficultyLabels = mapOf(
+                        BotDifficulty.EASY to Pair(stringResource(Res.string.difficulty_easy), stringResource(Res.string.difficulty_easy_desc)),
+                        BotDifficulty.MEDIUM to Pair(stringResource(Res.string.difficulty_medium), stringResource(Res.string.difficulty_medium_desc)),
+                        BotDifficulty.HARD to Pair(stringResource(Res.string.difficulty_hard), stringResource(Res.string.difficulty_hard_desc))
+                    )
+                    BotDifficulty.entries.forEach { difficulty ->
+                        val isSelected = selectedDifficulty == difficulty
+                        val (label, desc) = difficultyLabels[difficulty] ?: Pair(difficulty.label, "")
+                        val primary = MaterialTheme.colorScheme.primary
+                        val secondary = MaterialTheme.colorScheme.secondary
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isSelected) primary.copy(alpha = 0.12f)
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                .border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) primary else primary.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .clickable { onDifficultyChange(difficulty) }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = label,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = desc,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isSelected) secondary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Turn timer (Game Variants) — live-synced to joiners via RoomState.
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(Res.string.variant_turn_timer_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val timerOptions = listOf<Int?>(null, 30, 60, 90)
+                val primary = MaterialTheme.colorScheme.primary
+                timerOptions.forEach { option ->
+                    val isSelected = selectedTimer == option
+                    val label = if (option == null) stringResource(Res.string.variant_timer_off)
+                                else stringResource(Res.string.game_timer_seconds, option)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) primary else primary.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable { onTimerChange(option) }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                Text(stringResource(Res.string.button_done), fontWeight = FontWeight.Bold)
+            }
+        }
+    }
 }
