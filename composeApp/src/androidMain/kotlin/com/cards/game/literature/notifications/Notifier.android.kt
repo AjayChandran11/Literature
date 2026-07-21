@@ -120,7 +120,10 @@ actual object Notifier {
                 .build()
             val manager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.notify(id, notification)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            // Never crash the caller over a notification, but don't hide the reason either.
+            android.util.Log.w("Notifier", "Failed to post notification $id", e)
+        }
     }
 
     actual fun notifyYourTurn() {

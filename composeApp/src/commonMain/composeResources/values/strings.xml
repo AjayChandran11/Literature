@@ -337,6 +337,8 @@
     <string name="cd_score">Score: Your team %1$d, Opponents %2$d</string>
     <string name="cd_remove_card">Remove %1$s from selection</string>
     <string name="cd_select_card">Select %1$s</string>
+    <string name="cd_send_reaction">Send a reaction</string>
+    <string name="cd_send_reaction_type">Send %1$s reaction</string>
     <string name="cd_assign_card">Assign %1$s to a teammate</string>
     <string name="cd_connection_status">Connection status</string>
     <string name="cd_bot_thinking">Bot is thinking</string>
