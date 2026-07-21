@@ -350,8 +350,6 @@
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
-    <string name="settings_material_you">Use wallpaper colors</string>
-    <string name="settings_material_you_desc">Repaints the game with colors from your wallpaper</string>
     <string name="cd_assign_card">Assign %1$s to a teammate</string>
     <string name="cd_connection_status">Connection status</string>
     <string name="cd_bot_thinking">Bot is thinking</string>

@@ -19,13 +19,10 @@ import com.cards.game.literature.notifications.PuzzleReminderScheduler
 import com.cards.game.literature.preferences.GamePrefs
 import com.cards.game.literature.ui.theme.ThemeController
 import com.cards.game.literature.ui.theme.ThemeMode
-import com.cards.game.literature.ui.theme.isDynamicColorSupported
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.button_done
 import literature.composeapp.generated.resources.settings_daily_reminder
 import literature.composeapp.generated.resources.settings_haptic_feedback
-import literature.composeapp.generated.resources.settings_material_you
-import literature.composeapp.generated.resources.settings_material_you_desc
 import literature.composeapp.generated.resources.settings_notifications
 import literature.composeapp.generated.resources.settings_sound_effects
 import literature.composeapp.generated.resources.settings_theme
@@ -99,17 +96,10 @@ fun SettingsBottomSheet(onDismiss: () -> Unit) {
 
             // Theme: a value-picker row sized like the toggle rows — the current
             // choice reads inline, the three options live in a dropdown.
+            // (Material You dynamic color was deliberately NOT exposed: the game's
+            // heavy use of direct brand colours means it only half-repaints — the
+            // dormant plumbing lives in ThemeController.dynamicColors if ever wanted.)
             ThemePickerRow()
-
-            // Dynamic color — only offered where the OS supports it (Android 12+).
-            if (isDynamicColorSupported) {
-                SettingsToggleRow(
-                    label = stringResource(Res.string.settings_material_you),
-                    supportingText = stringResource(Res.string.settings_material_you_desc),
-                    checked = ThemeController.dynamicColors,
-                    onCheckedChange = { ThemeController.dynamicColors = it }
-                )
-            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -129,8 +119,7 @@ fun SettingsBottomSheet(onDismiss: () -> Unit) {
 private fun SettingsToggleRow(
     label: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    supportingText: String? = null
+    onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -139,17 +128,7 @@ private fun SettingsToggleRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f, fill = false)) {
-            Text(label, style = MaterialTheme.typography.bodyLarge)
-            if (supportingText != null) {
-                Text(
-                    supportingText,
-                    style = MaterialTheme.typography.bodySmall,
-                    // Dimmed so the description reads as secondary to the label.
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
-                )
-            }
-        }
+        Text(label, style = MaterialTheme.typography.bodyLarge)
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
