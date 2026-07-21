@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -264,7 +265,13 @@ private fun WelcomePage() {
                     initialScale = 0f
                 ) + fadeIn(tween(300))
             ) {
-                Text(suit, fontSize = 52.sp, color = cornerColors[i].copy(alpha = 0.12f))
+                Text(
+                    suit,
+                    fontSize = 52.sp,
+                    color = cornerColors[i].copy(alpha = 0.12f),
+                    // Decorative — keep screen readers from announcing raw suit glyphs.
+                    modifier = Modifier.clearAndSetSemantics {}
+                )
             }
         }
 
@@ -274,8 +281,12 @@ private fun WelcomePage() {
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(bottom = 100.dp)
         ) {
-            // Suits row — alpha + scale in graphicsLayer to avoid recomposition
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            // Suits row — alpha + scale in graphicsLayer to avoid recomposition.
+            // Decorative row: hidden from accessibility as one unit.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.clearAndSetSemantics {}
+            ) {
                 listOf(spades to onBackground, hearts to CardRed, diamonds to CardRed, clubs to onBackground)
                     .forEachIndexed { i, (s, c) ->
                         val symAlpha by animateFloatAsState(

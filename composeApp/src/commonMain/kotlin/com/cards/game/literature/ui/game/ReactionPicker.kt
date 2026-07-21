@@ -36,6 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.ReactionType
 import kotlinx.coroutines.delay
+import literature.composeapp.generated.resources.Res
+import literature.composeapp.generated.resources.cd_send_reaction
+import literature.composeapp.generated.resources.cd_send_reaction_type
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ReactionPicker(
@@ -75,6 +79,9 @@ fun ReactionPicker(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ReactionType.entries.forEach { type ->
+                        // The emoji itself is the argument — screen readers speak
+                        // emoji by name ("thumbs up"), so this localizes for free.
+                        val reactionDesc = stringResource(Res.string.cd_send_reaction_type, type.emoji)
                         Box(
                             modifier = Modifier
                                 .size(38.dp)
@@ -84,7 +91,7 @@ fun ReactionPicker(
                                     expanded = false
                                 }
                                 .semantics {
-                                    contentDescription = "Send ${type.name} reaction"
+                                    contentDescription = reactionDesc
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -106,7 +113,7 @@ fun ReactionPicker(
         ) {
             Icon(
                 imageVector = Icons.Outlined.EmojiEmotions,
-                contentDescription = "Send a reaction",
+                contentDescription = stringResource(Res.string.cd_send_reaction),
                 modifier = Modifier.size(22.dp)
             )
         }

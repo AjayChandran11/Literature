@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome layer for Android 13+ themed icons: the spade mark, sized to the
+     adaptive-icon 66dp safe zone (the launcher tints it to the wallpaper palette). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24 C45,39 30,46.5 30,58.5 C30,66 36,70.5 42.6,70.5 C46.5,70.5 49.8,69 51.9,66.6 C51,72 48.6,76.8 45,81 L63,81 C59.4,76.8 57,72 56.1,66.6 C58.2,69 61.5,70.5 65.4,70.5 C72,70.5 78,66 78,58.5 C78,46.5 63,39 54,24 Z" />
+</vector>

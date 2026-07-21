@@ -3,6 +3,8 @@ package com.cards.game.literature.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.logic.CardTracker
 import com.cards.game.literature.logic.CardTrackerState
@@ -177,6 +179,14 @@ class GameViewModel(
 
     fun startGame(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) {
         lastDifficulty = difficulty
+        Analytics.log(
+            AnalyticsEvent.GameStarted(
+                mode = "offline_bots",
+                teamSize = playerCount / 2,
+                hasBots = true,
+                turnTimerSecs = null,
+            )
+        )
         myAsks = 0
         myAsksSuccessful = 0
         myClaims = 0

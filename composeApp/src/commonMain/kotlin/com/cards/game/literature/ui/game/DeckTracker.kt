@@ -1,5 +1,7 @@
 package com.cards.game.literature.ui.game
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -40,6 +42,26 @@ private val HalfSuit.suit: Suit
 
 private val HalfSuit.isLow: Boolean get() = name.endsWith("_LOW")
 
+/**
+ * Claim-state color, eased over 450ms so a tracker cell visibly transitions
+ * (open → ours/theirs) the moment a claim lands instead of snapping.
+ */
+@Composable
+private fun animatedClaimColor(
+    claimedByTeamId: String?,
+    myTeamId: String,
+    open: Color,
+    ours: Color,
+    theirs: Color
+): Color {
+    val target = when {
+        claimedByTeamId == null -> open
+        claimedByTeamId == myTeamId -> ours
+        else -> theirs
+    }
+    return animateColorAsState(targetValue = target, animationSpec = tween(450)).value
+}
+
 /** Compact DeckTracker for landscape: smaller items. */
 @Composable
 fun CompactDeckTracker(
@@ -53,16 +75,18 @@ fun CompactDeckTracker(
         contentPadding = PaddingValues(horizontal = 2.dp)
     ) {
         items(statuses) { status ->
-            val bgColor = when {
-                status.claimedByTeamId == null -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
-                status.claimedByTeamId == myTeamId -> LightGreen.copy(alpha = 0.3f)
-                else -> CardRed.copy(alpha = 0.3f)
-            }
-            val borderColor = when {
-                status.claimedByTeamId == null -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
-                status.claimedByTeamId == myTeamId -> LightGreen
-                else -> CardRed
-            }
+            val bgColor = animatedClaimColor(
+                claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
+                open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                ours = LightGreen.copy(alpha = 0.3f),
+                theirs = CardRed.copy(alpha = 0.3f)
+            )
+            val borderColor = animatedClaimColor(
+                claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
+                open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                ours = LightGreen,
+                theirs = CardRed
+            )
 
             val deckDesc = when {
                 status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.displayName)
@@ -122,16 +146,18 @@ fun DeckTracker(
         contentPadding = PaddingValues(horizontal = 4.dp)
     ) {
         items(statuses) { status ->
-            val bgColor = when {
-                status.claimedByTeamId == null -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
-                status.claimedByTeamId == myTeamId -> LightGreen.copy(alpha = 0.3f)
-                else -> CardRed.copy(alpha = 0.3f)
-            }
-            val borderColor = when {
-                status.claimedByTeamId == null -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
-                status.claimedByTeamId == myTeamId -> LightGreen
-                else -> CardRed
-            }
+            val bgColor = animatedClaimColor(
+                claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
+                open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                ours = LightGreen.copy(alpha = 0.3f),
+                theirs = CardRed.copy(alpha = 0.3f)
+            )
+            val borderColor = animatedClaimColor(
+                claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
+                open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                ours = LightGreen,
+                theirs = CardRed
+            )
 
             val deckDesc = when {
                 status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.displayName)
@@ -218,16 +244,18 @@ private fun SideBySideDeckCell(
     myTeamId: String,
     modifier: Modifier = Modifier
 ) {
-    val bgColor = when {
-        status.claimedByTeamId == null -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
-        status.claimedByTeamId == myTeamId -> LightGreen.copy(alpha = 0.15f)
-        else -> CardRed.copy(alpha = 0.15f)
-    }
-    val borderColor = when {
-        status.claimedByTeamId == null -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
-        status.claimedByTeamId == myTeamId -> LightGreen
-        else -> CardRed
-    }
+    val bgColor = animatedClaimColor(
+        claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
+        open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+        ours = LightGreen.copy(alpha = 0.15f),
+        theirs = CardRed.copy(alpha = 0.15f)
+    )
+    val borderColor = animatedClaimColor(
+        claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
+        open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f),
+        ours = LightGreen,
+        theirs = CardRed
+    )
     val suit = status.halfSuit.suit
     val suitColor = if (suit.isRed) CardRed else MaterialTheme.colorScheme.onSurface
 

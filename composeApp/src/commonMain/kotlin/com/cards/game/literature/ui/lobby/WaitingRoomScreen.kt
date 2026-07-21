@@ -5,8 +5,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.bot.BotPersonalities
 import com.cards.game.literature.deeplink.InviteLink
@@ -174,7 +180,10 @@ fun WaitingRoomScreen(
             InviteLink.forRoom(uiState.roomCode)
         )
         OutlinedButton(
-            onClick = { Sharer.shareText(inviteText) },
+            onClick = {
+                Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room"))
+                Sharer.shareText(inviteText)
+            },
             enabled = uiState.roomCode.isNotBlank(),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
@@ -210,11 +219,22 @@ fun WaitingRoomScreen(
                 .weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(uiState.players) { player ->
+            items(uiState.players, key = { it.id }) { player ->
+                // Same spring language as the card hand: joins fade+settle in,
+                // leavers fade out, team switches glide to their new slot.
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateItem(
+                            fadeInSpec = tween(300),
+                            fadeOutSpec = tween(300),
+                            placementSpec = spring<IntOffset>(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),

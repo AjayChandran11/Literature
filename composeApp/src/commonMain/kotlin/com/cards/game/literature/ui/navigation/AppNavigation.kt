@@ -1,5 +1,11 @@
 package com.cards.game.literature.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -69,7 +75,25 @@ fun AppNavigation() {
         }
     }
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    // One consistent motion language for the whole app (previously all defaults):
+    // forward = slide in from the trailing edge with a fade, back = the reverse.
+    // A quarter-width offset keeps it subtle — screens glide, they don't fly.
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        enterTransition = {
+            slideInHorizontally(tween(300)) { it / 4 } + fadeIn(tween(300))
+        },
+        exitTransition = {
+            slideOutHorizontally(tween(300)) { -it / 4 } + fadeOut(tween(300))
+        },
+        popEnterTransition = {
+            slideInHorizontally(tween(300)) { -it / 4 } + fadeIn(tween(300))
+        },
+        popExitTransition = {
+            slideOutHorizontally(tween(300)) { it / 4 } + fadeOut(tween(300))
+        }
+    ) {
         composable(Routes.ONBOARDING) {
             OnboardingScreen(
                 onFinish = {
@@ -109,7 +133,14 @@ fun AppNavigation() {
                 onBack = { navController.popBackStack(Routes.HOME, inclusive = false) }
             )
         }
-        composable(Routes.GAME) { backStackEntry ->
+        composable(
+            Routes.GAME,
+            // Entering a match gets its own moment: the board scales up out of the
+            // setup dialog instead of sliding in like a regular page.
+            enterTransition = {
+                scaleIn(initialScale = 0.92f, animationSpec = tween(350)) + fadeIn(tween(350))
+            }
+        ) { backStackEntry ->
             val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
             val playerCount = backStackEntry.arguments?.getString("playerCount")?.toIntOrNull() ?: 6
             val difficulty = backStackEntry.arguments?.getString("difficulty")
@@ -167,7 +198,13 @@ fun AppNavigation() {
                 }
             )
         }
-        composable(Routes.ONLINE_GAME) {
+        composable(
+            Routes.ONLINE_GAME,
+            // Same "deal into the game" entrance as the offline board.
+            enterTransition = {
+                scaleIn(initialScale = 0.92f, animationSpec = tween(350)) + fadeIn(tween(350))
+            }
+        ) {
             val onlineRepo = koinInject<OnlineGameRepository>()
             OnlineGameScreen(
                 onlineRepository = onlineRepo,
