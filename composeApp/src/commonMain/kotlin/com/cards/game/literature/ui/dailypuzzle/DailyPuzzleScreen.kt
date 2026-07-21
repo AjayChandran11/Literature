@@ -98,6 +98,7 @@ import com.cards.game.literature.share.Sharer
 import com.cards.game.literature.stats.PuzzleStatus
 import com.cards.game.literature.ui.game.CardView
 import com.cards.game.literature.ui.stats.AchievementUnlockCard
+import com.cards.game.literature.ui.theme.CardFaceInk
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
@@ -112,7 +113,6 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val CardInk = Color(0xFF1A1A2E) // near-black for black suits on white mini-cards
 
 @Composable
 fun DailyPuzzleScreen(
@@ -717,7 +717,7 @@ private fun cardContentDescription(card: Card): String =
 /** A larger, NON-interactive playing card presenting the card in question (LOCATE / WASTED_ASK). */
 @Composable
 private fun FocusCard(card: Card) {
-    val ink = if (card.suit.isRed) CardRed else CardInk
+    val ink = if (card.suit.isRed) CardRed else CardFaceInk
     val desc = cardContentDescription(card)
     Column(
         modifier = Modifier
@@ -737,7 +737,7 @@ private fun FocusCard(card: Card) {
 
 @Composable
 private fun MiniCard(card: Card, modifier: Modifier = Modifier, dimmed: Boolean = false, placedTint: Color? = null) {
-    val ink = if (card.suit.isRed) CardRed else CardInk
+    val ink = if (card.suit.isRed) CardRed else CardFaceInk
     val border = placedTint?.copy(alpha = 0.6f) ?: Color(0x1F000000)
     val desc = cardContentDescription(card)
     Column(

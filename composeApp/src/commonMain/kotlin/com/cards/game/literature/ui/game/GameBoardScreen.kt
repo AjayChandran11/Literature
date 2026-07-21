@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -667,8 +666,8 @@ private fun styleSuitSymbols(text: String, brightSuitColor: Color): androidx.com
 private fun StripEntry(message: StripMessage) {
     val onSurface = MaterialTheme.colorScheme.onSurface
     // Bright color for ♠♣ — white in dark mode for max contrast, dark in light mode
-    val darkSuitColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f)
-        Color.White else Color(0xFF1C1B1F)
+    // onSurface already IS "bright on dark, dark on light" — no luminance math needed.
+    val darkSuitColor = MaterialTheme.colorScheme.onSurface
     Row(
         modifier = Modifier.padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1047,8 +1046,8 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
     val msg = messages.last()
 
     val onSurface = MaterialTheme.colorScheme.onSurface
-    val darkSuitColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f)
-        Color.White else Color(0xFF1C1B1F)
+    // onSurface already IS "bright on dark, dark on light" — no luminance math needed.
+    val darkSuitColor = MaterialTheme.colorScheme.onSurface
     Surface(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp

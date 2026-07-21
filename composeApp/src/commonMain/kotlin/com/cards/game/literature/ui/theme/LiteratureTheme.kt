@@ -5,8 +5,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import literature.composeapp.generated.resources.Res
+import literature.composeapp.generated.resources.playfair_display_bold
+import org.jetbrains.compose.resources.Font
 
 // ─── Shared semantic tokens ────────────────────────────────────────────────
 // These are the named colours used throughout the UI. Edit here to retheme.
@@ -27,6 +31,14 @@ val DarkGold = Color(0xFFF9A825)
 val SurfaceDark = Color(0xFF1A1A2E)
 val SurfaceVariantDark = Color(0xFF16213E)
 val OnSurfaceLight = Color(0xFFE0E0E0)
+
+/**
+ * Ink for black suits ON A WHITE CARD FACE (card faces stay white in both
+ * themes by design, so this must NOT follow onSurface). Red suits use
+ * [CardRed]. Shared by the hand cards, puzzle mini-cards, and any other
+ * card-face rendering so black suits look identical everywhere.
+ */
+val CardFaceInk = Color(0xFF1A1A2E)
 
 // ─── Dark colour scheme ────────────────────────────────────────────────────
 private val DarkColorScheme = darkColorScheme(
@@ -75,6 +87,31 @@ private val LightColorScheme = lightColorScheme(
 )
 
 // ─── Typography ──────────────────────────────────────────────────────────────
+
+/**
+ * The game's display face: Playfair Display (SIL OFL 1.1, licence in
+ * docs/licenses/). Applied to the three display roles only — the wordmark,
+ * result banner and hero numbers get the literary masthead look while body
+ * and label text stay on the platform default for legibility.
+ */
+@Composable
+fun literatureDisplayFontFamily(): FontFamily =
+    FontFamily(Font(Res.font.playfair_display_bold, weight = FontWeight.Bold))
+
+@Composable
+private fun literatureTypography(): Typography {
+    val display = literatureDisplayFontFamily()
+    return LiteratureTypography.copy(
+        // Bold (not ExtraBold) so the single bundled weight renders true, unsynthesised.
+        // Sizes run ~9% larger than the old sans roles: Playfair's high-contrast
+        // strokes and small x-height need the extra size to carry the same
+        // visual presence the heavy sans had.
+        displayLarge = TextStyle(fontFamily = display, fontSize = 52.sp, fontWeight = FontWeight.Bold),
+        displayMedium = TextStyle(fontFamily = display, fontSize = 46.sp, fontWeight = FontWeight.Bold),
+        displaySmall = TextStyle(fontFamily = display, fontSize = 39.sp, fontWeight = FontWeight.Bold),
+    )
+}
+
 val LiteratureTypography = Typography(
     displayLarge = TextStyle(fontSize = 48.sp, fontWeight = FontWeight.ExtraBold),
     displayMedium = TextStyle(fontSize = 42.sp, fontWeight = FontWeight.Bold),
@@ -115,7 +152,7 @@ fun LiteratureTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = LiteratureTypography,
+        typography = literatureTypography(),
         content = content,
     )
 }

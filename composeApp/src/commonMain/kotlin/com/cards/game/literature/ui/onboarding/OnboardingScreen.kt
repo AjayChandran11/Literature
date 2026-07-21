@@ -117,7 +117,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 ) {
                     Text(
                         stringResource(Res.string.onboarding_next),
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSecondary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
@@ -188,8 +188,10 @@ private fun ShimmerTitle() {
         stringResource(Res.string.onboarding_welcome_title),
         style = TextStyle(
             brush = shimmerBrush,
-            fontSize = 56.sp,
-            fontWeight = FontWeight.ExtraBold
+            // The wordmark's first appearance — set in the display face.
+            fontFamily = literatureDisplayFontFamily(),
+            fontSize = 60.sp,
+            fontWeight = FontWeight.Bold
         )
     )
 }
@@ -818,7 +820,7 @@ private fun AskPage() {
                     cardLabel,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
             }
         }
@@ -909,7 +911,7 @@ private fun ClaimBadge(visible: Boolean) {
                 stringResource(Res.string.onboarding_claim_badge),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSecondary,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
             )
         }
@@ -1074,7 +1076,7 @@ private fun ClaimPage(onFinish: () -> Unit, isActive: Boolean) {
                     stringResource(Res.string.onboarding_lets_play),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
             }
         }
