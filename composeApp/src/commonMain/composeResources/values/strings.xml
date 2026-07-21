@@ -339,6 +339,11 @@
     <string name="cd_select_card">Select %1$s</string>
     <string name="cd_send_reaction">Send a reaction</string>
     <string name="cd_send_reaction_type">Send %1$s reaction</string>
+
+    <!-- In-game claim celebration banner -->
+    <string name="claim_celebration_ours">Claimed by your team!</string>
+    <string name="claim_celebration_theirs">Claimed by opponents</string>
+    <string name="claim_celebration_failed">%1$s got it wrong</string>
     <string name="cd_assign_card">Assign %1$s to a teammate</string>
     <string name="cd_connection_status">Connection status</string>
     <string name="cd_bot_thinking">Bot is thinking</string>
