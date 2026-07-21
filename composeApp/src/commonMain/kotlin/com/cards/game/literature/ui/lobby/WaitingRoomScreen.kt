@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.bot.BotPersonalities
 import com.cards.game.literature.deeplink.InviteLink
@@ -174,7 +176,10 @@ fun WaitingRoomScreen(
             InviteLink.forRoom(uiState.roomCode)
         )
         OutlinedButton(
-            onClick = { Sharer.shareText(inviteText) },
+            onClick = {
+                Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room"))
+                Sharer.shareText(inviteText)
+            },
             enabled = uiState.roomCode.isNotBlank(),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)

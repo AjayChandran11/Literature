@@ -1,5 +1,7 @@
 package com.cards.game.literature.deeplink
 
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,6 +51,7 @@ object DeepLinkHandler {
      */
     fun submit(raw: String?) {
         val code = extractRoomCode(raw) ?: return
+        Analytics.log(AnalyticsEvent.InviteOpened)
         _pendingRoomCode.value = code
     }
 

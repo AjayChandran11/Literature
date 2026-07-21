@@ -1,5 +1,7 @@
 package com.cards.game.literature.stats
 
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.preferences.StatsPrefs
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +65,15 @@ object StatsStore {
         if (StatsPrefs.getLastRecordedGameId() == gameId) return null
         StatsPrefs.setLastRecordedGameId(gameId)
 
+        Analytics.log(
+            AnalyticsEvent.GameFinished(
+                mode = if (record.isOnline) "online" else "offline_bots",
+                won = record.outcome == Outcome.WIN,
+                teamSize = record.playerCount / 2,
+                durationSecs = null,
+            )
+        )
+
         val updatedStats = _stats.value.applying(record)
         val updatedHistory = (listOf(record) + _history.value).take(HISTORY_LIMIT)
 
@@ -82,6 +93,7 @@ object StatsStore {
         if (newlyUnlocked.isNotEmpty()) {
             StatsPrefs.setAchievementsJson(json.encodeToString(updatedAchievements))
         }
+        newlyUnlocked.forEach { Analytics.log(AnalyticsEvent.AchievementUnlocked(it.name)) }
         // Scoped to gameId and set unconditionally (even when empty) so a stale celebration
         // can't leak onto a later game's result screen, and a result-screen recreation
         // re-reads the matching payload instead of losing it.
@@ -106,6 +118,7 @@ object StatsStore {
             _achievements.value = updated
             StatsPrefs.setAchievementsJson(json.encodeToString(updated))
         }
+        newlyUnlocked.forEach { Analytics.log(AnalyticsEvent.AchievementUnlocked(it.name)) }
         newlyUnlocked
     }
 

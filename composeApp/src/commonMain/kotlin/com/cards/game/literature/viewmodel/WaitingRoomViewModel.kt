@@ -3,6 +3,8 @@ package com.cards.game.literature.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.protocol.RoomPhase
 import com.cards.game.literature.protocol.RoomState
@@ -82,6 +84,14 @@ class WaitingRoomViewModel(
     fun startGame(fillWithBots: Boolean = true, difficulty: BotDifficulty = BotDifficulty.MEDIUM) {
         viewModelScope.launch {
             log.i { "Starting game, fillWithBots=$fillWithBots, difficulty=$difficulty" }
+            Analytics.log(
+                AnalyticsEvent.GameStarted(
+                    mode = "online",
+                    teamSize = _uiState.value.targetPlayerCount / 2,
+                    hasBots = fillWithBots,
+                    turnTimerSecs = null,
+                )
+            )
             _uiState.update { it.copy(isStarting = true) }
             onlineRepository.startGame(fillWithBots, difficulty.name)
             // Reset after timeout so the button doesn't stay stuck if server doesn't respond
