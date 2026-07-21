@@ -161,7 +161,10 @@ private fun ThemePickerRow() {
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .clickable { menuOpen = true }
-                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                    // Same 48dp minimum the switches enforce, so this row's height
+                    // matches the toggle rows exactly (and the tap target is proper).
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
