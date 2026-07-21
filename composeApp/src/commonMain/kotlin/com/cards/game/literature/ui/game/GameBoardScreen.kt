@@ -730,13 +730,23 @@ private fun LastEventStrip(events: List<GameEvent>) {
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            messages.forEach { msg -> StripEntry(msg) }
+        // New narration slides up over the old (StripMessage is a data class, so
+        // the list only counts as changed when the visible text actually differs).
+        AnimatedContent(
+            targetState = messages,
+            transitionSpec = {
+                (slideInVertically(tween(200)) { it / 3 } + fadeIn(tween(200))) togetherWith
+                    fadeOut(tween(120)) using SizeTransform(clip = false)
+            }
+        ) { current ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                current.forEach { msg -> StripEntry(msg) }
+            }
         }
     }
 }
@@ -824,11 +834,11 @@ private fun CompactHeaderRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            "${uiState.myTeamScore}",
+        AnimatedScoreText(
+            score = uiState.myTeamScore,
+            color = LightGreen,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = LightGreen
+            fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -890,11 +900,11 @@ private fun CompactHeaderRow(
         Spacer(modifier = Modifier.width(8.dp))
 
         // Score: right
-        Text(
-            "${uiState.opponentTeamScore}",
+        AnimatedScoreText(
+            score = uiState.opponentTeamScore,
+            color = CardRed,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = CardRed
+            fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
@@ -1012,25 +1022,34 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                msg.indicator,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = msg.indicatorColor
-            )
-            Text(
-                text = styleSuitSymbols(msg.text, darkSuitColor),
-                style = MaterialTheme.typography.bodyLarge,
-                color = onSurface,
-                maxLines = 1
-            )
+        // Mirror of LastEventStrip's transition, single-line variant.
+        AnimatedContent(
+            targetState = msg,
+            transitionSpec = {
+                (slideInVertically(tween(200)) { it / 3 } + fadeIn(tween(200))) togetherWith
+                    fadeOut(tween(120)) using SizeTransform(clip = false)
+            }
+        ) { current ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    current.indicator,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = current.indicatorColor
+                )
+                Text(
+                    text = styleSuitSymbols(current.text, darkSuitColor),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = onSurface,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
