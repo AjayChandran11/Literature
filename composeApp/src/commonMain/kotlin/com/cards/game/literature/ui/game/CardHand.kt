@@ -153,7 +153,9 @@ fun CardView(
             .height(80.dp)
             // Subtle lift so white card faces separate from light backgrounds
             // (they nearly merged with #FAFAFA); invisible against dark felt.
-            .shadow(2.dp, RoundedCornerShape(8.dp))
+            // Skipped while selected: the selected fill is translucent gold, and
+            // a shadow bleeds through translucency as a grey halo.
+            .shadow(if (isSelected) 0.dp else 2.dp, RoundedCornerShape(8.dp))
             .background(bgColor, RoundedCornerShape(8.dp))
             .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
