@@ -40,13 +40,15 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun CardHand(
     handByHalfSuit: Map<HalfSuit, List<Card>>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val sortedEntries = handByHalfSuit.entries
         .sortedBy { it.key.ordinal }
 
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
+        contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(

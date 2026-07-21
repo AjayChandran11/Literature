@@ -94,10 +94,13 @@ fun TableTab(uiState: GameUiState, tutorialState: TutorialState? = null) {
 
 @Composable
 fun HandTab(uiState: GameUiState, tutorialState: TutorialState? = null) {
+    // No bottom padding on the column: cards scroll flush to the event strip
+    // instead of clipping 8dp above it (the last row's breathing room comes
+    // from the list's own contentPadding below).
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp)
     ) {
         Text(
             stringResource(Res.string.label_your_hand),
@@ -133,6 +136,7 @@ fun HandTab(uiState: GameUiState, tutorialState: TutorialState? = null) {
         } else {
             CardHand(
                 handByHalfSuit = uiState.myHandByHalfSuit,
+                contentPadding = PaddingValues(bottom = 8.dp),
                 modifier = Modifier
                     .weight(1f)
                     .onGloballyPositioned { coords ->
