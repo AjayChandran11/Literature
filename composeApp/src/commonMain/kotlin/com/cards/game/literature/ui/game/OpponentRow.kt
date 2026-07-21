@@ -24,7 +24,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.bot.BotPersonalities
@@ -37,24 +39,32 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun OpponentRow(opponents: List<PlayerInfo>, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        opponents.forEach { player ->
-            PlayerAvatar(player = player, isOpponent = true)
-        }
-    }
+    AvatarRow(players = opponents, isOpponent = true, modifier = modifier)
 }
 
 @Composable
 fun TeammateRow(teammates: List<PlayerInfo>, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        teammates.forEach { player ->
-            PlayerAvatar(player = player, isOpponent = false)
+    AvatarRow(players = teammates, isOpponent = false, modifier = modifier)
+}
+
+/**
+ * Row of player avatars that adapts to the space it actually gets. Each avatar
+ * naturally wants 88dp; when the row is narrower than count x 88dp (e.g. four
+ * opponents in the side-by-side left pane on a foldable), every avatar shrinks
+ * to an equal share instead of the last one getting crushed off the edge.
+ * When space allows, the 88dp width is unchanged from before.
+ */
+@Composable
+private fun AvatarRow(players: List<PlayerInfo>, isOpponent: Boolean, modifier: Modifier = Modifier) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val avatarWidth = (maxWidth / players.size.coerceAtLeast(1)).coerceAtMost(88.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            players.forEach { player ->
+                PlayerAvatar(player = player, isOpponent = isOpponent, width = avatarWidth)
+            }
         }
     }
 }
@@ -83,7 +93,7 @@ private fun turnPopScale(isCurrentTurn: Boolean): Float {
 }
 
 @Composable
-fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
+fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean, width: Dp = 88.dp) {
     val borderColor by animateColorAsState(
         targetValue = if (player.isCurrentTurn) MaterialTheme.colorScheme.secondary else Color.Transparent,
         animationSpec = if (player.isCurrentTurn) {
@@ -104,13 +114,16 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
         else -> stringResource(Res.string.cd_player, player.name, player.cardCount)
     }
 
+    // Circle keeps its 64dp look while the cell has room, shrinking only when
+    // the row is genuinely tighter than that (see AvatarRow).
+    val circleSize = (width - 4.dp).coerceAtMost(64.dp)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(88.dp).semantics { contentDescription = avatarDesc }
+        modifier = Modifier.width(width).semantics { contentDescription = avatarDesc }
     ) {
         Box(
             modifier = Modifier
-                .size(64.dp)
+                .size(circleSize)
                 .scale(turnPopScale(player.isCurrentTurn))
                 .clip(CircleShape)
                 .background(
@@ -141,7 +154,8 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
             textAlign = TextAlign.Center,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
         if (player.cardCount == 0) {
             Text(

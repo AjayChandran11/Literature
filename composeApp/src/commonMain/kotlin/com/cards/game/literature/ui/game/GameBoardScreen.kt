@@ -263,7 +263,14 @@ fun GameBoardContent(
                     .navigationBarsPadding()) {
                     if (showSideBySide) {
                         // ── Full-width: Event strip + Action buttons ────────────
-                        LandscapeLastEventStrip(events = gameLog)
+                        // The one-line strip exists for SHORT landscape-phone windows.
+                        // Tall side-by-side windows (unfolded foldables, tablets) have
+                        // plenty of room — give them the full multi-row narration.
+                        if (compactHeight) {
+                            LandscapeLastEventStrip(events = gameLog)
+                        } else {
+                            LastEventStrip(events = gameLog)
+                        }
 
                         if (compactHeight) {
                             CompactActionButtons(
