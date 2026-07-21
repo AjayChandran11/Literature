@@ -11,11 +11,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -56,6 +59,29 @@ fun TeammateRow(teammates: List<PlayerInfo>, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * One-shot scale pop the moment the turn lands on this player — a distinct
+ * "it's their move now" beat on top of the ongoing border pulse. Springs from
+ * a slight dip so the overshoot reads as a bounce, then settles at rest.
+ */
+@Composable
+private fun turnPopScale(isCurrentTurn: Boolean): Float {
+    val pop = remember { Animatable(1f) }
+    LaunchedEffect(isCurrentTurn) {
+        if (isCurrentTurn) {
+            pop.snapTo(0.85f)
+            pop.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            )
+        }
+    }
+    return pop.value
+}
+
 @Composable
 fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
     val borderColor by animateColorAsState(
@@ -85,6 +111,7 @@ fun PlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
         Box(
             modifier = Modifier
                 .size(64.dp)
+                .scale(turnPopScale(player.isCurrentTurn))
                 .clip(CircleShape)
                 .background(
                     if (isOpponent) CardRed.copy(alpha = 0.3f * alpha)
@@ -190,6 +217,7 @@ fun CompactPlayerAvatar(player: PlayerInfo, isOpponent: Boolean) {
         Box(
             modifier = Modifier
                 .size(32.dp)
+                .scale(turnPopScale(player.isCurrentTurn))
                 .clip(CircleShape)
                 .background(
                     if (isOpponent) CardRed.copy(alpha = 0.3f * alpha)

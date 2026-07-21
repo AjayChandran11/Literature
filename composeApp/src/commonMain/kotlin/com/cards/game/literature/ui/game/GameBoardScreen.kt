@@ -181,6 +181,12 @@ fun GameBoardContent(
         previouslyMyTurn = uiState.isMyTurn
     }
 
+    // Claim celebration: set by the game-event observer below, rendered as an
+    // overlay on top of the board, self-dismissing. The id keys re-animation
+    // when claims land back-to-back.
+    var claimCelebration by remember { mutableStateOf<ClaimCelebrationData?>(null) }
+    var claimCelebrationId by remember { mutableStateOf(0L) }
+
     // Sounds + haptics for game events
     LaunchedEffect(gameLog.size) {
         if (gameLog.size <= processedLogSize) return@LaunchedEffect
@@ -214,6 +220,18 @@ fun GameBoardContent(
                     }
                     if (GamePrefs.isHapticsEnabled()) {
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                    // Celebrate the claim on the board (suppressed mid-tutorial —
+                    // the spotlight overlay owns the screen there).
+                    if (tutorialState?.isActive != true) {
+                        claimCelebrationId += 1
+                        claimCelebration = ClaimCelebrationData(
+                            halfSuit = event.halfSuit,
+                            claimerName = event.claimerName,
+                            byMyTeam = event.teamId == myTeamId,
+                            correct = event.correct,
+                            id = claimCelebrationId
+                        )
                     }
                 }
                 else -> {}
@@ -480,6 +498,12 @@ fun GameBoardContent(
                 }
             }
         }
+
+        // Claim celebration banner + burst over the board
+        ClaimCelebrationOverlay(
+            celebration = claimCelebration,
+            onDone = { claimCelebration = null }
+        )
 
         // Tutorial overlay on top of everything
         if (tutorialState?.isActive == true) {
@@ -1139,17 +1163,32 @@ private fun TurnIndicatorBanner(
     }
 
     AnimatedVisibility(visible = uiState.phase == GamePhase.IN_PROGRESS) {
+        // The gold "it's you" tint eases in rather than snapping.
+        val bannerColor by animateColorAsState(
+            targetValue = if (uiState.isMyTurn) MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                          else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+            animationSpec = tween(300)
+        )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    if (uiState.isMyTurn) MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
-                    else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-                )
+                .background(bannerColor)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             val pass = uiState.passSelection
+            // Crossfade between turn states. Keyed on WHO/WHAT the banner describes —
+            // never the countdown value, or it would re-animate every second.
+            val bannerKey = when {
+                pass != null && !pass.isMine -> "pass_${pass.claimerName}"
+                uiState.isMyTurn -> "mine"
+                uiState.isBotThinking -> "bot_${uiState.activePlayerName}"
+                else -> "turn_${uiState.activePlayerName}"
+            }
+            AnimatedContent(
+                targetState = bannerKey,
+                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) }
+            ) { _ ->
             if (pass != null && !pass.isMine) {
                 PassChoosingIndicator(pass.claimerName, pass.deadlineMs, compact = false)
             } else if (uiState.isMyTurn) {
@@ -1212,6 +1251,7 @@ private fun TurnIndicatorBanner(
                         )
                     }
                 }
+            }
             }
 
             // Help icon
