@@ -141,7 +141,13 @@ fun GameBoardContent(
     // var selectedCard by remember { mutableStateOf<Card?>(null) } // TODO: future use
     var selectedTab by remember { mutableStateOf(GameTab.TABLE) }
     var previouslyMyTurn by remember { mutableStateOf(false) }
-    var processedLogSize by remember { mutableStateOf(0) }
+    // Bookmark of how far into the event log we've already reacted (sounds/haptics/celebration).
+    // Seed it at the CURRENT log length, not 0: the ViewModel-scoped gameLog survives an Activity
+    // recreation (a system dark/light theme change is a uiMode config change and MainActivity has no
+    // configChanges=uiMode, so it recreates; likewise a reconnect) but this remember does not. A 0
+    // seed would then re-drop the whole history — replaying every sound and re-popping the most
+    // recent claim's celebration. gameLog.size means we react only to events that land while present.
+    var processedLogSize by remember { mutableStateOf(gameLog.size) }
     val hapticFeedback = LocalHapticFeedback.current
 
     // Clear suit selection if the selected half suit is claimed OR the player lost all its cards
