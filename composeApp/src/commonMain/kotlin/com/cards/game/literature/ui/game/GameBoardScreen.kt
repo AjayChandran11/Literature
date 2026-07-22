@@ -186,6 +186,16 @@ fun GameBoardContent(
         previouslyMyTurn = uiState.isMyTurn
     }
 
+    // A turn can leave us with a sheet still open — most notably the 60s server turn timeout
+    // passing play on while our ask/claim sheet sits open (both are gated to our turn in
+    // ActionButtons). Close them the moment the turn is no longer ours.
+    LaunchedEffect(uiState.isMyTurn) {
+        if (!uiState.isMyTurn) {
+            showAskSheet = false
+            showClaimSheet = false
+        }
+    }
+
     // Claim celebration: set by the game-event observer below, rendered as an
     // overlay on top of the board, self-dismissing. The id keys re-animation
     // when claims land back-to-back.
