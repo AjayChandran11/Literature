@@ -36,4 +36,14 @@ actual object GamePrefs {
     actual fun setRequestedNotificationPermission(requested: Boolean) {
         prefs()?.edit()?.putBoolean("notif_perm_requested", requested)?.apply()
     }
+
+    actual fun getThemeMode(): String = prefs()?.getString("theme_mode", "SYSTEM") ?: "SYSTEM"
+    actual fun setThemeMode(mode: String) {
+        prefs()?.edit()?.putString("theme_mode", mode)?.apply()
+    }
+
+    actual fun isDynamicColorsEnabled(): Boolean = prefs()?.getBoolean("dynamic_colors", false) ?: false
+    actual fun setDynamicColorsEnabled(enabled: Boolean) {
+        prefs()?.edit()?.putBoolean("dynamic_colors", enabled)?.apply()
+    }
 }

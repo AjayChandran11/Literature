@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -142,7 +141,13 @@ fun GameBoardContent(
     // var selectedCard by remember { mutableStateOf<Card?>(null) } // TODO: future use
     var selectedTab by remember { mutableStateOf(GameTab.TABLE) }
     var previouslyMyTurn by remember { mutableStateOf(false) }
-    var processedLogSize by remember { mutableStateOf(0) }
+    // Bookmark of how far into the event log we've already reacted (sounds/haptics/celebration).
+    // Seed it at the CURRENT log length, not 0: the ViewModel-scoped gameLog survives an Activity
+    // recreation (a system dark/light theme change is a uiMode config change and MainActivity has no
+    // configChanges=uiMode, so it recreates; likewise a reconnect) but this remember does not. A 0
+    // seed would then re-drop the whole history — replaying every sound and re-popping the most
+    // recent claim's celebration. gameLog.size means we react only to events that land while present.
+    var processedLogSize by remember { mutableStateOf(gameLog.size) }
     val hapticFeedback = LocalHapticFeedback.current
 
     // Clear suit selection if the selected half suit is claimed OR the player lost all its cards
@@ -179,6 +184,16 @@ fun GameBoardContent(
             }
         }
         previouslyMyTurn = uiState.isMyTurn
+    }
+
+    // A turn can leave us with a sheet still open — most notably the 60s server turn timeout
+    // passing play on while our ask/claim sheet sits open (both are gated to our turn in
+    // ActionButtons). Close them the moment the turn is no longer ours.
+    LaunchedEffect(uiState.isMyTurn) {
+        if (!uiState.isMyTurn) {
+            showAskSheet = false
+            showClaimSheet = false
+        }
     }
 
     // Claim celebration: set by the game-event observer below, rendered as an
@@ -667,8 +682,8 @@ private fun styleSuitSymbols(text: String, brightSuitColor: Color): androidx.com
 private fun StripEntry(message: StripMessage) {
     val onSurface = MaterialTheme.colorScheme.onSurface
     // Bright color for ♠♣ — white in dark mode for max contrast, dark in light mode
-    val darkSuitColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f)
-        Color.White else Color(0xFF1C1B1F)
+    // onSurface already IS "bright on dark, dark on light" — no luminance math needed.
+    val darkSuitColor = MaterialTheme.colorScheme.onSurface
     Row(
         modifier = Modifier.padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1047,8 +1062,8 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
     val msg = messages.last()
 
     val onSurface = MaterialTheme.colorScheme.onSurface
-    val darkSuitColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f)
-        Color.White else Color(0xFF1C1B1F)
+    // onSurface already IS "bright on dark, dark on light" — no luminance math needed.
+    val darkSuitColor = MaterialTheme.colorScheme.onSurface
     Surface(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp

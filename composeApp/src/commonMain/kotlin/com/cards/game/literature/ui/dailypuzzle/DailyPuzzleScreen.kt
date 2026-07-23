@@ -96,8 +96,10 @@ import com.cards.game.literature.puzzle.PuzzlePlayer
 import com.cards.game.literature.puzzle.WastedAsk
 import com.cards.game.literature.share.Sharer
 import com.cards.game.literature.stats.PuzzleStatus
+import com.cards.game.literature.ui.common.ConfettiBurst
 import com.cards.game.literature.ui.game.CardView
 import com.cards.game.literature.ui.stats.AchievementUnlockCard
+import com.cards.game.literature.ui.theme.CardFaceInk
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
@@ -112,7 +114,6 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val CardInk = Color(0xFF1A1A2E) // near-black for black suits on white mini-cards
 
 @Composable
 fun DailyPuzzleScreen(
@@ -717,7 +718,7 @@ private fun cardContentDescription(card: Card): String =
 /** A larger, NON-interactive playing card presenting the card in question (LOCATE / WASTED_ASK). */
 @Composable
 private fun FocusCard(card: Card) {
-    val ink = if (card.suit.isRed) CardRed else CardInk
+    val ink = if (card.suit.isRed) CardRed else CardFaceInk
     val desc = cardContentDescription(card)
     Column(
         modifier = Modifier
@@ -737,7 +738,7 @@ private fun FocusCard(card: Card) {
 
 @Composable
 private fun MiniCard(card: Card, modifier: Modifier = Modifier, dimmed: Boolean = false, placedTint: Color? = null) {
-    val ink = if (card.suit.isRed) CardRed else CardInk
+    val ink = if (card.suit.isRed) CardRed else CardFaceInk
     val border = placedTint?.copy(alpha = 0.6f) ?: Color(0x1F000000)
     val desc = cardContentDescription(card)
     Column(
@@ -792,6 +793,10 @@ private fun feedbackText(uiState: DailyPuzzleUiState): String? = when (uiState.f
 private fun teammateName(puzzle: DailyPuzzle): String =
     puzzle.players.first { it.teamId == puzzle.humanTeamId && it.id != puzzle.humanSeatId }.name
 
+/** Streak counts worth a little fanfare: the first week, then every 30 days. */
+private fun isStreakMilestone(streak: Int): Boolean =
+    streak == 7 || (streak > 0 && streak % 30 == 0)
+
 // ─── Result ──────────────────────────────────────────────────────────────────
 
 @Composable
@@ -818,89 +823,119 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
     }
     val caption = "$base\n${InviteLink.PLAY_STORE}"
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.18f), accent.copy(alpha = 0.05f))))
-            .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            stringResource(if (solved) Res.string.daily_puzzle_solved else Res.string.daily_puzzle_failed),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.ExtraBold,
-            color = accent
-        )
-        if (solved) {
-            Spacer(Modifier.height(6.dp))
-            // Stars pop in one-by-one — the win "moment". Skipped in @Preview so the static
-            // panes show the finished state instead of catching the entrance at scale 0.
-            val inPreview = LocalInspectionMode.current
-            val starScale = remember { List(3) { Animatable(if (inPreview) 1f else 0f) } }
-            LaunchedEffect(Unit) {
-                if (inPreview) return@LaunchedEffect
-                starScale.forEachIndexed { i, a ->
-                    launch {
-                        delay(120L * i)
-                        a.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.18f), accent.copy(alpha = 0.05f))))
+                .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                stringResource(if (solved) Res.string.daily_puzzle_solved else Res.string.daily_puzzle_failed),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = accent
+            )
+            if (solved) {
+                Spacer(Modifier.height(6.dp))
+                // Stars pop in one-by-one — the win "moment". Skipped in @Preview so the static
+                // panes show the finished state instead of catching the entrance at scale 0.
+                val inPreview = LocalInspectionMode.current
+                val starScale = remember { List(3) { Animatable(if (inPreview) 1f else 0f) } }
+                LaunchedEffect(Unit) {
+                    if (inPreview) return@LaunchedEffect
+                    starScale.forEachIndexed { i, a ->
+                        launch {
+                            delay(120L * i)
+                            a.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+                        }
                     }
                 }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                repeat(3) { i ->
-                    Text(
-                        if (i < uiState.stars) "★" else "☆",
-                        fontSize = 30.sp,
-                        color = if (i < uiState.stars) GoldAccent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.scale(starScale[i].value)
-                    )
-                }
-            }
-            // Streak chip springs in just after the stars.
-            if (uiState.streak > 0) {
-                Spacer(Modifier.height(10.dp))
-                var showStreak by remember { mutableStateOf(inPreview) }
-                LaunchedEffect(Unit) { if (!inPreview) { delay(120L * 3 + 140L); showStreak = true } }
-                AnimatedVisibility(
-                    visible = showStreak,
-                    enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn()
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(GoldAccent.copy(alpha = 0.18f))
-                            .border(1.dp, GoldAccent.copy(alpha = 0.5f), RoundedCornerShape(50))
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
-                    ) {
-                        Text("🔥", fontSize = 18.sp)
-                        Spacer(Modifier.width(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    repeat(3) { i ->
                         Text(
-                            stringResource(Res.string.daily_puzzle_streak_chip, uiState.streak),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            if (i < uiState.stars) "★" else "☆",
+                            fontSize = 30.sp,
+                            color = if (i < uiState.stars) GoldAccent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.scale(starScale[i].value)
                         )
                     }
                 }
+                // Streak chip springs in just after the stars.
+                if (uiState.streak > 0) {
+                    Spacer(Modifier.height(10.dp))
+                    var showStreak by remember { mutableStateOf(inPreview) }
+                    LaunchedEffect(Unit) { if (!inPreview) { delay(120L * 3 + 140L); showStreak = true } }
+                    // On a milestone streak the 🔥 flares a few times — a small "you hit it" beat.
+                    val milestone = isStreakMilestone(uiState.streak)
+                    val flameScale = remember { Animatable(1f) }
+                    LaunchedEffect(showStreak, milestone) {
+                        if (showStreak && milestone && !inPreview) {
+                            delay(220)
+                            repeat(3) {
+                                flameScale.animateTo(1.4f, tween(90))
+                                flameScale.animateTo(1f, tween(140))
+                            }
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = showStreak,
+                        enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(GoldAccent.copy(alpha = 0.18f))
+                                .border(1.dp, GoldAccent.copy(alpha = 0.5f), RoundedCornerShape(50))
+                                .padding(horizontal = 14.dp, vertical = 7.dp)
+                        ) {
+                            Text("🔥", fontSize = 18.sp, modifier = Modifier.scale(flameScale.value))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                stringResource(Res.string.daily_puzzle_streak_chip, uiState.streak),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            reveal()
+            if (uiState.newlyUnlocked.isNotEmpty()) {
+                Spacer(Modifier.height(14.dp))
+                AchievementUnlockCard(uiState.newlyUnlocked)
+            }
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(onClick = { Sharer.shareText(caption) }, shape = RoundedCornerShape(10.dp)) {
+                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(Res.string.button_share))
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(stringResource(Res.string.daily_puzzle_come_back), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        // A one-time mini confetti burst crowns a flawless (first-try, 3★) solve. Sits over the card
+        // as a non-clipping overlay, launched high so it sprays up from around the stars.
+        if (solved && uiState.stars >= 3) {
+            val inPreview = LocalInspectionMode.current
+            var burst by remember { mutableStateOf(inPreview) }
+            LaunchedEffect(Unit) { if (!inPreview) { delay(360); burst = true } }
+            if (burst) {
+                ConfettiBurst(
+                    seed = uiState.puzzleNumber.toLong(),
+                    modifier = Modifier.matchParentSize(),
+                    particleCount = 22,
+                    originY = 0.28f
+                )
             }
         }
-        Spacer(Modifier.height(14.dp))
-        reveal()
-        if (uiState.newlyUnlocked.isNotEmpty()) {
-            Spacer(Modifier.height(14.dp))
-            AchievementUnlockCard(uiState.newlyUnlocked)
-        }
-        Spacer(Modifier.height(16.dp))
-        OutlinedButton(onClick = { Sharer.shareText(caption) }, shape = RoundedCornerShape(10.dp)) {
-            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(Res.string.button_share))
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(stringResource(Res.string.daily_puzzle_come_back), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

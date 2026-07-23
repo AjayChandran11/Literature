@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -160,6 +161,10 @@ fun WaitingRoomScreen(
                 Text(
                     text = uiState.roomCode,
                     style = MaterialTheme.typography.displaySmall,
+                    // The code mixes caps and digits; Playfair's old-style figures render the
+                    // numbers small and low next to the caps. Monospace gives every glyph the
+                    // same metrics, so the code reads evenly — and like the code it is.
+                    fontFamily = FontFamily.Monospace,
                     letterSpacing = 4.sp,
                     color = MaterialTheme.colorScheme.secondary
                 )

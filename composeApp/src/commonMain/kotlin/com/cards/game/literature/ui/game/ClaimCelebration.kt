@@ -1,11 +1,8 @@
 package com.cards.game.literature.ui.game
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,24 +13,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.HalfSuit
+import com.cards.game.literature.ui.common.ConfettiBurst
 import com.cards.game.literature.ui.theme.CardRed
-import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
 import kotlinx.coroutines.delay
 import literature.composeapp.generated.resources.Res
@@ -41,9 +32,6 @@ import literature.composeapp.generated.resources.claim_celebration_failed
 import literature.composeapp.generated.resources.claim_celebration_ours
 import literature.composeapp.generated.resources.claim_celebration_theirs
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.random.Random
 
 /** One resolved claim, queued for its moment of on-board celebration. */
 data class ClaimCelebrationData(
@@ -95,7 +83,7 @@ fun ClaimCelebrationOverlay(
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         // Confetti burst behind the banner — only for our team's correct claims.
         if (data.correct && data.byMyTeam) {
-            ClaimConfettiBurst(seed = data.id)
+            ConfettiBurst(seed = data.id, modifier = Modifier.fillMaxSize())
         }
 
         // Banner springs in from a dip, like the onboarding "CLAIMED!" badge.
@@ -150,66 +138,6 @@ fun ClaimCelebrationOverlay(
                     color = accent,
                     textAlign = TextAlign.Center
                 )
-            }
-        }
-    }
-}
-
-private class BurstParticle(random: Random) {
-    val angle = random.nextFloat() * 2f * 3.14159f
-    val speed = 340f + random.nextFloat() * 420f      // px travelled over the burst
-    val size = 8f + random.nextFloat() * 10f
-    val rotationRate = (random.nextFloat() - 0.5f) * 720f
-    val isCircle = random.nextBoolean()
-    val color = CONFETTI_COLORS[random.nextInt(CONFETTI_COLORS.size)]
-
-    companion object {
-        // Same festive palette as the result-screen confetti.
-        val CONFETTI_COLORS = listOf(
-            GoldAccent, LightGreen, CardRed,
-            Color(0xFF2196F3), Color(0xFF9C27B0), Color(0xFF00BCD4)
-        )
-    }
-}
-
-/** A one-shot radial confetti burst from the center — 26 particles, ~1.4s. */
-@Composable
-private fun ClaimConfettiBurst(seed: Long) {
-    val particles = remember(seed) {
-        val random = Random(seed)
-        List(26) { BurstParticle(random) }
-    }
-    // Static previews freeze the burst mid-flight so the pane shows the particles.
-    val inPreview = LocalInspectionMode.current
-    var progress by remember(seed) { mutableStateOf(if (inPreview) 0.35f else 0f) }
-    LaunchedEffect(seed) {
-        if (inPreview) return@LaunchedEffect
-        val anim = Animatable(0f)
-        anim.animateTo(1f, tween(durationMillis = 1400, easing = LinearEasing)) {
-            progress = value
-        }
-    }
-
-    if (progress <= 0f || progress >= 1f) return
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val center = Offset(size.width / 2f, size.height / 2f)
-        // Ease the burst: fast exit, slowing as it spreads.
-        val spread = 1f - (1f - progress) * (1f - progress)
-        val alpha = if (progress < 0.6f) 1f else 1f - (progress - 0.6f) / 0.4f
-        particles.forEach { p ->
-            val x = center.x + cos(p.angle) * p.speed * spread
-            // Slight gravity pull as the burst decays.
-            val y = center.y + sin(p.angle) * p.speed * spread + 260f * progress * progress
-            rotate(degrees = p.rotationRate * progress, pivot = Offset(x, y)) {
-                if (p.isCircle) {
-                    drawCircle(p.color.copy(alpha = alpha), radius = p.size / 2f, center = Offset(x, y))
-                } else {
-                    drawRect(
-                        p.color.copy(alpha = alpha),
-                        topLeft = Offset(x - p.size / 2f, y - p.size / 2f),
-                        size = androidx.compose.ui.geometry.Size(p.size, p.size * 0.65f)
-                    )
-                }
             }
         }
     }

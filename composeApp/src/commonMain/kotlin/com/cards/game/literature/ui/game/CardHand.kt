@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.contentDescription
@@ -31,6 +32,7 @@ import com.cards.game.literature.model.CardValue
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.Suit
 import com.cards.game.literature.model.isRed
+import com.cards.game.literature.ui.theme.CardFaceInk
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.LiteratureTheme
 import literature.composeapp.generated.resources.Res
@@ -142,7 +144,7 @@ fun CardView(
     modifier: Modifier = Modifier,
     badgeNumber: Int? = null
 ) {
-    val cardColor = if (card.suit.isRed) CardRed else Color.Black
+    val cardColor = if (card.suit.isRed) CardRed else CardFaceInk
     val bgColor = if (isSelected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f) else Color.White
     val borderColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.LightGray
 
@@ -151,6 +153,11 @@ fun CardView(
         modifier = modifier
             .width(60.dp)
             .height(80.dp)
+            // Subtle lift so white card faces separate from light backgrounds
+            // (they nearly merged with #FAFAFA); invisible against dark felt.
+            // Skipped while selected: the selected fill is translucent gold, and
+            // a shadow bleeds through translucency as a grey halo.
+            .shadow(if (isSelected) 0.dp else 2.dp, RoundedCornerShape(8.dp))
             .background(bgColor, RoundedCornerShape(8.dp))
             .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
