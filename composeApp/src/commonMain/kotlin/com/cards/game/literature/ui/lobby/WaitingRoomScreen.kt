@@ -10,6 +10,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +37,8 @@ import com.cards.game.literature.share.Sharer
 import com.cards.game.literature.ui.common.ConnectionBanner
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
+import com.cards.game.literature.ui.common.WindowSize.useSideBySide
+import com.cards.game.literature.viewmodel.WaitingRoomPlayer
 import com.cards.game.literature.viewmodel.WaitingRoomViewModel
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
@@ -110,6 +114,20 @@ fun WaitingRoomScreen(
         }
     }
 
+    // Guarded leave shared by the bottom button (the dialog has its own inline copy that also
+    // dismisses itself first).
+    val onLeaveClicked: () -> Unit = {
+        if (!isLeaving) {
+            isLeaving = true
+            viewModel.leaveRoom()
+            onLeave()
+        }
+    }
+    val errorToShow = when {
+        uiState.isStartGameTimedOut -> startGameTimeoutMsg
+        else -> uiState.errorMessage
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
@@ -126,350 +144,503 @@ fun WaitingRoomScreen(
             )
         }
 
-    val windowInfo = currentWindowAdaptiveInfo()
-    val isCompact = windowInfo.isCompactHeight
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(if (isCompact) 16.dp else 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 32.dp))
+        val windowInfo = currentWindowAdaptiveInfo()
+        val isCompact = windowInfo.isCompactHeight
+        val sideBySide = windowInfo.useSideBySide
 
-        Text(
-            text = stringResource(Res.string.waiting_room_title),
-            style = if (isCompact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.secondary
-        )
-        Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
-
-        // Room code display
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.padding(8.dp)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = stringResource(Res.string.waiting_room_code_label),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = uiState.roomCode,
-                    style = MaterialTheme.typography.displaySmall,
-                    // The code mixes caps and digits; Playfair's old-style figures render the
-                    // numbers small and low next to the caps. Monospace gives every glyph the
-                    // same metrics, so the code reads evenly — and like the code it is.
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 4.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Text(
-                    text = stringResource(Res.string.waiting_room_share_code),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Invite friends via the system share sheet (deep-link room invite).
-        val inviteText = stringResource(
-            Res.string.invite_share_text,
-            uiState.roomCode,
-            InviteLink.forRoom(uiState.roomCode)
-        )
-        OutlinedButton(
-            onClick = {
-                Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room"))
-                Sharer.shareText(inviteText)
-            },
-            enabled = uiState.roomCode.isNotBlank(),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Share,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(Res.string.waiting_room_invite),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = stringResource(Res.string.waiting_room_players_count, uiState.players.size, uiState.targetPlayerCount),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Player list
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(uiState.players, key = { it.id }) { player ->
-                // Same spring language as the card hand: joins fade+settle in,
-                // leavers fade out, team switches glide to their new slot.
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .animateItem(
-                            fadeInSpec = tween(300),
-                            fadeOutSpec = tween(300),
-                            placementSpec = spring<IntOffset>(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessLow
-                            )
-                        )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Connection indicator
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (player.isConnected)
-                                        MaterialTheme.colorScheme.primary
-                                    else
-                                        MaterialTheme.colorScheme.error
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        if (player.isBot) {
-                            Text(
-                                text = BotPersonalities.emojiFor(player.name),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-
-                        Text(
-                            text = player.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        Text(
-                            text = if (player.teamId == "team_1")
-                                stringResource(Res.string.waiting_room_team_1)
-                            else
-                                stringResource(Res.string.waiting_room_team_2),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        if (player.id == uiState.myPlayerId) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            TextButton(
-                                onClick = { viewModel.switchTeam() },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(Res.string.waiting_room_switch_team),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-
-                        if (player.isHost) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
-                            ) {
-                                Text(
-                                    text = stringResource(Res.string.player_badge_host),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Host controls
-        if (uiState.isHost) {
-            val team1Count = uiState.players.count { it.teamId == "team_1" }
-            val team2Count = uiState.players.count { it.teamId == "team_2" }
-            val teamsUneven = !fillWithBots && team1Count != team2Count
-
+        if (sideBySide) {
+            // Landscape / tablet / unfolded foldable: two panes. The players list gets its own
+            // full-height, scrollable column instead of fighting the fixed chrome for a sliver of
+            // vertical space.
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(0.8f)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = if (isCompact) 8.dp else 16.dp)
             ) {
-                Checkbox(
-                    checked = fillWithBots,
-                    onCheckedChange = { fillWithBots = it },
-                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(Res.string.waiting_room_fill_bots),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            // Bot difficulty selector — shown when filling with bots
-            if (fillWithBots) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(Res.string.game_setup_difficulty_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(0.8f),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // LEFT: a scrollable body + a pinned Start/Leave footer. On a short pane (phone
+                // landscape) the body scrolls and the actions stay visible; on a tall pane (tablet)
+                // the body sits at the top and the weight pushes the footer to the bottom, so the
+                // controls never float mid-pane above a void.
+                Column(
+                    modifier = Modifier
+                        .weight(0.42f)
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    val difficultyLabels = mapOf(
-                        BotDifficulty.EASY to Pair(stringResource(Res.string.difficulty_easy), stringResource(Res.string.difficulty_easy_desc)),
-                        BotDifficulty.MEDIUM to Pair(stringResource(Res.string.difficulty_medium), stringResource(Res.string.difficulty_medium_desc)),
-                        BotDifficulty.HARD to Pair(stringResource(Res.string.difficulty_hard), stringResource(Res.string.difficulty_hard_desc))
-                    )
-                    BotDifficulty.entries.forEach { difficulty ->
-                        val isSelected = selectedDifficulty == difficulty
-                        val (label, desc) = difficultyLabels[difficulty] ?: Pair(difficulty.label, "")
-                        val primary = MaterialTheme.colorScheme.primary
-                        val secondary = MaterialTheme.colorScheme.secondary
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (isSelected) primary.copy(alpha = 0.12f)
-                                    else MaterialTheme.colorScheme.surfaceVariant
-                                )
-                                .border(
-                                    width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) primary else primary.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable { selectedDifficulty = difficulty }
-                                .padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = label,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = desc,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (isSelected) secondary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        RoomCodeCard(uiState.roomCode)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        InviteButton(uiState.roomCode)
+                        Spacer(modifier = Modifier.height(if (isCompact) 12.dp else 20.dp))
+                        if (uiState.isHost) {
+                            HostSetupControls(
+                                players = uiState.players,
+                                fillWithBots = fillWithBots,
+                                onFillWithBots = { fillWithBots = it },
+                                selectedDifficulty = selectedDifficulty,
+                                onDifficulty = { selectedDifficulty = it }
+                            )
+                        } else {
+                            WaitingForHostText()
                         }
                     }
+                    if (uiState.isHost) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        StartGameButton(
+                            players = uiState.players,
+                            targetPlayerCount = uiState.targetPlayerCount,
+                            fillWithBots = fillWithBots,
+                            isStarting = uiState.isStarting,
+                            onStartGame = { viewModel.startGame(fillWithBots, selectedDifficulty) }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LeaveRoomButton(onLeave = onLeaveClicked)
+                    errorToShow?.let { ErrorSection(it, onClearError = viewModel::clearError) }
                 }
-            }
 
-            if (teamsUneven) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(Res.string.waiting_room_teams_uneven_warning),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                )
-            }
+                Spacer(modifier = Modifier.width(16.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = { viewModel.startGame(fillWithBots, selectedDifficulty) },
-                modifier = Modifier
-                    .fillMaxWidth(0.8f)
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                enabled = !uiState.isStarting && !teamsUneven && (fillWithBots || uiState.players.size == uiState.targetPlayerCount)
-            ) {
-                if (uiState.isStarting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                // RIGHT: the players list gets the full pane height.
+                Column(
+                    modifier = Modifier
+                        .weight(0.58f)
+                        .fillMaxHeight()
+                ) {
+                    PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    PlayerList(
+                        players = uiState.players,
+                        myPlayerId = uiState.myPlayerId,
+                        onSwitchTeam = viewModel::switchTeam,
+                        modifier = Modifier.weight(1f)
                     )
-                } else {
-                    Text(stringResource(Res.string.button_start_game), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
             }
         } else {
-            Text(
-                text = stringResource(Res.string.waiting_room_waiting_for_host),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
+            // Portrait: the original single column (plenty of vertical space here).
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(if (isCompact) 16.dp else 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 32.dp))
 
-        Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = stringResource(Res.string.waiting_room_title),
+                    style = if (isCompact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
 
-        TextButton(
-            onClick = {
-                if (isLeaving) return@TextButton
-                isLeaving = true
-                viewModel.leaveRoom()
-                onLeave()
+                RoomCodeCard(uiState.roomCode)
+                Spacer(modifier = Modifier.height(12.dp))
+                InviteButton(uiState.roomCode)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                PlayerList(
+                    players = uiState.players,
+                    myPlayerId = uiState.myPlayerId,
+                    onSwitchTeam = viewModel::switchTeam,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (uiState.isHost) {
+                    HostSetupControls(
+                        players = uiState.players,
+                        fillWithBots = fillWithBots,
+                        onFillWithBots = { fillWithBots = it },
+                        selectedDifficulty = selectedDifficulty,
+                        onDifficulty = { selectedDifficulty = it }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    StartGameButton(
+                        players = uiState.players,
+                        targetPlayerCount = uiState.targetPlayerCount,
+                        fillWithBots = fillWithBots,
+                        isStarting = uiState.isStarting,
+                        onStartGame = { viewModel.startGame(fillWithBots, selectedDifficulty) }
+                    )
+                } else {
+                    WaitingForHostText()
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                LeaveRoomButton(onLeave = onLeaveClicked)
+                errorToShow?.let { ErrorSection(it, onClearError = viewModel::clearError) }
             }
-        ) {
-            Text(stringResource(Res.string.button_leave_room), color = MaterialTheme.colorScheme.error)
         }
+    } // Box
+    } // Scaffold
+}
 
-        val errorToShow = when {
-            uiState.isStartGameTimedOut -> startGameTimeoutMsg
-            else -> uiState.errorMessage
-        }
-        errorToShow?.let { error ->
-            Spacer(modifier = Modifier.height(8.dp))
+// ─── Shared building blocks (used by both the portrait column and the landscape panes) ─────────
+
+@Composable
+private fun RoomCodeCard(roomCode: String, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = modifier.padding(8.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(16.dp)
+        ) {
             Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
+                text = stringResource(Res.string.waiting_room_code_label),
                 style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            LaunchedEffect(error) {
-                kotlinx.coroutines.delay(3000)
-                viewModel.clearError()
+            Text(
+                text = roomCode,
+                style = MaterialTheme.typography.displaySmall,
+                // The code mixes caps and digits; Playfair's old-style figures render the
+                // numbers small and low next to the caps. Monospace gives every glyph the
+                // same metrics, so the code reads evenly — and like the code it is.
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 4.sp,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Text(
+                text = stringResource(Res.string.waiting_room_share_code),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun InviteButton(roomCode: String, modifier: Modifier = Modifier) {
+    // Invite friends via the system share sheet (deep-link room invite).
+    val inviteText = stringResource(
+        Res.string.invite_share_text,
+        roomCode,
+        InviteLink.forRoom(roomCode)
+    )
+    OutlinedButton(
+        onClick = {
+            Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room"))
+            Sharer.shareText(inviteText)
+        },
+        enabled = roomCode.isNotBlank(),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
+        modifier = modifier
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Share,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = stringResource(Res.string.waiting_room_invite),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun PlayersCountHeader(count: Int, target: Int, modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(Res.string.waiting_room_players_count, count, target),
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun PlayerList(
+    players: List<WaitingRoomPlayer>,
+    myPlayerId: String,
+    onSwitchTeam: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(players, key = { it.id }) { player ->
+            // Same spring language as the card hand: joins fade+settle in,
+            // leavers fade out, team switches glide to their new slot.
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateItem(
+                        fadeInSpec = tween(300),
+                        fadeOutSpec = tween(300),
+                        placementSpec = spring<IntOffset>(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Connection indicator
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (player.isConnected)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.error
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    if (player.isBot) {
+                        Text(
+                            text = BotPersonalities.emojiFor(player.name),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
+                    Text(
+                        text = player.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Text(
+                        text = if (player.teamId == "team_1")
+                            stringResource(Res.string.waiting_room_team_1)
+                        else
+                            stringResource(Res.string.waiting_room_team_2),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (player.id == myPlayerId) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        TextButton(
+                            onClick = onSwitchTeam,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.waiting_room_switch_team),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    if (player.isHost) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.player_badge_host),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
-    } // Box
-    } // Scaffold
+}
+
+/** Host setup that lives in the scrollable body: the fill-with-bots toggle, difficulty selector,
+ *  and the uneven-teams warning. The Start button is separate ([StartGameButton]) so it can be
+ *  pinned to the bottom of the landscape pane. */
+@Composable
+private fun HostSetupControls(
+    players: List<WaitingRoomPlayer>,
+    fillWithBots: Boolean,
+    onFillWithBots: (Boolean) -> Unit,
+    selectedDifficulty: BotDifficulty,
+    onDifficulty: (BotDifficulty) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val team1Count = players.count { it.teamId == "team_1" }
+    val team2Count = players.count { it.teamId == "team_2" }
+    val teamsUneven = !fillWithBots && team1Count != team2Count
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(0.8f)
+        ) {
+            Checkbox(
+                checked = fillWithBots,
+                onCheckedChange = onFillWithBots,
+                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(Res.string.waiting_room_fill_bots),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        // Bot difficulty selector — shown when filling with bots
+        if (fillWithBots) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(Res.string.game_setup_difficulty_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(0.8f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val difficultyLabels = mapOf(
+                    BotDifficulty.EASY to Pair(stringResource(Res.string.difficulty_easy), stringResource(Res.string.difficulty_easy_desc)),
+                    BotDifficulty.MEDIUM to Pair(stringResource(Res.string.difficulty_medium), stringResource(Res.string.difficulty_medium_desc)),
+                    BotDifficulty.HARD to Pair(stringResource(Res.string.difficulty_hard), stringResource(Res.string.difficulty_hard_desc))
+                )
+                BotDifficulty.entries.forEach { difficulty ->
+                    val isSelected = selectedDifficulty == difficulty
+                    val (label, desc) = difficultyLabels[difficulty] ?: Pair(difficulty.label, "")
+                    val primary = MaterialTheme.colorScheme.primary
+                    val secondary = MaterialTheme.colorScheme.secondary
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) primary else primary.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable { onDifficulty(difficulty) }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = label,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = desc,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isSelected) secondary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (teamsUneven) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(Res.string.waiting_room_teams_uneven_warning),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(0.8f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun StartGameButton(
+    players: List<WaitingRoomPlayer>,
+    targetPlayerCount: Int,
+    fillWithBots: Boolean,
+    isStarting: Boolean,
+    onStartGame: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val team1Count = players.count { it.teamId == "team_1" }
+    val team2Count = players.count { it.teamId == "team_2" }
+    val teamsUneven = !fillWithBots && team1Count != team2Count
+
+    Button(
+        onClick = onStartGame,
+        modifier = modifier
+            .fillMaxWidth(0.8f)
+            .height(56.dp),
+        shape = RoundedCornerShape(12.dp),
+        enabled = !isStarting && !teamsUneven && (fillWithBots || players.size == targetPlayerCount)
+    ) {
+        if (isStarting) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        } else {
+            Text(stringResource(Res.string.button_start_game), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun WaitingForHostText(modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(Res.string.waiting_room_waiting_for_host),
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun LeaveRoomButton(onLeave: () -> Unit, modifier: Modifier = Modifier) {
+    TextButton(onClick = onLeave, modifier = modifier) {
+        Text(stringResource(Res.string.button_leave_room), color = MaterialTheme.colorScheme.error)
+    }
+}
+
+@Composable
+private fun ErrorSection(error: String, onClearError: () -> Unit) {
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+        text = error,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyLarge,
+        textAlign = TextAlign.Center
+    )
+    LaunchedEffect(error) {
+        kotlinx.coroutines.delay(3000)
+        onClearError()
+    }
 }
