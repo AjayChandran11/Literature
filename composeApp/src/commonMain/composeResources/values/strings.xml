@@ -344,6 +344,12 @@
     <string name="claim_celebration_ours">Claimed by your team!</string>
     <string name="claim_celebration_theirs">Claimed by opponents</string>
     <string name="claim_celebration_failed">%1$s got it wrong</string>
+
+    <!-- Theme settings -->
+    <string name="settings_theme">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
     <string name="cd_assign_card">Assign %1$s to a teammate</string>
     <string name="cd_connection_status">Connection status</string>
     <string name="cd_bot_thinking">Bot is thinking</string>

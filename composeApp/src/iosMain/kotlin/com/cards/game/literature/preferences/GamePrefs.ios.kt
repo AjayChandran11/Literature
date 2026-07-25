@@ -41,4 +41,18 @@ actual object GamePrefs {
     actual fun setRequestedNotificationPermission(requested: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(requested, forKey = "notif_perm_requested")
     }
+
+    actual fun getThemeMode(): String =
+        NSUserDefaults.standardUserDefaults.stringForKey("theme_mode") ?: "SYSTEM"
+
+    actual fun setThemeMode(mode: String) {
+        NSUserDefaults.standardUserDefaults.setObject(mode, forKey = "theme_mode")
+    }
+
+    actual fun isDynamicColorsEnabled(): Boolean =
+        NSUserDefaults.standardUserDefaults.boolForKey("dynamic_colors")
+
+    actual fun setDynamicColorsEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = "dynamic_colors")
+    }
 }

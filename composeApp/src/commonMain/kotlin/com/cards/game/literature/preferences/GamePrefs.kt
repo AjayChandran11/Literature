@@ -11,4 +11,10 @@ expect object GamePrefs {
     fun setPuzzleReminderEnabled(enabled: Boolean)
     fun hasRequestedNotificationPermission(): Boolean
     fun setRequestedNotificationPermission(requested: Boolean)
+
+    /** Stored [com.cards.game.literature.ui.theme.ThemeMode] name; "SYSTEM" when unset. */
+    fun getThemeMode(): String
+    fun setThemeMode(mode: String)
+    fun isDynamicColorsEnabled(): Boolean
+    fun setDynamicColorsEnabled(enabled: Boolean)
 }
