@@ -813,6 +813,11 @@ private fun PuzzleResult(uiState: DailyPuzzleUiState, puzzle: DailyPuzzle) {
 private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -> Unit) {
     val solved = uiState.status == PuzzleStatus.SOLVED
     val accent = if (solved) LightGreen else CardRed
+    val inPreview = LocalInspectionMode.current
+    // The result celebration (star pops, streak spring, confetti) plays ONCE — on the solve that
+    // just happened (uiState.justSolved). Re-entering an already-solved puzzle loads justSolved=false,
+    // so everything shows settled with no entrance animation (same as the @Preview panes).
+    val animate = uiState.justSolved && !inPreview
     // Spoiler-safe share line (no answer leaked) — identical across kinds.
     val suffix = (if (solved && uiState.stars > 0) " " + "⭐".repeat(uiState.stars) else "") +
         (if (uiState.streak > 0) " · 🔥${uiState.streak}" else "")
@@ -841,12 +846,10 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
             )
             if (solved) {
                 Spacer(Modifier.height(6.dp))
-                // Stars pop in one-by-one — the win "moment". Skipped in @Preview so the static
-                // panes show the finished state instead of catching the entrance at scale 0.
-                val inPreview = LocalInspectionMode.current
-                val starScale = remember { List(3) { Animatable(if (inPreview) 1f else 0f) } }
+                // Stars pop in one-by-one on the fresh solve; settled (no entrance) on re-entry / @Preview.
+                val starScale = remember { List(3) { Animatable(if (animate) 0f else 1f) } }
                 LaunchedEffect(Unit) {
-                    if (inPreview) return@LaunchedEffect
+                    if (!animate) return@LaunchedEffect
                     starScale.forEachIndexed { i, a ->
                         launch {
                             delay(120L * i)
@@ -867,13 +870,13 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
                 // Streak chip springs in just after the stars.
                 if (uiState.streak > 0) {
                     Spacer(Modifier.height(10.dp))
-                    var showStreak by remember { mutableStateOf(inPreview) }
-                    LaunchedEffect(Unit) { if (!inPreview) { delay(120L * 3 + 140L); showStreak = true } }
+                    var showStreak by remember { mutableStateOf(!animate) }
+                    LaunchedEffect(Unit) { if (animate) { delay(120L * 3 + 140L); showStreak = true } }
                     // On a milestone streak the 🔥 flares a few times — a small "you hit it" beat.
                     val milestone = isStreakMilestone(uiState.streak)
                     val flameScale = remember { Animatable(1f) }
                     LaunchedEffect(showStreak, milestone) {
-                        if (showStreak && milestone && !inPreview) {
+                        if (showStreak && milestone && animate) {
                             delay(220)
                             repeat(3) {
                                 flameScale.animateTo(1.4f, tween(90))
@@ -924,9 +927,10 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
         // A one-time mini confetti burst crowns a flawless (first-try, 3★) solve. Sits over the card
         // as a non-clipping overlay, launched high so it sprays up from around the stars.
         if (solved && uiState.stars >= 3) {
-            val inPreview = LocalInspectionMode.current
+            // Frozen-visible in @Preview (design panes); on a real fresh solve it fires after the
+            // stars land. Re-entry: animate=false and not preview, so it never shows.
             var burst by remember { mutableStateOf(inPreview) }
-            LaunchedEffect(Unit) { if (!inPreview) { delay(360); burst = true } }
+            LaunchedEffect(Unit) { if (animate) { delay(360); burst = true } }
             if (burst) {
                 ConfettiBurst(
                     seed = uiState.puzzleNumber.toLong(),
