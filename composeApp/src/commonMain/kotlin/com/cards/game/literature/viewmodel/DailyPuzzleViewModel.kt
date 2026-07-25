@@ -45,7 +45,11 @@ data class DailyPuzzleUiState(
     val revealed: Boolean = false,
     val howToSeen: Boolean = true,
     /** Achievements unlocked by THIS solve — celebrated once on the result; empty on re-entry. */
-    val newlyUnlocked: List<Achievement> = emptyList()
+    val newlyUnlocked: List<Achievement> = emptyList(),
+    /** True only on the submit that just solved it — gates the one-time result celebration
+     *  (star pops / streak spring / confetti). False on load, so re-entering an already-solved
+     *  puzzle shows the result settled with no replay. */
+    val justSolved: Boolean = false
 )
 
 /**
@@ -158,7 +162,8 @@ class DailyPuzzleViewModel(
                 streak = progress.displayedStreak(today),
                 feedback = if (correct) PuzzleFeedback.NONE else wrongFeedback,
                 revealed = progress.status.isTerminal(),
-                newlyUnlocked = unlocked
+                newlyUnlocked = unlocked,
+                justSolved = progress.status == PuzzleStatus.SOLVED
             )
         }
     }
