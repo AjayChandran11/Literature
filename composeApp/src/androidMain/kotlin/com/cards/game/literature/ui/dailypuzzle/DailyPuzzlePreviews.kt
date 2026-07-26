@@ -6,6 +6,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.unit.dp
 import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.HalfSuit
@@ -347,3 +361,56 @@ private fun LocateInteractivePreview() = SeatKindInteractive(sampleLocate, sampl
 @Preview(name = "0 · INTERACTIVE — Wasted Ask solve flow", showBackground = true, heightDp = 950)
 @Composable
 private fun WastedInteractivePreview() = SeatKindInteractive(sampleWasted, sampleWastedAnswer.seatId)
+
+// ── Interactive: the SOLVE CELEBRATION with real motion ───────────────────────────
+
+/**
+ * The one-time solve celebration — star pops, confetti, streak-chip spring and the 🔥 milestone
+ * flare — is invisible in a normal @Preview: the result gates it on `justSolved && !inspectionMode`.
+ * This pins justSolved = true with a milestone streak (7) and forces LocalInspectionMode off, so
+ * opening it in Android Studio's *Interactive Preview* plays the whole moment; tap empty space to replay.
+ */
+@Preview(name = "0 · INTERACTIVE — solve celebration (confetti + streak flare)", showBackground = true, heightDp = 950)
+@Composable
+private fun SolveCelebrationInteractivePreview() {
+    var replay by remember { mutableStateOf(0) }
+    LiteratureTheme {
+        CompositionLocalProvider(LocalInspectionMode provides false) {
+            Box(modifier = Modifier.fillMaxSize().clickable { replay++ }) {
+                key(replay) {
+                    DailyPuzzleScreenContent(
+                        uiState = state(
+                            selectedHalfSuit = sampleHalfSuit,
+                            selectedCard = sampleHidden,
+                            status = PuzzleStatus.SOLVED,
+                            attemptsUsed = 1,
+                            stars = 3,
+                            streak = 7,
+                            revealed = true
+                        ).copy(justSolved = true),
+                        onBack = {},
+                        onSelectHalfSuit = {},
+                        onChangeHalfSuit = {},
+                        onSelectCard = {},
+                        onSelectSeat = {},
+                        onSubmit = {},
+                        onHowToSeen = {}
+                    )
+                }
+                Text(
+                    text = "Tap empty space to replay",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 6.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                            RoundedCornerShape(50)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
