@@ -427,6 +427,10 @@ fun ResultScreenContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── Score ─────────────────────────────────────────────────────
+            // lnum = lining figures: Playfair's default old-style figures give digits uneven
+            // heights (6/8 sit tall, 0/1/2 short), so a score like "6 - 2" reads lopsided. lnum
+            // makes them uniform cap-height while keeping the Playfair display face.
+            val scoreStyle = MaterialTheme.typography.displayLarge.copy(fontFeatureSettings = "lnum")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -439,14 +443,14 @@ fun ResultScreenContent(
                     )
                     Text(
                         "$animatedMyScore",
-                        style = MaterialTheme.typography.displayLarge,
+                        style = scoreStyle,
                         fontWeight = FontWeight.Bold,
                         color = LightGreen
                     )
                 }
                 Text(
                     "-",
-                    style = MaterialTheme.typography.displayLarge,
+                    style = scoreStyle,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 16.dp)
@@ -459,7 +463,7 @@ fun ResultScreenContent(
                     )
                     Text(
                         "$animatedOpponentScore",
-                        style = MaterialTheme.typography.displayLarge,
+                        style = scoreStyle,
                         fontWeight = FontWeight.Bold,
                         color = CardRed
                     )
