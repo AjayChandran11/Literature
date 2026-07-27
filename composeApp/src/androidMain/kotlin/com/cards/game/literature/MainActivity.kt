@@ -20,6 +20,7 @@ import com.cards.game.literature.preferences.GamePrefs
 import com.cards.game.literature.preferences.OnboardingPrefs
 import com.cards.game.literature.preferences.StatsPrefs
 import com.cards.game.literature.preferences.TutorialPrefs
+import com.cards.game.literature.review.AppReview
 import com.cards.game.literature.share.Sharer
 
 class MainActivity : ComponentActivity() {
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
         StatsPrefs.init(this)
         SoundPlayer.init(this)
         Sharer.init(this)
+        AppReview.setActivity(this)
         FirebaseApp.initializeApp(this)
         FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = true
 

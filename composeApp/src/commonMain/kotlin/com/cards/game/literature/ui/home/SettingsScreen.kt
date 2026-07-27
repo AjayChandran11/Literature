@@ -2,9 +2,13 @@ package com.cards.game.literature.ui.home
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
@@ -13,50 +17,56 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.cards.game.literature.di.appVersionCode
+import com.cards.game.literature.di.appVersionName
 import com.cards.game.literature.notifications.PuzzleReminderScheduler
 import com.cards.game.literature.preferences.GamePrefs
 import com.cards.game.literature.ui.theme.ThemeController
 import com.cards.game.literature.ui.theme.ThemeMode
 import literature.composeapp.generated.resources.Res
-import literature.composeapp.generated.resources.button_done
-import literature.composeapp.generated.resources.settings_daily_reminder
-import literature.composeapp.generated.resources.settings_haptic_feedback
-import literature.composeapp.generated.resources.settings_notifications
-import literature.composeapp.generated.resources.settings_sound_effects
-import literature.composeapp.generated.resources.settings_theme
-import literature.composeapp.generated.resources.settings_title
-import literature.composeapp.generated.resources.theme_dark
-import literature.composeapp.generated.resources.theme_light
-import literature.composeapp.generated.resources.theme_system
+import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+
+private const val PRIVACY_POLICY_URL = "https://ajaychandran11.github.io/Literature/privacy"
+private const val FEEDBACK_EMAIL = "ajaychandran443@gmail.com"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsBottomSheet(onDismiss: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit) {
     var soundEnabled by remember { mutableStateOf(GamePrefs.isSoundEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(GamePrefs.isHapticsEnabled()) }
     var notificationsEnabled by remember { mutableStateOf(GamePrefs.isNotificationsEnabled()) }
     var puzzleReminderEnabled by remember { mutableStateOf(GamePrefs.isPuzzleReminderEnabled()) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val uriHandler = LocalUriHandler.current
 
-    ModalBottomSheet(onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(stringResource(Res.string.settings_title), fontWeight = FontWeight.Bold)
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(Res.string.cd_settings_back)
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp)
+                .padding(bottom = 24.dp)
         ) {
-            Text(
-                text = stringResource(Res.string.settings_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
             SettingsToggleRow(
                 label = stringResource(Res.string.settings_sound_effects),
                 checked = soundEnabled,
@@ -65,7 +75,6 @@ fun SettingsBottomSheet(onDismiss: () -> Unit) {
                     GamePrefs.setSoundEnabled(it)
                 }
             )
-
             SettingsToggleRow(
                 label = stringResource(Res.string.settings_haptic_feedback),
                 checked = hapticsEnabled,
@@ -74,7 +83,6 @@ fun SettingsBottomSheet(onDismiss: () -> Unit) {
                     GamePrefs.setHapticsEnabled(it)
                 }
             )
-
             SettingsToggleRow(
                 label = stringResource(Res.string.settings_notifications),
                 checked = notificationsEnabled,
@@ -83,7 +91,6 @@ fun SettingsBottomSheet(onDismiss: () -> Unit) {
                     GamePrefs.setNotificationsEnabled(it)
                 }
             )
-
             SettingsToggleRow(
                 label = stringResource(Res.string.settings_daily_reminder),
                 checked = puzzleReminderEnabled,
@@ -94,23 +101,50 @@ fun SettingsBottomSheet(onDismiss: () -> Unit) {
                 }
             )
 
-            // Theme: a value-picker row sized like the toggle rows — the current
-            // choice reads inline, the three options live in a dropdown.
-            // (Material You dynamic color was deliberately NOT exposed: the game's
-            // heavy use of direct brand colours means it only half-repaints — the
-            // dormant plumbing lives in ThemeController.dynamicColors if ever wanted.)
+            // Theme: a value-picker row sized like the toggle rows — the current choice reads
+            // inline, the three options live in a dropdown. (Material You dynamic color was
+            // deliberately NOT exposed: the game's heavy use of direct brand colours means it only
+            // half-repaints — the dormant plumbing lives in ThemeController.dynamicColors if wanted.)
             ThemePickerRow()
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                Text(stringResource(Res.string.button_done), fontWeight = FontWeight.Bold)
-            }
+            // ── About ─────────────────────────────────────────────────────
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            )
+            Text(
+                text = stringResource(Res.string.settings_about),
+                // Same size as the option rows (bodyLarge) so the header doesn't read as shrunken;
+                // bold weight is what marks it as a section label instead.
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            SettingsInfoRow(
+                label = stringResource(Res.string.settings_version),
+                value = "$appVersionName ($appVersionCode)"
+            )
+            val feedbackSubject = stringResource(Res.string.feedback_email_subject, appVersionName)
+            SettingsLinkRow(
+                label = stringResource(Res.string.settings_privacy_policy),
+                onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }
+            )
+            SettingsLinkRow(
+                label = stringResource(Res.string.settings_send_feedback),
+                onClick = {
+                    // Minimal percent-encoding for the subject so spaces/parens survive the mailto.
+                    val subject = feedbackSubject
+                        .replace(" ", "%20").replace("(", "%28").replace(")", "%29")
+                    uriHandler.openUri("mailto:$FEEDBACK_EMAIL?subject=$subject")
+                }
+            )
+            Text(
+                text = stringResource(Res.string.settings_licenses),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
@@ -130,6 +164,51 @@ private fun SettingsToggleRow(
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge)
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+/** Read-only label/value row (e.g. app version), sized like the toggle rows. */
+@Composable
+private fun SettingsInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** Tappable text row that opens an external target (privacy page, mail composer). It reads as an
+ *  inline link, not a button, so it's clickable without ripple/indication (interactionSource + null
+ *  indication) — a ripple wash on a bare text line looks out of place. */
+@Composable
+private fun SettingsLinkRow(label: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .heightIn(min = 48.dp)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 
@@ -155,14 +234,12 @@ private fun ThemePickerRow() {
     ) {
         Text(stringResource(Res.string.settings_theme), style = MaterialTheme.typography.bodyLarge)
         Box {
-            // Plain clickable row (not a TextButton) so the value + arrow sit flush
-            // with the row's right edge, exactly where the switches end.
+            // Plain clickable row (not a TextButton) so the value + arrow sit flush with the
+            // row's right edge, exactly where the switches end.
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .clickable { menuOpen = true }
-                    // Same 48dp minimum the switches enforce, so this row's height
-                    // matches the toggle rows exactly (and the tap target is proper).
                     .heightIn(min = 48.dp)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -181,11 +258,6 @@ private fun ThemePickerRow() {
             DropdownMenu(
                 expanded = menuOpen,
                 onDismissRequest = { menuOpen = false },
-                // Match the game's surfaces instead of M3's default menu container,
-                // but lifted a step above the sheet: a 10% onSurface wash lightens
-                // the panel in dark mode (where shadows can't separate same-colored
-                // surfaces) and gently darkens it in light. The hairline outline
-                // gives it a defined edge on the dark felt.
                 shape = RoundedCornerShape(12.dp),
                 containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
                     .compositeOver(MaterialTheme.colorScheme.surface),

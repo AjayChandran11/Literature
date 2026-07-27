@@ -58,6 +58,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.audio.SoundEvent
 import com.cards.game.literature.audio.SoundPlayer
 import com.cards.game.literature.preferences.GamePrefs
@@ -224,6 +226,7 @@ private fun BreakdownRow(
     status: HalfSuitStatus,
     index: Int,
     visible: Boolean,
+    myTeamId: String,
     myTeamName: String,
     opponentTeamName: String,
 ) {
@@ -245,15 +248,17 @@ private fun BreakdownRow(
         ),
         label = "rowOffset$index"
     )
+    // Attribute each half-suit by the local player's actual team id — NOT the "team_1"
+    // literal. Online players can be on team 2, in which case team_1 is the opponent.
     val claimedBy = when (status.claimedByTeamId) {
-        "team_1" -> myTeamName
-        "team_2" -> opponentTeamName
-        else -> stringResource(Res.string.result_unclaimed)
+        null -> stringResource(Res.string.result_unclaimed)
+        myTeamId -> myTeamName
+        else -> opponentTeamName
     }
     val claimColor = when (status.claimedByTeamId) {
-        "team_1" -> LightGreen
-        "team_2" -> CardRed
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+        null -> MaterialTheme.colorScheme.onSurfaceVariant
+        myTeamId -> LightGreen
+        else -> CardRed
     }
     Row(
         modifier = Modifier
@@ -323,20 +328,30 @@ fun ResultScreenContent(
 
     // ── Sound + haptics ──────────────────────────────────────────────────
     LaunchedEffect(Unit) {
-        if (uiState.isWinner) {
-            SoundPlayer.play(SoundEvent.GAME_WIN)
-            if (GamePrefs.isHapticsEnabled()) {
-                repeat(3) {
+        when {
+            // A draw is neither a win nor a loss — don't play the sour GAME_LOSE sound.
+            // A single soft haptic marks the moment without celebrating or mourning.
+            uiState.isDraw -> {
+                if (GamePrefs.isHapticsEnabled()) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    delay(80)
                 }
             }
-        } else {
-            SoundPlayer.play(SoundEvent.GAME_LOSE)
-            if (GamePrefs.isHapticsEnabled()) {
-                repeat(2) {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    delay(80)
+            uiState.isWinner -> {
+                SoundPlayer.play(SoundEvent.GAME_WIN)
+                if (GamePrefs.isHapticsEnabled()) {
+                    repeat(3) {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        delay(80)
+                    }
+                }
+            }
+            else -> {
+                SoundPlayer.play(SoundEvent.GAME_LOSE)
+                if (GamePrefs.isHapticsEnabled()) {
+                    repeat(2) {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        delay(80)
+                    }
                 }
             }
         }
@@ -514,6 +529,7 @@ fun ResultScreenContent(
                         status = status,
                         index = index,
                         visible = breakdownVisible,
+                        myTeamId = uiState.myTeamId,
                         myTeamName = myTeamDisplayName,
                         opponentTeamName = opponentTeamDisplayName,
                     )
@@ -549,6 +565,7 @@ fun ResultScreenContent(
                 // fit without wrapping ("Hom"/"e") at the narrow weight(1f) width.
                 OutlinedButton(
                     onClick = {
+                        Analytics.log(AnalyticsEvent.ResultShared)
                         shareScope.launch {
                             val bitmap = shareLayer.toImageBitmap()
                             Sharer.shareImage(imageBitmapToPng(bitmap), shareCaption)
@@ -702,6 +719,7 @@ private val previewWinState = ResultUiState(
     opponentTeamScore = 3,
     myTeamName = "Team Alpha",
     opponentTeamName = "Team Beta",
+    myTeamId = "team_1",
     isWinner = true,
     isDraw = false,
     halfSuitBreakdown = previewBreakdown,

@@ -15,6 +15,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.cards.game.literature.model.GamePhase
 import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.repository.ConnectionState
+import com.cards.game.literature.repository.FatalSessionError
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.repository.ReconnectInfo
 import com.cards.game.literature.model.ReactionType
@@ -42,6 +43,7 @@ fun OnlineGameScreen(
     val uiState by viewModel.uiState.collectAsState()
     val connectionState by onlineRepository.connectionState.collectAsState()
     val reconnectCountdowns by onlineRepository.reconnectCountdowns.collectAsState()
+    val fatalError by onlineRepository.fatalError.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
     var isQuitting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -84,6 +86,29 @@ fun OnlineGameScreen(
             dismissButton = {
                 TextButton(onClick = { showQuitDialog = false }) {
                     Text(stringResource(Res.string.button_keep_playing))
+                }
+            }
+        )
+    }
+
+    // Terminal session error (room gone after a server restart, or this build is too old for the
+    // server): the game can't resume, so surface it and leave rather than freezing on a stale board.
+    val fatal = fatalError
+    if (fatal != null) {
+        val message = when (fatal) {
+            FatalSessionError.ROOM_GONE -> stringResource(Res.string.error_room_gone)
+            FatalSessionError.UPDATE_REQUIRED -> stringResource(Res.string.error_update_required)
+        }
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text(stringResource(Res.string.dialog_session_ended_title), fontWeight = FontWeight.Bold) },
+            text = { Text(message) },
+            confirmButton = {
+                Button(onClick = {
+                    onlineRepository.leaveRoomAndReset()
+                    onQuit()
+                }) {
+                    Text(stringResource(Res.string.button_ok))
                 }
             }
         )

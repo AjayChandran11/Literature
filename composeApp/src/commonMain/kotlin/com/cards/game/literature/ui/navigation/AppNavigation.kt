@@ -22,6 +22,7 @@ import com.cards.game.literature.stats.currentEpochDay
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.ui.game.GameBoardScreen
 import com.cards.game.literature.ui.home.HomeScreen
+import com.cards.game.literature.ui.home.SettingsScreen
 import com.cards.game.literature.ui.lobby.LobbyScreen
 import com.cards.game.literature.ui.lobby.WaitingRoomScreen
 import com.cards.game.literature.preferences.OnboardingPrefs
@@ -38,14 +39,18 @@ object Routes {
     const val HOME = "home"
     const val GAME = "game/{playerName}/{playerCount}/{difficulty}"
     const val ONLINE_GAME = "online_game"
-    const val RESULT = "result"
+    // Carries the finished offline game's setup so "Play Again" can re-deal the same
+    // configuration directly, without bouncing the player back through the Home dialog.
+    const val RESULT = "result/{playerName}/{playerCount}/{difficulty}"
     const val RESULT_ONLINE = "result_online"
     const val LOBBY = "lobby/{playerName}?room={roomCode}"
     const val WAITING_ROOM = "waiting_room/{roomCode}"
     const val STATS = "stats"
     const val DAILY_PUZZLE = "daily_puzzle"
+    const val SETTINGS = "settings"
 
     fun game(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) = "game/$playerName/$playerCount/${difficulty.name}"
+    fun result(playerName: String, playerCount: Int, difficulty: BotDifficulty) = "result/$playerName/$playerCount/${difficulty.name}"
     fun lobby(playerName: String) = "lobby/$playerName"
     // Deep-link invite: lands in the lobby with the room code prefilled to auto-join.
     fun lobby(playerName: String, roomCode: String) = "lobby/$playerName?room=$roomCode"
@@ -120,6 +125,9 @@ fun AppNavigation() {
                 },
                 onOpenDailyPuzzle = {
                     navController.navigate(Routes.DAILY_PUZZLE)
+                },
+                onOpenSettings = {
+                    navController.navigate(Routes.SETTINGS)
                 }
             )
         }
@@ -130,6 +138,11 @@ fun AppNavigation() {
         }
         composable(Routes.DAILY_PUZZLE) {
             DailyPuzzleScreen(
+                onBack = { navController.popBackStack(Routes.HOME, inclusive = false) }
+            )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
                 onBack = { navController.popBackStack(Routes.HOME, inclusive = false) }
             )
         }
@@ -151,7 +164,7 @@ fun AppNavigation() {
                 playerCount = playerCount,
                 difficulty = difficulty,
                 onGameEnd = {
-                    navController.navigate(Routes.RESULT) {
+                    navController.navigate(Routes.result(playerName, playerCount, difficulty)) {
                         popUpTo(Routes.HOME)
                     }
                 },
@@ -218,10 +231,19 @@ fun AppNavigation() {
                 }
             )
         }
-        composable(Routes.RESULT) {
+        composable(Routes.RESULT) { backStackEntry ->
+            val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
+            val playerCount = backStackEntry.arguments?.getString("playerCount")?.toIntOrNull() ?: 6
+            val difficulty = backStackEntry.arguments?.getString("difficulty")
+                ?.let { runCatching { BotDifficulty.valueOf(it) }.getOrNull() }
+                ?: BotDifficulty.MEDIUM
             ResultScreen(
                 onPlayAgain = {
-                    navController.popBackStack(Routes.HOME, inclusive = false)
+                    // Re-deal a fresh game with the same setup — the player is at peak
+                    // "one more" intent, so skip the round-trip through the Home dialog.
+                    navController.navigate(Routes.game(playerName, playerCount, difficulty)) {
+                        popUpTo(Routes.HOME)
+                    }
                 },
                 onGoHome = {
                     navController.popBackStack(Routes.HOME, inclusive = false)
