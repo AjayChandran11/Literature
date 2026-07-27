@@ -7,6 +7,7 @@ import com.cards.game.literature.model.GamePhase
 import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.OnlineGameRepository
+import com.cards.game.literature.review.AppReview
 import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.StatsStore
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +35,10 @@ data class ResultUiState(
     /** True when this is an online game and the local player is the host. */
     val canRematch: Boolean = false
 )
+
+// Don't prompt for a review until the player has a few games behind them — a first-time winner
+// hasn't formed an opinion yet, and Play's quota is a scarce resource not to spend on them.
+private const val REVIEW_MIN_GAMES = 3
 
 class ResultViewModel(
     private val repository: GameRepository,
@@ -106,6 +111,12 @@ class ResultViewModel(
                 canRematch = onlineRepository != null &&
                     onlineRepository.roomState.value?.hostPlayerId == myPlayerId
             )
+
+            // A win is a natural high point to ask for a rating. Skip first-timers; Play's own
+            // quota decides whether the sheet actually shows and rate-limits how often.
+            if (myScore > oppScore && StatsStore.stats.value.gamesPlayed >= REVIEW_MIN_GAMES) {
+                AppReview.requestReview()
+            }
         }
 
         // Collect (rather than read once) — game recording may still be in flight when this
