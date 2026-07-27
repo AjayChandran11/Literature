@@ -53,6 +53,7 @@ import com.cards.game.literature.ui.theme.LightGreen
 import com.cards.game.literature.viewmodel.GameUiState
 import com.cards.game.literature.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -255,12 +256,13 @@ fun GameBoardContent(
         processedLogSize = gameLog.size
     }
 
-    // Error snackbar
+    // Error snackbar — one-shot events (failed asks/claims, server rejections). Replace any
+    // visible error with the newest rather than queueing a backlog of stale messages.
     val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearError()
+    LaunchedEffect(Unit) {
+        viewModel.errorEvents.collect { message ->
+            snackbarHostState.currentSnackbarData?.dismiss()
+            launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
         }
     }
 
