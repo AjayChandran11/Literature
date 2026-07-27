@@ -57,14 +57,14 @@ fun HomeScreen(
     onPlayOnline: (playerName: String) -> Unit = {},
     onJoinRoom: (playerName: String, roomCode: String) -> Unit = { _, _ -> },
     onOpenStats: () -> Unit = {},
-    onOpenDailyPuzzle: () -> Unit = {}
+    onOpenDailyPuzzle: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}
 ) {
     val session = koinInject<SessionStore>()
     var playerName by rememberSaveable { mutableStateOf(session.playerName) }
     val pendingInvite by DeepLinkHandler.pendingRoomCode.collectAsState()
     var showSetupDialog by remember { mutableStateOf(false) }
     var showOnlineGateDialog by remember { mutableStateOf(false) }
-    var showSettingsSheet by remember { mutableStateOf(false) }
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     // Flag the Daily Puzzle button with a "!" alert badge on the FIRST Home open of the day
@@ -244,7 +244,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                TextButton(onClick = { showSettingsSheet = true }) {
+                TextButton(onClick = onOpenSettings) {
                     Icon(
                         imageVector = Icons.Filled.Settings,
                         contentDescription = null,
@@ -260,10 +260,6 @@ fun HomeScreen(
                 }
             }
         }
-    }
-
-    if (showSettingsSheet) {
-        SettingsBottomSheet(onDismiss = { showSettingsSheet = false })
     }
 
     if (showSetupDialog) {

@@ -22,6 +22,7 @@ import com.cards.game.literature.stats.currentEpochDay
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.ui.game.GameBoardScreen
 import com.cards.game.literature.ui.home.HomeScreen
+import com.cards.game.literature.ui.home.SettingsScreen
 import com.cards.game.literature.ui.lobby.LobbyScreen
 import com.cards.game.literature.ui.lobby.WaitingRoomScreen
 import com.cards.game.literature.preferences.OnboardingPrefs
@@ -46,6 +47,7 @@ object Routes {
     const val WAITING_ROOM = "waiting_room/{roomCode}"
     const val STATS = "stats"
     const val DAILY_PUZZLE = "daily_puzzle"
+    const val SETTINGS = "settings"
 
     fun game(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) = "game/$playerName/$playerCount/${difficulty.name}"
     fun result(playerName: String, playerCount: Int, difficulty: BotDifficulty) = "result/$playerName/$playerCount/${difficulty.name}"
@@ -123,6 +125,9 @@ fun AppNavigation() {
                 },
                 onOpenDailyPuzzle = {
                     navController.navigate(Routes.DAILY_PUZZLE)
+                },
+                onOpenSettings = {
+                    navController.navigate(Routes.SETTINGS)
                 }
             )
         }
@@ -133,6 +138,11 @@ fun AppNavigation() {
         }
         composable(Routes.DAILY_PUZZLE) {
             DailyPuzzleScreen(
+                onBack = { navController.popBackStack(Routes.HOME, inclusive = false) }
+            )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
                 onBack = { navController.popBackStack(Routes.HOME, inclusive = false) }
             )
         }
