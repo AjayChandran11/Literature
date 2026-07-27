@@ -176,9 +176,10 @@ fun HomeScreen(
                     .fillMaxWidth(0.8f)
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
+                // Default disabled colors (onSurface 12%/38%) — NOT colorScheme.outline, which is a
+                // vivid green in the light theme and makes a disabled button read as tappable.
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    disabledContainerColor = MaterialTheme.colorScheme.outline
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text(stringResource(Res.string.home_new_game), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -405,9 +406,10 @@ private fun RoomInviteCard(
                 .fillMaxWidth()
                 .height(48.dp),
             shape = RoundedCornerShape(12.dp),
+            // Default disabled colors (onSurface 12%/38%) — NOT colorScheme.outline, a vivid green
+            // in the light theme that makes the disabled Join button read as tappable.
             colors = ButtonDefaults.buttonColors(
-                containerColor = primary,
-                disabledContainerColor = MaterialTheme.colorScheme.outline
+                containerColor = primary
             )
         ) {
             Text(
@@ -441,7 +443,7 @@ internal fun HomeStatsCard(stats: PlayerStats) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         HomeStatMini("${stats.gamesPlayed}", stringResource(Res.string.stats_games), Modifier.weight(1f))
-        HomeStatMini("${(stats.winRate * 100).toInt()}%", stringResource(Res.string.stats_wins), Modifier.weight(1f))
+        HomeStatMini("${(stats.winRate * 100).toInt()}%", stringResource(Res.string.stats_win_rate), Modifier.weight(1f))
         HomeStreakMini(stats, Modifier.weight(1f))
     }
 }

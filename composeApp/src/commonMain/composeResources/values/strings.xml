@@ -422,7 +422,7 @@
     <string name="stats_today">Today</string>
     <string name="stats_yesterday">Yesterday</string>
     <string name="stats_days_ago">%1$d days ago</string>
-    <string name="cd_home_stats_card">View your stats</string>
+    <string name="cd_home_stats_card">Your game stats</string>
     <string name="home_my_stats">My Stats</string>
 
     <!-- Achievements -->
