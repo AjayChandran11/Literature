@@ -15,6 +15,9 @@ class AnalyticsEventTest {
     private val sampleEvents: List<AnalyticsEvent> = listOf(
         AnalyticsEvent.GameStarted(mode = "online", teamSize = 3, hasBots = true, turnTimerSecs = null),
         AnalyticsEvent.GameFinished(mode = "offline_bots", won = false, teamSize = 2, durationSecs = 420L),
+        AnalyticsEvent.OnboardingFinished(completed = true),
+        AnalyticsEvent.TutorialCompleted,
+        AnalyticsEvent.ResultShared,
         AnalyticsEvent.DailyPuzzleOpened,
         AnalyticsEvent.DailyPuzzleSolved(kind = "wasted_ask", stars = 3, firstTry = true, streak = 7),
         AnalyticsEvent.InviteShared(surface = "waiting_room"),
@@ -31,6 +34,9 @@ class AnalyticsEventTest {
         assertEquals("invite_shared", AnalyticsEvent.InviteShared("waiting_room").name)
         assertEquals("invite_opened", AnalyticsEvent.InviteOpened.name)
         assertEquals("achievement_unlocked", AnalyticsEvent.AchievementUnlocked("X").name)
+        assertEquals("onboarding_finished", AnalyticsEvent.OnboardingFinished(true).name)
+        assertEquals("tutorial_completed", AnalyticsEvent.TutorialCompleted.name)
+        assertEquals("result_shared", AnalyticsEvent.ResultShared.name)
     }
 
     @Test
@@ -52,6 +58,8 @@ class AnalyticsEventTest {
 
         assertEquals(mapOf("surface" to "waiting_room"), AnalyticsEvent.InviteShared("waiting_room").params)
         assertEquals(mapOf("achievement_id" to "CASE_MASTER"), AnalyticsEvent.AchievementUnlocked("CASE_MASTER").params)
+        assertEquals(mapOf("completed" to true), AnalyticsEvent.OnboardingFinished(true).params)
+        assertEquals(mapOf("completed" to false), AnalyticsEvent.OnboardingFinished(false).params)
     }
 
     @Test

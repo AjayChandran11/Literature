@@ -70,7 +70,7 @@ object StatsStore {
                 mode = if (record.isOnline) "online" else "offline_bots",
                 won = record.outcome == Outcome.WIN,
                 teamSize = record.playerCount / 2,
-                durationSecs = null,
+                durationSecs = record.durationSecs,
             )
         )
 

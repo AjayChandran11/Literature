@@ -52,6 +52,12 @@ class OnlineGameRepository(
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val errors: Flow<String> = _errors.asSharedFlow()
 
+    // Set when the online session ends in a way reconnecting can't fix: the client is rejected
+    // (protocol too old) or the room no longer exists (server restarted and lost it). The UI
+    // observes this to leave the game with an explanation instead of freezing on a stale board.
+    private val _fatalError = MutableStateFlow<FatalSessionError?>(null)
+    val fatalError: StateFlow<FatalSessionError?> = _fatalError.asStateFlow()
+
     private val _playerEvents = MutableSharedFlow<PlayerConnectionEvent>(extraBufferCapacity = 16)
     val playerEvents: Flow<PlayerConnectionEvent> = _playerEvents.asSharedFlow()
 
@@ -106,8 +112,11 @@ class OnlineGameRepository(
                         try { webSocketSession?.close() } catch (_: Exception) {}
                     }
                 } else {
-                    // Network restored — reconnect immediately
-                    if (_connectionState.value != ConnectionState.CONNECTED
+                    // Network restored — reconnect immediately. Gated on shouldAutoReconnect so a
+                    // session we deliberately ended (left, or a terminal fatal error like the room
+                    // being gone) is NOT silently re-established on the next connectivity change.
+                    if (shouldAutoReconnect
+                        && _connectionState.value != ConnectionState.CONNECTED
                         && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()
                     ) {
                         autoReconnectJob?.cancel()
@@ -144,12 +153,14 @@ class OnlineGameRepository(
 
     suspend fun createRoom(playerName: String, playerCount: Int) {
         log.i { "Creating room: player=$playerName, count=$playerCount" }
+        _fatalError.value = null
         connectAndSend(ClientMessage.CreateRoom(playerName, playerCount))
     }
 
     suspend fun joinRoom(code: String, playerName: String) {
         roomCode = code.uppercase()
         log.i { "Joining room: code=$roomCode, player=$playerName" }
+        _fatalError.value = null
         connectAndSend(ClientMessage.JoinRoom(roomCode, playerName))
     }
 
@@ -216,6 +227,7 @@ class OnlineGameRepository(
         _gameState.value = null
         _roomState.value = null
         _reconnectCountdowns.value = emptyMap()
+        _fatalError.value = null
         lastSeenEventTimestamp = 0L
         needsEventReplay.value = false
         myPlayerId = ""
@@ -259,7 +271,10 @@ class OnlineGameRepository(
                 client.webSocket(urlString = "$serverUrl/game?v=${Protocol.VERSION}") {
                     webSocketSession = this
                     _connectionState.value = ConnectionState.CONNECTED
-                    reconnectAttempts = 0
+                    // NOTE: reconnectAttempts is reset on room ADMISSION (the first decoded message,
+                    // in handleServerMessage) — NOT here. A protocol-rejection or rate-limit close
+                    // lands right after this handshake succeeds, so resetting on connect kept the
+                    // backoff pinned near zero and the give-up cap never tripped: the ~1Hz storm.
                     log.i { "WebSocket connected" }
 
                     // Send the initial message
@@ -271,6 +286,14 @@ class OnlineGameRepository(
                         if (frame is Frame.Text) {
                             handleServerMessage(frame.readText())
                         }
+                    }
+
+                    // Incoming closed → the server hung up. A CANNOT_ACCEPT (1003) close is the
+                    // version gate: this build is too old and would be rejected on every retry,
+                    // so make it terminal instead of auto-reconnecting into a storm.
+                    if (closeReason.await()?.code == CloseReason.Codes.CANNOT_ACCEPT.code) {
+                        shouldAutoReconnect = false
+                        _fatalError.value = FatalSessionError.UPDATE_REQUIRED
                     }
                 }
             } catch (e: CancellationException) {
@@ -360,6 +383,11 @@ class OnlineGameRepository(
             return
         }
 
+        // Receiving a decoded server message proves the socket was admitted into the room flow
+        // (a rejected client is closed at the handshake and never gets this far). This is the
+        // correct place to reset the reconnect backoff — see the note at the handshake above.
+        reconnectAttempts = 0
+
         when (message) {
             is ServerMessage.RoomCreated -> {
                 roomCode = message.roomCode
@@ -419,7 +447,17 @@ class OnlineGameRepository(
             }
             is ServerMessage.Error -> {
                 log.w { "Server error: ${message.message}" }
-                _errors.emit(message.message)
+                // "Room not found" while we hold a session (roomCode set) means the room is gone —
+                // typically the server restarted and dropped all in-memory rooms. The socket stays
+                // open, so without this the player is stranded on a frozen board under a green
+                // "Reconnected" banner. Make it terminal so the UI can leave. An empty roomCode is a
+                // failed lobby join, which the lobby surfaces as an ordinary error instead.
+                if (roomCode.isNotEmpty() && message.message.contains("Room not found", ignoreCase = true)) {
+                    _fatalError.value = FatalSessionError.ROOM_GONE
+                    disconnect()
+                } else {
+                    _errors.emit(message.message)
+                }
             }
             is ServerMessage.RoomClosed -> {
                 log.i { "Room $roomCode closed" }
@@ -539,6 +577,14 @@ class OnlineGameRepository(
         // Do NOT cancel scope — it is application-lifetime (singleton). Cancelling it
         // permanently breaks connectAndSend for any subsequent online session.
     }
+}
+
+/** A terminal online-session condition the UI surfaces and then leaves on — reconnecting can't fix it. */
+enum class FatalSessionError {
+    /** The room is gone (e.g. the server restarted and lost its in-memory rooms). */
+    ROOM_GONE,
+    /** This client is too old for the server (protocol below MIN_SUPPORTED). */
+    UPDATE_REQUIRED
 }
 
 enum class ConnectionState {

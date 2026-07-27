@@ -17,6 +17,7 @@ import com.cards.game.literature.stats.PuzzleStatus
 import com.cards.game.literature.stats.PuzzleStore
 import com.cards.game.literature.stats.StatsStore
 import com.cards.game.literature.stats.currentEpochDay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,21 +66,26 @@ class DailyPuzzleViewModel(
     val uiState: StateFlow<DailyPuzzleUiState> = _uiState.asStateFlow()
 
     init {
-        val today = currentEpochDay()
-        val progress = PuzzleStore.today(today)
-        val puzzle = repository.todaysPuzzle(today)
-        _uiState.value = DailyPuzzleUiState(
-            loading = false,
-            puzzle = puzzle,
-            puzzleNumber = repository.puzzleNumber(today),
-            streak = progress.displayedStreak(today),
-            status = progress.status,
-            attemptsUsed = progress.attemptsUsed,
-            stars = progress.stars,
-            revealed = progress.status.isTerminal(),
-            howToSeen = puzzle?.let { progress.hasSeenHowTo(it.kind) } ?: true
-        )
         Analytics.log(AnalyticsEvent.DailyPuzzleOpened)
+        // Generate off the main thread — todaysPuzzle() deals a deck and replays a game, enough to
+        // jank the screen-open frame. Initial uiState is loading=true (the screen shows a loader);
+        // we post the finished puzzle here.
+        viewModelScope.launch(Dispatchers.Default) {
+            val today = currentEpochDay()
+            val progress = PuzzleStore.today(today)
+            val puzzle = repository.todaysPuzzle(today)
+            _uiState.value = DailyPuzzleUiState(
+                loading = false,
+                puzzle = puzzle,
+                puzzleNumber = repository.puzzleNumber(today),
+                streak = progress.displayedStreak(today),
+                status = progress.status,
+                attemptsUsed = progress.attemptsUsed,
+                stars = progress.stars,
+                revealed = progress.status.isTerminal(),
+                howToSeen = puzzle?.let { progress.hasSeenHowTo(it.kind) } ?: true
+            )
+        }
     }
 
     fun selectHalfSuit(halfSuit: HalfSuit) {

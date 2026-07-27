@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -59,7 +61,13 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 1 -> DeckPage(isActive = pagerState.currentPage == 1)
                 2 -> TeamsPage(isActive = pagerState.currentPage == 2)
                 3 -> AskPage()
-                4 -> ClaimPage(onFinish = onFinish, isActive = pagerState.currentPage == 4)
+                4 -> ClaimPage(
+                    onFinish = {
+                        Analytics.log(AnalyticsEvent.OnboardingFinished(completed = true))
+                        onFinish()
+                    },
+                    isActive = pagerState.currentPage == 4
+                )
             }
         }
 
@@ -73,7 +81,10 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 .statusBarsPadding()
                 .padding(end = 16.dp, top = 8.dp)
         ) {
-            TextButton(onClick = onFinish) {
+            TextButton(onClick = {
+                Analytics.log(AnalyticsEvent.OnboardingFinished(completed = false))
+                onFinish()
+            }) {
                 Text(stringResource(Res.string.onboarding_skip), color = onBackground.copy(alpha = 0.5f), fontSize = 14.sp)
             }
         }

@@ -22,5 +22,8 @@ data class MatchRecord(
     val myAsks: Int = 0,
     val myAsksSuccessful: Int = 0,
     val myClaims: Int = 0,
-    val myClaimsCorrect: Int = 0
+    val myClaimsCorrect: Int = 0,
+    /** Wall-clock length of the match in seconds; null when unknown (e.g. an online game joined
+     *  mid-session). Optional + defaulted so older persisted history deserialises unchanged. */
+    val durationSecs: Long? = null
 )

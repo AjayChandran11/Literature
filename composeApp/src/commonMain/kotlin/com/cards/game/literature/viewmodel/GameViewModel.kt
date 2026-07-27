@@ -6,8 +6,6 @@ import co.touchlab.kermit.Logger
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.bot.BotDifficulty
-import com.cards.game.literature.logic.CardTracker
-import com.cards.game.literature.logic.CardTrackerState
 import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.*
 import com.cards.game.literature.repository.GameRepository
@@ -60,7 +58,6 @@ data class GameUiState(
     val activePlayerId: String = "",
     val isLoading: Boolean = false,
     val isBotThinking: Boolean = false,
-    val errorMessage: String? = null,
     val myPlayerId: String = "player_0",
     val myTeamId: String = "team_1",
     val passSelection: PassSelectionUiState? = null
@@ -88,13 +85,22 @@ class GameViewModel(
     private val _uiState = MutableStateFlow(GameUiState(isOnline = isOnline))
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
+    // One-shot, user-facing errors (failed ask/claim, server rejections). Deliberately a
+    // SharedFlow rather than a field on GameUiState: updateUiState() rebuilds the whole state
+    // on every gameState emission, which used to wipe a sticky errorMessage before the snackbar
+    // could show it. Online rejections ("not your turn", claim races) also arrive out-of-band on
+    // OnlineGameRepository.errors, not as exceptions from the submit calls — a one-shot event fits
+    // both cases and can never be clobbered by a state refresh.
+    private val _errorEvents = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val errorEvents: SharedFlow<String> = _errorEvents.asSharedFlow()
+
+    private fun reportError(message: String?) {
+        message?.let { _errorEvents.tryEmit(it) }
+    }
+
     private val _gameLog = MutableStateFlow<List<GameEvent>>(emptyList())
     val gameLog: StateFlow<List<GameEvent>> = _gameLog.asStateFlow()
 
-    private val _trackerState = MutableStateFlow(CardTrackerState())
-    val trackerState: StateFlow<CardTrackerState> = _trackerState.asStateFlow()
-
-    private val cardTracker = CardTracker()
     private var myPlayerId = overridePlayerId ?: "player_0"
 
     // Per-game stat counters, tracked incrementally because the online
@@ -106,6 +112,9 @@ class GameViewModel(
     private var myClaimsCorrect = 0
     private var recordedGameId: String? = null
     private var lastDifficulty: BotDifficulty? = null
+    // Wall-clock start of the current match, stamped when play first goes IN_PROGRESS, for the
+    // game_finished duration metric. Null online if we joined after the game had already started.
+    private var gameStartedAtMillis: Long? = null
 
     fun setPlayerId(playerId: String) {
         myPlayerId = playerId
@@ -114,6 +123,9 @@ class GameViewModel(
     init {
         viewModelScope.launch {
             repository.gameState.filterNotNull().collect { state ->
+                if (state.phase == GamePhase.IN_PROGRESS && gameStartedAtMillis == null) {
+                    gameStartedAtMillis = currentTimeMillis()
+                }
                 updateUiState(state)
                 if (state.phase == GamePhase.FINISHED) {
                     maybeRecordGame(state)
@@ -124,6 +136,13 @@ class GameViewModel(
             repository.gameEvents.collect { event ->
                 _gameLog.update { it + event }
                 trackMyActions(event)
+            }
+        }
+        // Surface server-side rejections that arrive out-of-band rather than as exceptions from
+        // the submit calls — this is the only place the game screen learns of a rejected ask/claim.
+        if (repository is OnlineGameRepository) {
+            viewModelScope.launch {
+                repository.errors.collect { reportError(it) }
             }
         }
     }
@@ -153,6 +172,9 @@ class GameViewModel(
             myTeam.score < opponentTeam.score -> Outcome.LOSS
             else -> Outcome.DRAW
         }
+        val durationSecs = gameStartedAtMillis?.let {
+            ((currentTimeMillis() - it) / 1000).coerceAtLeast(0)
+        }
         val result = StatsStore.recordGame(
             gameId = state.gameId,
             record = MatchRecord(
@@ -166,7 +188,8 @@ class GameViewModel(
                 myAsks = myAsks,
                 myAsksSuccessful = myAsksSuccessful,
                 myClaims = myClaims,
-                myClaimsCorrect = myClaimsCorrect
+                myClaimsCorrect = myClaimsCorrect,
+                durationSecs = durationSecs
             )
         )
         // Newly unlocked achievements travel to the result screen via
@@ -192,13 +215,15 @@ class GameViewModel(
         myClaims = 0
         myClaimsCorrect = 0
         recordedGameId = null
+        gameStartedAtMillis = null
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 repository.createGame(playerName, playerCount, difficulty)
             } catch (e: Exception) {
                 log.e(e) { "Failed to start game" }
-                _uiState.update { it.copy(errorMessage = e.message, isLoading = false) }
+                _uiState.update { it.copy(isLoading = false) }
+                reportError(e.message)
             }
         }
     }
@@ -208,7 +233,7 @@ class GameViewModel(
             try {
                 repository.submitAsk(myPlayerId, targetId, card)
             } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = e.message) }
+                reportError(e.message)
             }
         }
     }
@@ -220,7 +245,7 @@ class GameViewModel(
                 repository.submitMultiAsk(myPlayerId, targetId, cards)
             } catch (e: Exception) {
                 log.e(e) { "Ask failed" }
-                _uiState.update { it.copy(errorMessage = e.message) }
+                reportError(e.message)
             }
         }
     }
@@ -232,13 +257,9 @@ class GameViewModel(
                 repository.submitClaim(declaration)
             } catch (e: Exception) {
                 log.e(e) { "Claim failed" }
-                _uiState.update { it.copy(errorMessage = e.message) }
+                reportError(e.message)
             }
         }
-    }
-
-    fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
     }
 
     private fun updateUiState(state: GameState) {
@@ -270,9 +291,6 @@ class GameViewModel(
                 isBot = player.isBot
             )
         }
-
-        val tracker = cardTracker.buildState(state.events, state.players, myPlayerId)
-        _trackerState.value = tracker
 
         val passSelection = state.pendingPass?.let { pending ->
             val isMine = pending.claimerId == myPlayerId
@@ -327,7 +345,7 @@ class GameViewModel(
                 repository.submitPassTarget(playerId)
             } catch (e: Exception) {
                 log.e(e) { "Pass selection failed" }
-                _uiState.update { it.copy(errorMessage = e.message) }
+                reportError(e.message)
             }
         }
     }

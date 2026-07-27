@@ -35,6 +35,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.core.splashscreen)
             implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+            implementation("com.google.android.play:review:2.0.2")
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -76,8 +77,8 @@ android {
         applicationId = "com.cards.game.literature"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 21
-        versionName = "1.1.6"
+        versionCode = 22
+        versionName = "1.1.7"
     }
     buildFeatures {
         buildConfig = true

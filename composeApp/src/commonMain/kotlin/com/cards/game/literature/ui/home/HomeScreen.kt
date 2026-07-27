@@ -57,14 +57,14 @@ fun HomeScreen(
     onPlayOnline: (playerName: String) -> Unit = {},
     onJoinRoom: (playerName: String, roomCode: String) -> Unit = { _, _ -> },
     onOpenStats: () -> Unit = {},
-    onOpenDailyPuzzle: () -> Unit = {}
+    onOpenDailyPuzzle: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}
 ) {
     val session = koinInject<SessionStore>()
     var playerName by rememberSaveable { mutableStateOf(session.playerName) }
     val pendingInvite by DeepLinkHandler.pendingRoomCode.collectAsState()
     var showSetupDialog by remember { mutableStateOf(false) }
     var showOnlineGateDialog by remember { mutableStateOf(false) }
-    var showSettingsSheet by remember { mutableStateOf(false) }
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     // Flag the Daily Puzzle button with a "!" alert badge on the FIRST Home open of the day
@@ -176,9 +176,10 @@ fun HomeScreen(
                     .fillMaxWidth(0.8f)
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
+                // Default disabled colors (onSurface 12%/38%) — NOT colorScheme.outline, which is a
+                // vivid green in the light theme and makes a disabled button read as tappable.
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    disabledContainerColor = MaterialTheme.colorScheme.outline
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text(stringResource(Res.string.home_new_game), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -243,7 +244,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                TextButton(onClick = { showSettingsSheet = true }) {
+                TextButton(onClick = onOpenSettings) {
                     Icon(
                         imageVector = Icons.Filled.Settings,
                         contentDescription = null,
@@ -259,10 +260,6 @@ fun HomeScreen(
                 }
             }
         }
-    }
-
-    if (showSettingsSheet) {
-        SettingsBottomSheet(onDismiss = { showSettingsSheet = false })
     }
 
     if (showSetupDialog) {
@@ -405,9 +402,10 @@ private fun RoomInviteCard(
                 .fillMaxWidth()
                 .height(48.dp),
             shape = RoundedCornerShape(12.dp),
+            // Default disabled colors (onSurface 12%/38%) — NOT colorScheme.outline, a vivid green
+            // in the light theme that makes the disabled Join button read as tappable.
             colors = ButtonDefaults.buttonColors(
-                containerColor = primary,
-                disabledContainerColor = MaterialTheme.colorScheme.outline
+                containerColor = primary
             )
         ) {
             Text(
@@ -441,7 +439,7 @@ internal fun HomeStatsCard(stats: PlayerStats) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         HomeStatMini("${stats.gamesPlayed}", stringResource(Res.string.stats_games), Modifier.weight(1f))
-        HomeStatMini("${(stats.winRate * 100).toInt()}%", stringResource(Res.string.stats_wins), Modifier.weight(1f))
+        HomeStatMini("${(stats.winRate * 100).toInt()}%", stringResource(Res.string.stats_win_rate), Modifier.weight(1f))
         HomeStreakMini(stats, Modifier.weight(1f))
     }
 }
