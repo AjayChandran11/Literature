@@ -118,6 +118,9 @@ class GameViewModel(
     private var myClaimsCorrect = 0
     private var recordedGameId: String? = null
     private var lastDifficulty: BotDifficulty? = null
+    // Wall-clock start of the current match, stamped when play first goes IN_PROGRESS, for the
+    // game_finished duration metric. Null online if we joined after the game had already started.
+    private var gameStartedAtMillis: Long? = null
 
     fun setPlayerId(playerId: String) {
         myPlayerId = playerId
@@ -126,6 +129,9 @@ class GameViewModel(
     init {
         viewModelScope.launch {
             repository.gameState.filterNotNull().collect { state ->
+                if (state.phase == GamePhase.IN_PROGRESS && gameStartedAtMillis == null) {
+                    gameStartedAtMillis = currentTimeMillis()
+                }
                 updateUiState(state)
                 if (state.phase == GamePhase.FINISHED) {
                     maybeRecordGame(state)
@@ -172,6 +178,9 @@ class GameViewModel(
             myTeam.score < opponentTeam.score -> Outcome.LOSS
             else -> Outcome.DRAW
         }
+        val durationSecs = gameStartedAtMillis?.let {
+            ((currentTimeMillis() - it) / 1000).coerceAtLeast(0)
+        }
         val result = StatsStore.recordGame(
             gameId = state.gameId,
             record = MatchRecord(
@@ -185,7 +194,8 @@ class GameViewModel(
                 myAsks = myAsks,
                 myAsksSuccessful = myAsksSuccessful,
                 myClaims = myClaims,
-                myClaimsCorrect = myClaimsCorrect
+                myClaimsCorrect = myClaimsCorrect,
+                durationSecs = durationSecs
             )
         )
         // Newly unlocked achievements travel to the result screen via
@@ -211,6 +221,7 @@ class GameViewModel(
         myClaims = 0
         myClaimsCorrect = 0
         recordedGameId = null
+        gameStartedAtMillis = null
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {

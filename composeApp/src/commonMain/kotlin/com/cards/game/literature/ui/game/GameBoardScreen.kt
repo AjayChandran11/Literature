@@ -31,6 +31,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.audio.SoundEvent
 import com.cards.game.literature.audio.SoundPlayer
 import com.cards.game.literature.bot.BotDifficulty
@@ -118,6 +120,7 @@ fun GameBoardScreen(
     LaunchedEffect(tutorialState.isActive) {
         if (isFirstGame && !tutorialState.isActive) {
             TutorialPrefs.markFirstGameCompleted()
+            Analytics.log(AnalyticsEvent.TutorialCompleted)
         }
     }
 

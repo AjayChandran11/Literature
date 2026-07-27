@@ -45,6 +45,19 @@ sealed class AnalyticsEvent(
         },
     )
 
+    /** Player left the intro carousel. [completed] = reached the end; false = tapped Skip.
+     *  Top of the first-time funnel — pairs with [TutorialCompleted] and [GameStarted]. */
+    class OnboardingFinished(completed: Boolean) : AnalyticsEvent(
+        name = "onboarding_finished",
+        params = mapOf("completed" to completed),
+    )
+
+    /** The first-game coached tutorial ran to completion. */
+    data object TutorialCompleted : AnalyticsEvent(name = "tutorial_completed")
+
+    /** Player shared the end-of-game result card (a growth surface distinct from a room invite). */
+    data object ResultShared : AnalyticsEvent(name = "result_shared")
+
     /** Player opened the Daily Puzzle screen. */
     data object DailyPuzzleOpened : AnalyticsEvent(name = "daily_puzzle_opened")
 

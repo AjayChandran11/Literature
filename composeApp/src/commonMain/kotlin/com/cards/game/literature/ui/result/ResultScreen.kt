@@ -58,6 +58,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.audio.SoundEvent
 import com.cards.game.literature.audio.SoundPlayer
 import com.cards.game.literature.preferences.GamePrefs
@@ -563,6 +565,7 @@ fun ResultScreenContent(
                 // fit without wrapping ("Hom"/"e") at the narrow weight(1f) width.
                 OutlinedButton(
                     onClick = {
+                        Analytics.log(AnalyticsEvent.ResultShared)
                         shareScope.launch {
                             val bitmap = shareLayer.toImageBitmap()
                             Sharer.shareImage(imageBitmapToPng(bitmap), shareCaption)
