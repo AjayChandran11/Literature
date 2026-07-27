@@ -8,8 +8,14 @@ import com.cards.game.literature.repository.OnlineGameRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 enum class LoadingOperation { CREATE, JOIN }
+
+// Give up waiting for room admission after this long. Without it, a graceful close before
+// admission (e.g. hitting the per-IP connection rate limit on a crowded Wi-Fi) emits neither an
+// error nor a room state, so the lobby spinner would spin forever.
+private const val ADMISSION_TIMEOUT_MS = 20_000L
 
 data class LobbyUiState(
     val loadingOperation: LoadingOperation? = null,
@@ -64,6 +70,7 @@ class LobbyViewModel(
             _uiState.update { it.copy(loadingOperation = LoadingOperation.CREATE, errorMessage = null) }
             serverReadyDeferred.await() // waits only if warmUp is still in progress
             onlineRepository.createRoom(playerName, playerCount)
+            guardAdmissionTimeout()
         }
     }
 
@@ -73,6 +80,29 @@ class LobbyViewModel(
             _uiState.update { it.copy(loadingOperation = LoadingOperation.JOIN, errorMessage = null) }
             serverReadyDeferred.await()
             onlineRepository.joinRoom(roomCode, playerName)
+            guardAdmissionTimeout()
+        }
+    }
+
+    /**
+     * Fails the pending create/join if the server never admits us into a room. Only acts while
+     * still loading, so a room state (navigates away) or an error (shown normally) that arrives
+     * first wins the race and this becomes a no-op — it can't disconnect a live session.
+     */
+    private fun guardAdmissionTimeout() {
+        viewModelScope.launch {
+            val admitted = withTimeoutOrNull(ADMISSION_TIMEOUT_MS) {
+                onlineRepository.roomState.filterNotNull().first()
+            }
+            if (admitted == null && _uiState.value.loadingOperation != null) {
+                _uiState.update {
+                    it.copy(
+                        loadingOperation = null,
+                        errorMessage = "Couldn't reach the room. Please check your connection and try again."
+                    )
+                }
+                onlineRepository.disconnect()
+            }
         }
     }
 
