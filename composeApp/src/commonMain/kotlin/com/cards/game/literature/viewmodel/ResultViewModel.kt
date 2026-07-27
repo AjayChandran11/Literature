@@ -23,6 +23,9 @@ data class ResultUiState(
     val opponentTeamScore: Int = 0,
     val myTeamName: String = "",
     val opponentTeamName: String = "",
+    /** The local player's team id — used to attribute half-suit claims to "my team" vs the
+     *  opponents. Must not be assumed "team_1": online players can be on team 2. */
+    val myTeamId: String = "",
     val isWinner: Boolean = false,
     val isDraw: Boolean = false,
     val halfSuitBreakdown: List<HalfSuitStatus> = emptyList(),
@@ -95,6 +98,7 @@ class ResultViewModel(
                 opponentTeamScore = oppScore,
                 myTeamName = myTeam?.name ?: "",
                 opponentTeamName = opponentTeam?.name ?: "",
+                myTeamId = myTeam?.id ?: "",
                 isWinner = myScore > oppScore,
                 isDraw = myScore == oppScore,
                 halfSuitBreakdown = state.halfSuitStatuses,
