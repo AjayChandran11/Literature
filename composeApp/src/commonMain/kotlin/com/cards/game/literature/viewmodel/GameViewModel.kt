@@ -6,8 +6,6 @@ import co.touchlab.kermit.Logger
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.bot.BotDifficulty
-import com.cards.game.literature.logic.CardTracker
-import com.cards.game.literature.logic.CardTrackerState
 import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.*
 import com.cards.game.literature.repository.GameRepository
@@ -103,10 +101,6 @@ class GameViewModel(
     private val _gameLog = MutableStateFlow<List<GameEvent>>(emptyList())
     val gameLog: StateFlow<List<GameEvent>> = _gameLog.asStateFlow()
 
-    private val _trackerState = MutableStateFlow(CardTrackerState())
-    val trackerState: StateFlow<CardTrackerState> = _trackerState.asStateFlow()
-
-    private val cardTracker = CardTracker()
     private var myPlayerId = overridePlayerId ?: "player_0"
 
     // Per-game stat counters, tracked incrementally because the online
@@ -297,9 +291,6 @@ class GameViewModel(
                 isBot = player.isBot
             )
         }
-
-        val tracker = cardTracker.buildState(state.events, state.players, myPlayerId)
-        _trackerState.value = tracker
 
         val passSelection = state.pendingPass?.let { pending ->
             val isMine = pending.claimerId == myPlayerId

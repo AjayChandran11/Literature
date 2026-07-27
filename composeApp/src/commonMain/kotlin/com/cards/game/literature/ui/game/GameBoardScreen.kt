@@ -30,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
@@ -851,22 +853,47 @@ private fun PersistentHeader(
 }
 
 /** Merged score + turn info in a single ~36dp row for landscape. */
+/**
+ * Online turn countdown, isolated into its own leaf so ticking it each second recomposes ONLY this
+ * text — not the whole header row (score, turn label). Owns the 60s state; [timerKey] (a turn/score
+ * composite) resets it. Renders nothing when offline or above 15s.
+ */
 @Composable
-private fun CompactHeaderRow(
-    uiState: GameUiState,
-    onHelpClick: () -> Unit = {},
-    timerPaused: Boolean = false
+private fun TurnTimerText(
+    timerKey: String,
+    timerPaused: Boolean,
+    isOnline: Boolean,
+    style: TextStyle,
+    normalColor: Color,
+    spacer: Dp,
 ) {
     var secondsRemaining by remember { mutableStateOf(60) }
-    val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
-
-    LaunchedEffect(timerKey, timerPaused) {
+    LaunchedEffect(timerKey, timerPaused, isOnline) {
+        if (!isOnline) return@LaunchedEffect
         secondsRemaining = 60
         while (secondsRemaining > 0 && !timerPaused) {
             delay(1000L)
             secondsRemaining--
         }
     }
+    if (isOnline && secondsRemaining <= 15) {
+        Spacer(modifier = Modifier.width(spacer))
+        Text(
+            stringResource(Res.string.game_timer_seconds, secondsRemaining),
+            style = style,
+            fontWeight = FontWeight.Bold,
+            color = if (secondsRemaining <= 10) CardRed else normalColor
+        )
+    }
+}
+
+@Composable
+private fun CompactHeaderRow(
+    uiState: GameUiState,
+    onHelpClick: () -> Unit = {},
+    timerPaused: Boolean = false
+) {
+    val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
 
     Row(
         modifier = Modifier
@@ -934,16 +961,14 @@ private fun CompactHeaderRow(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    if (uiState.isOnline && secondsRemaining <= 15) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            stringResource(Res.string.game_timer_seconds, secondsRemaining),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (secondsRemaining <= 10) CardRed
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    TurnTimerText(
+                        timerKey = timerKey,
+                        timerPaused = timerPaused,
+                        isOnline = uiState.isOnline,
+                        style = MaterialTheme.typography.bodySmall,
+                        normalColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        spacer = 6.dp,
+                    )
                 }
             }
         }
@@ -1175,19 +1200,9 @@ private fun TurnIndicatorBanner(
     onHelpClick: () -> Unit = {},
     timerPaused: Boolean = false
 ) {
-    // Local 60s countdown, reset on every game state change (ask, claim, turn change)
-    var secondsRemaining by remember { mutableStateOf(60) }
-
-    // Use activePlayerId + myHand size + scores as a composite key that changes on every action
+    // Composite key that changes on every action (turn change, ask, claim) — resets the countdown
+    // inside TurnTimerText below.
     val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
-
-    LaunchedEffect(timerKey, timerPaused) {
-        secondsRemaining = 60
-        while (secondsRemaining > 0 && !timerPaused) {
-            delay(1000L)
-            secondsRemaining--
-        }
-    }
 
     AnimatedVisibility(visible = uiState.phase == GamePhase.IN_PROGRESS) {
         // The gold "it's you" tint eases in rather than snapping.
@@ -1229,15 +1244,14 @@ private fun TurnIndicatorBanner(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary
                     )
-                    if (uiState.isOnline && secondsRemaining <= 15) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            stringResource(Res.string.game_timer_seconds, secondsRemaining),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = if (secondsRemaining <= 10) CardRed else MaterialTheme.colorScheme.secondary
-                        )
-                    }
+                    TurnTimerText(
+                        timerKey = timerKey,
+                        timerPaused = timerPaused,
+                        isOnline = uiState.isOnline,
+                        style = MaterialTheme.typography.titleMedium,
+                        normalColor = MaterialTheme.colorScheme.secondary,
+                        spacer = 8.dp,
+                    )
                 }
             } else if (uiState.isBotThinking) {
                 Row(
@@ -1267,16 +1281,14 @@ private fun TurnIndicatorBanner(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (uiState.isOnline && secondsRemaining <= 15) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            stringResource(Res.string.game_timer_seconds, secondsRemaining),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = if (secondsRemaining <= 10) CardRed
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    TurnTimerText(
+                        timerKey = timerKey,
+                        timerPaused = timerPaused,
+                        isOnline = uiState.isOnline,
+                        style = MaterialTheme.typography.titleMedium,
+                        normalColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        spacer = 8.dp,
+                    )
                 }
             }
             }
