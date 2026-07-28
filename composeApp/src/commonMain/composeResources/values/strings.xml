@@ -302,7 +302,7 @@
     <string name="help_button_description">How to play</string>
     <string name="help_title">How to Play</string>
     <string name="help_objective_title">Objective</string>
-    <string name="help_objective_body">Claim 5 of 8 half-suits before the other team to win.</string>
+    <string name="help_objective_body">Claim more half-suits than the other team to win — there are 8 in all.</string>
     <string name="help_deck_title">The Deck</string>
     <string name="help_deck_body">48 cards across 4 suits (♠ ♥ ♦ ♣). No 8s.\n\nEach suit splits into two half-suits:\n• Low: 2, 3, 4, 5, 6, 7\n• High: 9, 10, J, Q, K, A\n\nThat\'s 8 half-suits of 6 cards each.</string>
     <string name="help_teams_title">Teams</string>
@@ -328,6 +328,12 @@
     <string name="tutorial_action_buttons">On your turn, use these to ask for cards or claim a half-suit.</string>
     <string name="tutorial_tap_continue">Tap anywhere to continue</string>
     <string name="tutorial_tap_hand_tab">↓  Tap the Hand tab below  ↓</string>
+    <string name="tutorial_skip">Skip tutorial</string>
+    <string name="waiting_room_primer_title">New to Literature?</string>
+    <string name="waiting_room_primer_cta">See how to play</string>
+    <string name="cd_dismiss">Dismiss</string>
+    <string name="result_debrief_title">That was your first game!</string>
+    <string name="result_debrief_body">The goal: claim more half-suits than the other team — there are 8 in all. Ask opponents for the cards you need to complete a half-suit, then claim it.</string>
 
     <!-- Accessibility content descriptions -->
     <string name="cd_card">%1$s of %2$s</string>

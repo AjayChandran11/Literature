@@ -197,7 +197,7 @@ fun HomeScreen(
                     label = stringResource(Res.string.home_play_online),
                     enabled = playerName.isNotBlank(),
                     onClick = {
-                        if (!TutorialPrefs.isFirstGameCompleted()) {
+                        if (!TutorialPrefs.isFirstGameCompleted() && !TutorialPrefs.isOnlineGateDismissed()) {
                             showOnlineGateDialog = true
                         } else {
                             onPlayOnline(playerName.trim())
@@ -296,9 +296,10 @@ fun HomeScreen(
                 TextButton(
                     onClick = {
                         showOnlineGateDialog = false
-                        // Player chose to skip the offline tutorial — treat onboarding
-                        // as done so the gate dialog and in-game tooltips don't reappear.
-                        TutorialPrefs.markFirstGameCompleted()
+                        // Player chose to go online first. Suppress the gate so it doesn't
+                        // re-nag, but DON'T mark the first game complete — their first offline
+                        // game should still get the in-game tutorial (which is offline-only).
+                        TutorialPrefs.markOnlineGateDismissed()
                         onPlayOnline(playerName.trim())
                     }
                 ) {
