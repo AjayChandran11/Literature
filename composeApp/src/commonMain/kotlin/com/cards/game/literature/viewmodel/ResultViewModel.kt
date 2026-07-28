@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.GamePhase
 import com.cards.game.literature.model.HalfSuitStatus
+import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.review.AppReview
@@ -33,7 +34,9 @@ data class ResultUiState(
     val gameLog: List<GameEvent> = emptyList(),
     val unlockedAchievements: List<Achievement> = emptyList(),
     /** True when this is an online game and the local player is the host. */
-    val canRematch: Boolean = false
+    val canRematch: Boolean = false,
+    /** True only on the player's first completed game — gates the one-time debrief. */
+    val isFirstGame: Boolean = false
 )
 
 // Don't prompt for a review until the player has a few games behind them — a first-time winner
@@ -98,6 +101,11 @@ class ResultViewModel(
             val opponentTeam = state.teams.firstOrNull { it.id != myTeam?.id }
             val myScore = myTeam?.score ?: 0
             val oppScore = opponentTeam?.score ?: 0
+            // First-game debrief: gamesPlayed<=1 excludes veterans (updating users have many
+            // games), the flag makes it strictly once. gamesPlayed may still be 0 here if
+            // recording is in flight, but 0 and 1 both satisfy <=1, so it's read-order safe.
+            val isFirstGame = !TutorialPrefs.isFirstGameDebriefShown() &&
+                StatsStore.stats.value.gamesPlayed <= 1
             _uiState.value = ResultUiState(
                 myTeamScore = myScore,
                 opponentTeamScore = oppScore,
@@ -109,8 +117,10 @@ class ResultViewModel(
                 halfSuitBreakdown = state.halfSuitStatuses,
                 gameLog = state.events,
                 canRematch = onlineRepository != null &&
-                    onlineRepository.roomState.value?.hostPlayerId == myPlayerId
+                    onlineRepository.roomState.value?.hostPlayerId == myPlayerId,
+                isFirstGame = isFirstGame
             )
+            if (isFirstGame) TutorialPrefs.markFirstGameDebriefShown()
 
             // A win is a natural high point to ask for a rating. Skip first-timers; Play's own
             // quota decides whether the sheet actually shows and rate-limits how often.

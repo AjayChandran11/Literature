@@ -20,11 +20,14 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -43,6 +46,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -58,6 +62,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalInspectionMode
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.audio.SoundEvent
@@ -116,6 +121,8 @@ import literature.composeapp.generated.resources.cd_close_log
 import literature.composeapp.generated.resources.label_opponents
 import literature.composeapp.generated.resources.label_your_team
 import literature.composeapp.generated.resources.result_breakdown_title
+import literature.composeapp.generated.resources.result_debrief_body
+import literature.composeapp.generated.resources.result_debrief_title
 import literature.composeapp.generated.resources.result_draw
 import literature.composeapp.generated.resources.result_log_title
 import literature.composeapp.generated.resources.result_lose
@@ -325,6 +332,10 @@ fun ResultScreenContent(
     onRematch: () -> Unit = {}
 ) {
     val hapticFeedback = LocalHapticFeedback.current
+    // In a @Preview the LaunchedEffect entrance animations never fire, so start the reveal
+    // flags already-visible under inspection — the preview then shows the full screen
+    // (banner + breakdown rows + achievements) instead of a half-empty one.
+    val inInspection = LocalInspectionMode.current
 
     // ── Sound + haptics ──────────────────────────────────────────────────
     LaunchedEffect(Unit) {
@@ -358,7 +369,7 @@ fun ResultScreenContent(
     }
 
     // ── Banner entrance: visible after short delay ────────────────────────
-    var bannerVisible by remember { mutableStateOf(false) }
+    var bannerVisible by remember { mutableStateOf(inInspection) }
     LaunchedEffect(Unit) {
         delay(100)
         bannerVisible = true
@@ -389,7 +400,7 @@ fun ResultScreenContent(
     )
 
     // ── Breakdown stagger: reveal rows progressively ──────────────────────
-    var breakdownVisible by remember { mutableStateOf(false) }
+    var breakdownVisible by remember { mutableStateOf(inInspection) }
     LaunchedEffect(Unit) {
         delay(800)
         breakdownVisible = true
@@ -403,11 +414,18 @@ fun ResultScreenContent(
     val shareScope = rememberCoroutineScope()
     val shareCaption = stringResource(Res.string.share_result_caption, InviteLink.PLAY_STORE)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // safeDrawingPadding is on the Box (outside the scroll) so it frames the viewport as a fixed
+    // inset — inside verticalScroll it would scroll away and let content slide under the status
+    // bar. It also makes maxHeight the safe-area height, so the centering math below stays right.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                // min = the safe-area viewport height, so short results stay vertically centered
+                // but taller ones (first-game debrief + achievements) grow and scroll — clipped
+                // to the safe area, never under the status bar.
+                .heightIn(min = maxHeight)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -485,9 +503,15 @@ fun ResultScreenContent(
                 }
             }
 
+            // ── First-game debrief (teaching layer, shown once) ───────────
+            if (uiState.isFirstGame) {
+                Spacer(modifier = Modifier.height(20.dp))
+                FirstGameDebriefCard()
+            }
+
             // ── Achievement unlocks ───────────────────────────────────────
             if (uiState.unlockedAchievements.isNotEmpty()) {
-                var achievementsVisible by remember { mutableStateOf(false) }
+                var achievementsVisible by remember { mutableStateOf(inInspection) }
                 LaunchedEffect(Unit) {
                     delay(1200) // let the score count-up land first
                     achievementsVisible = true
@@ -616,14 +640,14 @@ fun ResultScreenContent(
                 onDismissRequest = onToggleLog,
                 sheetState = logSheetState,
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 24.dp)
-                ) {
+                // Cap the sheet at ~60% of the screen so it never blankets the whole result —
+                // the log is context, not a takeover. Header stays pinned; the list is the
+                // single scroll surface filling the rest (drag-to-dismiss engages at its top).
+                Column(modifier = Modifier.fillMaxHeight(0.6f)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 8.dp, bottom = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -639,11 +663,13 @@ fun ResultScreenContent(
                             )
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 360.dp)
+                            .weight(1f),
+                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         items(displayEvents) { event ->
                             GameLogEntry(event = event, fontSize = 13.sp)
@@ -695,6 +721,39 @@ private val previewBreakdown = listOf(
     HalfSuitStatus(HalfSuit.CLUBS_LOW, claimedByTeamId = "team_1"),
     HalfSuitStatus(HalfSuit.CLUBS_HIGH, claimedByTeamId = null),
 )
+
+/** One-time teaching card shown on the result of a player's very first game — reinforces the
+ *  win condition right after they've lived it. Gated by [ResultUiState.isFirstGame]. */
+@Composable
+private fun FirstGameDebriefCard(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                RoundedCornerShape(12.dp)
+            )
+            .padding(16.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text("💡", fontSize = 22.sp, modifier = Modifier.padding(end = 12.dp))
+        Column {
+            Text(
+                text = stringResource(Res.string.result_debrief_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(Res.string.result_debrief_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f),
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
 
 private val previewGameLog = buildList {
     repeat(30) { i ->
@@ -772,8 +831,7 @@ private fun PreviewResultWinWithAchievements() {
 }
 
 // More than MAX_UNLOCKS_SHOWN unlocks at once — exercises the "+N more" cap.
-// NOTE: the unlock card animates in after a delay, so use *interactive* preview
-// to see it on the full screen; the isolated card preview below shows it statically.
+// (Renders statically now — inspection mode starts the reveal flags visible.)
 @Preview(name = "Result — Win, capped achievements", showBackground = true)
 @Composable
 private fun PreviewResultWinWithManyAchievements() {
@@ -823,6 +881,52 @@ private fun PreviewResultWinWithLog() {
         ResultScreenContent(
             uiState = previewWinState,
             showLog = true,
+            onToggleLog = {},
+            onPlayAgain = {},
+            onGoHome = {}
+        )
+    }
+}
+
+// The one to open: first-game debrief + several achievements + full breakdown, all at once.
+@Preview(name = "Result — First game (debrief + achievements)", showBackground = true)
+@Composable
+private fun PreviewResultFirstGameFull() {
+    LiteratureTheme {
+        ResultScreenContent(
+            uiState = previewWinState.copy(
+                isFirstGame = true,
+                unlockedAchievements = listOf(
+                    Achievement.FIRST_WIN,
+                    Achievement.HAT_TRICK,
+                    Achievement.CLAIM_MASTER
+                )
+            ),
+            showLog = false,
+            onToggleLog = {},
+            onPlayAgain = {},
+            onGoHome = {}
+        )
+    }
+}
+
+// Same content forced into a short viewport so it overflows — exercises the scroll/centering
+// fix: the top (banner/score) stays reachable and top-anchored instead of clipping. (Preview
+// panes have no system-bar insets, so verify the status-bar clearance on-device.)
+@Preview(name = "Result — First game (short screen, scrolls)", showBackground = true, heightDp = 640)
+@Composable
+private fun PreviewResultFirstGameShort() {
+    LiteratureTheme {
+        ResultScreenContent(
+            uiState = previewWinState.copy(
+                isFirstGame = true,
+                unlockedAchievements = listOf(
+                    Achievement.FIRST_WIN,
+                    Achievement.HAT_TRICK,
+                    Achievement.CLAIM_MASTER
+                )
+            ),
+            showLog = false,
             onToggleLog = {},
             onPlayAgain = {},
             onGoHome = {}
