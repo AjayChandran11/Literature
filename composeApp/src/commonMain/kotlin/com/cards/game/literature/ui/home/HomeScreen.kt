@@ -34,6 +34,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.deeplink.DeepLinkHandler
+import com.cards.game.literature.festival.Festival
+import com.cards.game.literature.festival.FestivalCalendar
+import com.cards.game.literature.festival.IndependenceDayGreeting
+import com.cards.game.literature.festival.TricolorWordmark
 import com.cards.game.literature.preferences.SessionStore
 import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.stats.PlayerStats
@@ -65,6 +69,11 @@ fun HomeScreen(
     val pendingInvite by DeepLinkHandler.pendingRoomCode.collectAsState()
     var showSetupDialog by remember { mutableStateOf(false) }
     var showOnlineGateDialog by remember { mutableStateOf(false) }
+    // Festival theming — date + region gated, extensible (see FestivalCalendar). Only Independence
+    // Day (India) is defined: the wordmark accent runs Aug 13-17, the banner only on Aug 15.
+    val festival = remember { FestivalCalendar.active() }
+    val isIndependenceDay = festival == Festival.INDEPENDENCE_DAY
+    val showFestivalBanner = remember { FestivalCalendar.bannerActive() }
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     // Flag the Daily Puzzle button with a "!" alert badge on the FIRST Home open of the day
@@ -112,24 +121,45 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = stringResource(Res.string.suits_display),
-                fontSize = 48.sp,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.secondary
-            )
+            if (isIndependenceDay) {
+                TricolorWordmark(
+                    text = stringResource(Res.string.suits_display),
+                    baseStyle = LocalTextStyle.current,
+                    fontSize = 48.sp,
+                    textAlign = TextAlign.Center
+                )
+            } else {
+                Text(
+                    text = stringResource(Res.string.suits_display),
+                    fontSize = 48.sp,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(Res.string.home_title),
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.secondary
-            )
+            if (isIndependenceDay) {
+                TricolorWordmark(
+                    text = stringResource(Res.string.home_title),
+                    baseStyle = MaterialTheme.typography.displayMedium
+                )
+            } else {
+                Text(
+                    text = stringResource(Res.string.home_title),
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(Res.string.home_subtitle),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            if (showFestivalBanner) {
+                Spacer(modifier = Modifier.height(12.dp))
+                IndependenceDayGreeting()
+            }
 
             // Room invite from a deep link — prompt the player to join.
             pendingInvite?.let { code ->
