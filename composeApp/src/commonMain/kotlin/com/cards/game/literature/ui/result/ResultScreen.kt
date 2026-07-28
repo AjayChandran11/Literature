@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -32,13 +31,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -46,12 +42,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -89,7 +82,8 @@ import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.model.Suit
 import androidx.compose.foundation.border
 import com.cards.game.literature.stats.Achievement
-import com.cards.game.literature.ui.game.GameLogEntry
+import androidx.activity.compose.BackHandler
+import com.cards.game.literature.ui.game.GameLogScreen
 import com.cards.game.literature.ui.stats.AchievementUnlockCard
 import com.cards.game.literature.ui.stats.ui
 import com.cards.game.literature.ui.theme.CardRed
@@ -117,14 +111,12 @@ import literature.composeapp.generated.resources.button_home
 import literature.composeapp.generated.resources.button_play_again
 import literature.composeapp.generated.resources.button_rematch
 import literature.composeapp.generated.resources.button_share
-import literature.composeapp.generated.resources.cd_close_log
 import literature.composeapp.generated.resources.label_opponents
 import literature.composeapp.generated.resources.label_your_team
 import literature.composeapp.generated.resources.result_breakdown_title
 import literature.composeapp.generated.resources.result_debrief_body
 import literature.composeapp.generated.resources.result_debrief_title
 import literature.composeapp.generated.resources.result_draw
-import literature.composeapp.generated.resources.result_log_title
 import literature.composeapp.generated.resources.result_lose
 import literature.composeapp.generated.resources.result_show_log
 import literature.composeapp.generated.resources.result_unclaimed
@@ -626,58 +618,7 @@ fun ResultScreenContent(
             }
         }
 
-        // ── Game log in a modal bottom sheet ──────────────────────────────
-        // A sheet keeps the result layout stable — opening the log no longer
-        // reflows the whole screen the way the old inline expansion did.
-        if (showLog) {
-            val logSheetState = rememberModalBottomSheetState(
-                skipPartiallyExpanded = true
-            )
-            val displayEvents = uiState.gameLog.filterNot {
-                it is GameEvent.TurnChanged || it is GameEvent.GameStarted
-            }
-            ModalBottomSheet(
-                onDismissRequest = onToggleLog,
-                sheetState = logSheetState,
-            ) {
-                // Cap the sheet at ~60% of the screen so it never blankets the whole result —
-                // the log is context, not a takeover. Header stays pinned; the list is the
-                // single scroll surface filling the rest (drag-to-dismiss engages at its top).
-                Column(modifier = Modifier.fillMaxHeight(0.6f)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 20.dp, end = 8.dp, bottom = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            stringResource(Res.string.result_log_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        IconButton(onClick = onToggleLog) {
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = stringResource(Res.string.cd_close_log)
-                            )
-                        }
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(displayEvents) { event ->
-                            GameLogEntry(event = event, fontSize = 13.sp)
-                        }
-                    }
-                }
-            }
-        }
+        // Game log opens as a full-screen page (GameLogScreen), rendered below after the confetti.
 
         // ── Off-screen shareable card, captured on demand into shareLayer ──
         // Pushed far off-screen (not size 0 / alpha 0) so it's measured & drawn —
@@ -702,9 +643,15 @@ fun ResultScreenContent(
             }
         }
 
-        // ── Confetti (win only, on top of everything) ─────────────────────
-        if (uiState.isWinner) {
+        // ── Confetti (win only; hidden while the log page is open) ────────
+        if (uiState.isWinner && !showLog) {
             ConfettiOverlay()
+        }
+
+        // ── Game log — a full-screen page over the result ─────────────────
+        if (showLog) {
+            BackHandler { onToggleLog() }
+            GameLogScreen(events = uiState.gameLog, onClose = onToggleLog)
         }
     }
 }
