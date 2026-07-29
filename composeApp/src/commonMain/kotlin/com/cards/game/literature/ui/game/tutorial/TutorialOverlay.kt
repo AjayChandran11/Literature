@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,6 +86,12 @@ class TutorialState(initiallyActive: Boolean) {
         }
     }
 
+    /** End the tutorial early (Skip). The caller marks the first game complete
+     *  when [isActive] flips to false. */
+    fun skip() {
+        isActive = false
+    }
+
     fun reportBounds(step: TutorialStep, rect: Rect) {
         targetBounds[step] = rect
     }
@@ -108,6 +115,8 @@ fun TutorialOverlay(state: TutorialState) {
     val bounds = state.targetBounds[state.currentStep]
     val density = LocalDensity.current
     val accentColor = MaterialTheme.colorScheme.secondary
+    // Card + pointer follow the theme so dark mode isn't a jarring white slab.
+    val surfaceColor = MaterialTheme.colorScheme.surface
 
     // Pulse animation for the spotlight border
     val infiniteTransition = rememberInfiniteTransition(label = "spotlight")
@@ -219,7 +228,7 @@ fun TutorialOverlay(state: TutorialState) {
                     }
                     close()
                 }
-                drawPath(path, color = Color.White)
+                drawPath(path, color = surfaceColor)
             }
 
             // Tooltip card — use a Box that fills the space above/below the spotlight,
@@ -232,7 +241,7 @@ fun TutorialOverlay(state: TutorialState) {
                         .height(with(density) { (anchorY - triangleH).toDp() }),
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    TooltipCard(state = state, accentColor = accentColor)
+                    TooltipCard(state = state, accentColor = accentColor, surfaceColor = surfaceColor)
                 }
             } else {
                 // Card fills area from triangle base to bottom of screen, aligned to top
@@ -242,15 +251,32 @@ fun TutorialOverlay(state: TutorialState) {
                         .offset { IntOffset(0, (anchorY + triangleH).toInt()) },
                     contentAlignment = Alignment.TopCenter
                 ) {
-                    TooltipCard(state = state, accentColor = accentColor)
+                    TooltipCard(state = state, accentColor = accentColor, surfaceColor = surfaceColor)
                 }
             }
+        }
+
+        // Skip affordance — always on top (last child), so it wins taps over the
+        // scrim's tap-to-advance. Ends the tutorial; the caller marks the first
+        // game complete when the overlay deactivates. White reads on the dark scrim.
+        TextButton(
+            onClick = { state.skip() },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 4.dp, end = 8.dp)
+        ) {
+            Text(
+                text = stringResource(Res.string.tutorial_skip),
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 14.sp
+            )
         }
     }
 }
 
 @Composable
-private fun TooltipCard(state: TutorialState, accentColor: Color) {
+private fun TooltipCard(state: TutorialState, accentColor: Color, surfaceColor: Color) {
     val windowInfo = currentWindowAdaptiveInfo()
     val hintText = if (state.currentStep.requiresUserAction) {
         stringResource(Res.string.tutorial_tap_hand_tab)
@@ -266,7 +292,7 @@ private fun TooltipCard(state: TutorialState, accentColor: Color) {
             .widthIn(max = maxTooltipWidth)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
+            .background(surfaceColor)
             .padding(top = 16.dp, bottom = 12.dp, start = 16.dp, end = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -274,7 +300,7 @@ private fun TooltipCard(state: TutorialState, accentColor: Color) {
         Text(
             text = "${state.currentStep.ordinal + 1} / ${TutorialStep.entries.size}",
             style = MaterialTheme.typography.labelSmall,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             letterSpacing = 1.sp
         )
 
@@ -293,7 +319,7 @@ private fun TooltipCard(state: TutorialState, accentColor: Color) {
             text = tooltipTextForStep(state.currentStep),
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF1C1B1F),
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
             lineHeight = 22.sp
         )

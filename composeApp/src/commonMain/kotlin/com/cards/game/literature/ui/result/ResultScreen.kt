@@ -20,22 +20,21 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -43,11 +42,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalInspectionMode
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.audio.SoundEvent
@@ -72,6 +70,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -82,9 +82,14 @@ import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.model.Suit
+import com.cards.game.literature.model.isLow
+import com.cards.game.literature.model.isRed
+import com.cards.game.literature.model.suit
+import com.cards.game.literature.model.symbol
 import androidx.compose.foundation.border
 import com.cards.game.literature.stats.Achievement
-import com.cards.game.literature.ui.game.GameLogEntry
+import androidx.activity.compose.BackHandler
+import com.cards.game.literature.ui.game.GameLogScreen
 import com.cards.game.literature.ui.stats.AchievementUnlockCard
 import com.cards.game.literature.ui.stats.ui
 import com.cards.game.literature.ui.theme.CardRed
@@ -112,15 +117,25 @@ import literature.composeapp.generated.resources.button_home
 import literature.composeapp.generated.resources.button_play_again
 import literature.composeapp.generated.resources.button_rematch
 import literature.composeapp.generated.resources.button_share
-import literature.composeapp.generated.resources.cd_close_log
 import literature.composeapp.generated.resources.label_opponents
 import literature.composeapp.generated.resources.label_your_team
 import literature.composeapp.generated.resources.result_breakdown_title
+import literature.composeapp.generated.resources.result_debrief_body
+import literature.composeapp.generated.resources.result_debrief_title
 import literature.composeapp.generated.resources.result_draw
-import literature.composeapp.generated.resources.result_log_title
 import literature.composeapp.generated.resources.result_lose
+import literature.composeapp.generated.resources.ask_filter_high
+import literature.composeapp.generated.resources.ask_filter_low
+import literature.composeapp.generated.resources.cd_deck_open
+import literature.composeapp.generated.resources.cd_deck_ours
+import literature.composeapp.generated.resources.cd_deck_ours_stolen
+import literature.composeapp.generated.resources.cd_deck_theirs
+import literature.composeapp.generated.resources.cd_deck_theirs_stolen
+import literature.composeapp.generated.resources.deck_tracker_open
+import literature.composeapp.generated.resources.deck_tracker_ours
+import literature.composeapp.generated.resources.deck_tracker_theirs
 import literature.composeapp.generated.resources.result_show_log
-import literature.composeapp.generated.resources.result_unclaimed
+import literature.composeapp.generated.resources.result_steal_hint
 import literature.composeapp.generated.resources.result_win
 import literature.composeapp.generated.resources.result_share
 import literature.composeapp.generated.resources.share_result_caption
@@ -219,68 +234,157 @@ private fun ConfettiOverlay(modifier: Modifier = Modifier) {
     }
 }
 
-// ─── Breakdown row with stagger animation ─────────────────────────────────
+// ─── Half-suit breakdown: suit-chip grid ───────────────────────────────────
+
+/** Ownership of a half-suit from the local player's view: 1 = ours, 2 = theirs, 0 = open.
+ *  Online players can be on team 2, so this compares against the real [myTeamId], never "team_1". */
+private fun HalfSuitStatus.owner(myTeamId: String): Int = when (claimedByTeamId) {
+    null -> 0
+    myTeamId -> 1
+    else -> 2
+}
+
+/** A set is "stolen" when it was awarded to its owner by the OTHER team's failed claim
+ *  (claimCorrect == false) — the most dramatic beat in a game, marked with a ⚡. */
+private val HalfSuitStatus.isStolen: Boolean get() = claimCorrect == false
+
+/** Shared accessibility label for a half-suit cell — earned/stolen aware. */
+@Composable
+private fun deckContentDescription(status: HalfSuitStatus, myTeamId: String): String {
+    val name = status.halfSuit.displayName
+    return when (status.owner(myTeamId)) {
+        1 -> if (status.isStolen) stringResource(Res.string.cd_deck_ours_stolen, name)
+             else stringResource(Res.string.cd_deck_ours, name)
+        2 -> if (status.isStolen) stringResource(Res.string.cd_deck_theirs_stolen, name)
+             else stringResource(Res.string.cd_deck_theirs, name)
+        else -> stringResource(Res.string.cd_deck_open, name)
+    }
+}
+
+/** The eight half-suits as a 4×2 tinted chip grid — the whole breakdown.
+ *  Reuses the in-game DeckTracker vocabulary (suit glyph, Low/High, ownership tag);
+ *  a ⚡ marks any set won on the opponents' failed claim. */
+@Composable
+private fun SuitChipGrid(
+    statuses: List<HalfSuitStatus>,
+    myTeamId: String,
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        statuses.chunked(4).forEachIndexed { rowIndex, rowItems ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                rowItems.forEachIndexed { colIndex, status ->
+                    SuitChipCell(
+                        status = status,
+                        myTeamId = myTeamId,
+                        index = rowIndex * 4 + colIndex,
+                        visible = visible,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                // Pad a short final row so remaining cells keep their column width.
+                repeat(4 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        // Footnote: only when a set changed hands on a failed claim. Fades in just after
+        // the last chip (delay ≈ the 8th cell's) so it never pops ahead of the grid.
+        if (statuses.any { it.isStolen }) {
+            val hintAlpha by animateFloatAsState(
+                targetValue = if (visible) 1f else 0f,
+                animationSpec = tween(300, delayMillis = if (visible) 560 else 0, easing = EaseOut),
+                label = "stealHintAlpha"
+            )
+            Text(
+                text = "⚡ " + stringResource(Res.string.result_steal_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 2.dp)
+                    .graphicsLayer { alpha = hintAlpha }
+            )
+        }
+    }
+}
 
 @Composable
-private fun BreakdownRow(
+private fun SuitChipCell(
     status: HalfSuitStatus,
+    myTeamId: String,
     index: Int,
     visible: Boolean,
-    myTeamId: String,
-    myTeamName: String,
-    opponentTeamName: String,
+    modifier: Modifier = Modifier,
 ) {
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = 300,
-            delayMillis = if (visible) index * 60 else 0,
-            easing = EaseOut
-        ),
-        label = "rowAlpha$index"
+        animationSpec = tween(300, delayMillis = if (visible) 200 + index * 45 else 0, easing = EaseOut),
+        label = "chipAlpha$index"
     )
     val offsetY by animateFloatAsState(
-        targetValue = if (visible) 0f else 20f,
-        animationSpec = tween(
-            durationMillis = 300,
-            delayMillis = if (visible) index * 60 else 0,
-            easing = EaseOutBack
-        ),
-        label = "rowOffset$index"
+        targetValue = if (visible) 0f else 16f,
+        animationSpec = tween(300, delayMillis = if (visible) 200 + index * 45 else 0, easing = EaseOutBack),
+        label = "chipOffset$index"
     )
-    // Attribute each half-suit by the local player's actual team id — NOT the "team_1"
-    // literal. Online players can be on team 2, in which case team_1 is the opponent.
-    val claimedBy = when (status.claimedByTeamId) {
-        null -> stringResource(Res.string.result_unclaimed)
-        myTeamId -> myTeamName
-        else -> opponentTeamName
+
+    val owner = status.owner(myTeamId)
+    val bg = when (owner) {
+        1 -> LightGreen.copy(alpha = 0.20f)
+        2 -> CardRed.copy(alpha = 0.20f)
+        else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
     }
-    val claimColor = when (status.claimedByTeamId) {
-        null -> MaterialTheme.colorScheme.onSurfaceVariant
-        myTeamId -> LightGreen
-        else -> CardRed
+    val border = when (owner) {
+        1 -> LightGreen
+        2 -> CardRed
+        else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .graphicsLayer {
-                this.alpha = alpha
-                translationY = offsetY
-            },
-        horizontalArrangement = Arrangement.SpaceBetween
+    val ownLabel = when (owner) {
+        1 -> stringResource(Res.string.deck_tracker_ours)
+        2 -> stringResource(Res.string.deck_tracker_theirs)
+        else -> stringResource(Res.string.deck_tracker_open)
+    }
+    val ownColor = when (owner) {
+        1 -> LightGreen
+        2 -> CardRed
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val suit = status.halfSuit.suit
+    val suitColor = if (suit.isRed) CardRed else MaterialTheme.colorScheme.onSurface
+    val lowHigh = if (status.halfSuit.isLow) stringResource(Res.string.ask_filter_low)
+                  else stringResource(Res.string.ask_filter_high)
+    val cd = deckContentDescription(status, myTeamId)
+
+    Box(
+        modifier = modifier
+            .graphicsLayer { this.alpha = alpha; translationY = offsetY }
+            .clearAndSetSemantics { contentDescription = cd }
     ) {
-        Text(
-            status.halfSuit.displayName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            claimedBy,
-            style = MaterialTheme.typography.bodyMedium,
-            color = claimColor,
-            fontWeight = FontWeight.Medium
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(bg, RoundedCornerShape(9.dp))
+                .border(1.dp, border, RoundedCornerShape(9.dp))
+                .padding(vertical = 8.dp, horizontal = 3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(suit.symbol, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = suitColor)
+            Text(
+                lowHigh.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                ownLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = ownColor,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        if (status.isStolen) {
+            Text("⚡", fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+        }
     }
 }
 
@@ -325,6 +429,10 @@ fun ResultScreenContent(
     onRematch: () -> Unit = {}
 ) {
     val hapticFeedback = LocalHapticFeedback.current
+    // In a @Preview the LaunchedEffect entrance animations never fire, so start the reveal
+    // flags already-visible under inspection — the preview then shows the full screen
+    // (banner + breakdown rows + achievements) instead of a half-empty one.
+    val inInspection = LocalInspectionMode.current
 
     // ── Sound + haptics ──────────────────────────────────────────────────
     LaunchedEffect(Unit) {
@@ -358,7 +466,7 @@ fun ResultScreenContent(
     }
 
     // ── Banner entrance: visible after short delay ────────────────────────
-    var bannerVisible by remember { mutableStateOf(false) }
+    var bannerVisible by remember { mutableStateOf(inInspection) }
     LaunchedEffect(Unit) {
         delay(100)
         bannerVisible = true
@@ -389,7 +497,7 @@ fun ResultScreenContent(
     )
 
     // ── Breakdown stagger: reveal rows progressively ──────────────────────
-    var breakdownVisible by remember { mutableStateOf(false) }
+    var breakdownVisible by remember { mutableStateOf(inInspection) }
     LaunchedEffect(Unit) {
         delay(800)
         breakdownVisible = true
@@ -403,11 +511,18 @@ fun ResultScreenContent(
     val shareScope = rememberCoroutineScope()
     val shareCaption = stringResource(Res.string.share_result_caption, InviteLink.PLAY_STORE)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // safeDrawingPadding is on the Box (outside the scroll) so it frames the viewport as a fixed
+    // inset — inside verticalScroll it would scroll away and let content slide under the status
+    // bar. It also makes maxHeight the safe-area height, so the centering math below stays right.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                // min = the safe-area viewport height, so short results stay vertically centered
+                // but taller ones (first-game debrief + achievements) grow and scroll — clipped
+                // to the safe area, never under the status bar.
+                .heightIn(min = maxHeight)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -485,9 +600,15 @@ fun ResultScreenContent(
                 }
             }
 
+            // ── First-game debrief (teaching layer, shown once) ───────────
+            if (uiState.isFirstGame) {
+                Spacer(modifier = Modifier.height(20.dp))
+                FirstGameDebriefCard()
+            }
+
             // ── Achievement unlocks ───────────────────────────────────────
             if (uiState.unlockedAchievements.isNotEmpty()) {
-                var achievementsVisible by remember { mutableStateOf(false) }
+                var achievementsVisible by remember { mutableStateOf(inInspection) }
                 LaunchedEffect(Unit) {
                     delay(1200) // let the score count-up land first
                     achievementsVisible = true
@@ -516,24 +637,19 @@ fun ResultScreenContent(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                    .padding(12.dp)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                    .padding(14.dp)
             ) {
-                uiState.halfSuitBreakdown.forEachIndexed { index, status ->
-                    BreakdownRow(
-                        status = status,
-                        index = index,
-                        visible = breakdownVisible,
-                        myTeamId = uiState.myTeamId,
-                        myTeamName = myTeamDisplayName,
-                        opponentTeamName = opponentTeamDisplayName,
-                    )
-                }
+                SuitChipGrid(
+                    statuses = uiState.halfSuitBreakdown,
+                    myTeamId = uiState.myTeamId,
+                    visible = breakdownVisible
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -602,56 +718,7 @@ fun ResultScreenContent(
             }
         }
 
-        // ── Game log in a modal bottom sheet ──────────────────────────────
-        // A sheet keeps the result layout stable — opening the log no longer
-        // reflows the whole screen the way the old inline expansion did.
-        if (showLog) {
-            val logSheetState = rememberModalBottomSheetState(
-                skipPartiallyExpanded = true
-            )
-            val displayEvents = uiState.gameLog.filterNot {
-                it is GameEvent.TurnChanged || it is GameEvent.GameStarted
-            }
-            ModalBottomSheet(
-                onDismissRequest = onToggleLog,
-                sheetState = logSheetState,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            stringResource(Res.string.result_log_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        IconButton(onClick = onToggleLog) {
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = stringResource(Res.string.cd_close_log)
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 360.dp)
-                    ) {
-                        items(displayEvents) { event ->
-                            GameLogEntry(event = event, fontSize = 13.sp)
-                        }
-                    }
-                }
-            }
-        }
+        // Game log opens as a full-screen page (GameLogScreen), rendered below after the confetti.
 
         // ── Off-screen shareable card, captured on demand into shareLayer ──
         // Pushed far off-screen (not size 0 / alpha 0) so it's measured & drawn —
@@ -676,9 +743,15 @@ fun ResultScreenContent(
             }
         }
 
-        // ── Confetti (win only, on top of everything) ─────────────────────
-        if (uiState.isWinner) {
+        // ── Confetti (win only; hidden while the log page is open) ────────
+        if (uiState.isWinner && !showLog) {
             ConfettiOverlay()
+        }
+
+        // ── Game log — a full-screen page over the result ─────────────────
+        if (showLog) {
+            BackHandler { onToggleLog() }
+            GameLogScreen(events = uiState.gameLog, onClose = onToggleLog)
         }
     }
 }
@@ -686,15 +759,49 @@ fun ResultScreenContent(
 // ─── Preview data ──────────────────────────────────────────────────────────
 
 private val previewBreakdown = listOf(
-    HalfSuitStatus(HalfSuit.SPADES_LOW, claimedByTeamId = "team_1"),
-    HalfSuitStatus(HalfSuit.SPADES_HIGH, claimedByTeamId = "team_1"),
-    HalfSuitStatus(HalfSuit.HEARTS_LOW, claimedByTeamId = "team_2"),
-    HalfSuitStatus(HalfSuit.HEARTS_HIGH, claimedByTeamId = "team_2"),
-    HalfSuitStatus(HalfSuit.DIAMONDS_LOW, claimedByTeamId = "team_1"),
-    HalfSuitStatus(HalfSuit.DIAMONDS_HIGH, claimedByTeamId = "team_2"),
-    HalfSuitStatus(HalfSuit.CLUBS_LOW, claimedByTeamId = "team_1"),
-    HalfSuitStatus(HalfSuit.CLUBS_HIGH, claimedByTeamId = null),
+    HalfSuitStatus(HalfSuit.SPADES_LOW, claimedByTeamId = "team_1", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.SPADES_HIGH, claimedByTeamId = "team_1", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.HEARTS_LOW, claimedByTeamId = "team_2", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.HEARTS_HIGH, claimedByTeamId = "team_2", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.DIAMONDS_LOW, claimedByTeamId = "team_1", claimCorrect = true),
+    // Awarded to us by team_2's failed claim → "stolen" (⚡).
+    HalfSuitStatus(HalfSuit.DIAMONDS_HIGH, claimedByTeamId = "team_1", claimCorrect = false),
+    HalfSuitStatus(HalfSuit.CLUBS_LOW, claimedByTeamId = "team_1", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.CLUBS_HIGH, claimedByTeamId = "team_2", claimCorrect = true),
 )
+
+/** One-time teaching card shown on the result of a player's very first game — reinforces the
+ *  win condition right after they've lived it. Gated by [ResultUiState.isFirstGame]. */
+@Composable
+private fun FirstGameDebriefCard(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                RoundedCornerShape(12.dp)
+            )
+            .padding(16.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text("💡", fontSize = 22.sp, modifier = Modifier.padding(end = 12.dp))
+        Column {
+            Text(
+                text = stringResource(Res.string.result_debrief_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(Res.string.result_debrief_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f),
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
 
 private val previewGameLog = buildList {
     repeat(30) { i ->
@@ -772,8 +879,7 @@ private fun PreviewResultWinWithAchievements() {
 }
 
 // More than MAX_UNLOCKS_SHOWN unlocks at once — exercises the "+N more" cap.
-// NOTE: the unlock card animates in after a delay, so use *interactive* preview
-// to see it on the full screen; the isolated card preview below shows it statically.
+// (Renders statically now — inspection mode starts the reveal flags visible.)
 @Preview(name = "Result — Win, capped achievements", showBackground = true)
 @Composable
 private fun PreviewResultWinWithManyAchievements() {
@@ -823,6 +929,52 @@ private fun PreviewResultWinWithLog() {
         ResultScreenContent(
             uiState = previewWinState,
             showLog = true,
+            onToggleLog = {},
+            onPlayAgain = {},
+            onGoHome = {}
+        )
+    }
+}
+
+// The one to open: first-game debrief + several achievements + full breakdown, all at once.
+@Preview(name = "Result — First game (debrief + achievements)", showBackground = true)
+@Composable
+private fun PreviewResultFirstGameFull() {
+    LiteratureTheme {
+        ResultScreenContent(
+            uiState = previewWinState.copy(
+                isFirstGame = true,
+                unlockedAchievements = listOf(
+                    Achievement.FIRST_WIN,
+                    Achievement.HAT_TRICK,
+                    Achievement.CLAIM_MASTER
+                )
+            ),
+            showLog = false,
+            onToggleLog = {},
+            onPlayAgain = {},
+            onGoHome = {}
+        )
+    }
+}
+
+// Same content forced into a short viewport so it overflows — exercises the scroll/centering
+// fix: the top (banner/score) stays reachable and top-anchored instead of clipping. (Preview
+// panes have no system-bar insets, so verify the status-bar clearance on-device.)
+@Preview(name = "Result — First game (short screen, scrolls)", showBackground = true, heightDp = 640)
+@Composable
+private fun PreviewResultFirstGameShort() {
+    LiteratureTheme {
+        ResultScreenContent(
+            uiState = previewWinState.copy(
+                isFirstGame = true,
+                unlockedAchievements = listOf(
+                    Achievement.FIRST_WIN,
+                    Achievement.HAT_TRICK,
+                    Achievement.CLAIM_MASTER
+                )
+            ),
+            showLog = false,
             onToggleLog = {},
             onPlayAgain = {},
             onGoHome = {}

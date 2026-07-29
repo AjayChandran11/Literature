@@ -23,24 +23,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.HalfSuitStatus
-import com.cards.game.literature.model.Suit
+import com.cards.game.literature.model.isLow
 import com.cards.game.literature.model.isRed
+import com.cards.game.literature.model.suit
 import com.cards.game.literature.model.symbol
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.LightGreen
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
-
-private val HalfSuit.suit: Suit
-    get() = when (this) {
-        HalfSuit.SPADES_LOW, HalfSuit.SPADES_HIGH -> Suit.SPADES
-        HalfSuit.HEARTS_LOW, HalfSuit.HEARTS_HIGH -> Suit.HEARTS
-        HalfSuit.DIAMONDS_LOW, HalfSuit.DIAMONDS_HIGH -> Suit.DIAMONDS
-        HalfSuit.CLUBS_LOW, HalfSuit.CLUBS_HIGH -> Suit.CLUBS
-    }
-
-private val HalfSuit.isLow: Boolean get() = name.endsWith("_LOW")
 
 /**
  * Claim-state color, eased over 450ms so a tracker cell visibly transitions

@@ -57,3 +57,15 @@ val Suit.symbol: String
 
 val Suit.isRed: Boolean
     get() = this == Suit.HEARTS || this == Suit.DIAMONDS
+
+/** The playing-card suit a half-suit belongs to (e.g. SPADES_LOW → SPADES). */
+val HalfSuit.suit: Suit
+    get() = when (this) {
+        HalfSuit.SPADES_LOW, HalfSuit.SPADES_HIGH -> Suit.SPADES
+        HalfSuit.HEARTS_LOW, HalfSuit.HEARTS_HIGH -> Suit.HEARTS
+        HalfSuit.DIAMONDS_LOW, HalfSuit.DIAMONDS_HIGH -> Suit.DIAMONDS
+        HalfSuit.CLUBS_LOW, HalfSuit.CLUBS_HIGH -> Suit.CLUBS
+    }
+
+/** True for the low half (2–7), false for the high half (9–A). */
+val HalfSuit.isLow: Boolean get() = name.endsWith("_LOW")
