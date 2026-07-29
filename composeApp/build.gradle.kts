@@ -34,6 +34,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.core.splashscreen)
+            implementation(libs.installreferrer)
             implementation("androidx.lifecycle:lifecycle-process:2.8.7")
             implementation("com.google.android.play:review:2.0.2")
         }

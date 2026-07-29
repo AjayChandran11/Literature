@@ -86,4 +86,13 @@ object DeepLinkHandler {
         val candidate = (fromQuery ?: lastSegment).trim().uppercase()
         return if (ROOM_CODE_REGEX.matches(candidate)) candidate else null
     }
+
+    /**
+     * Pulls a room code out of a Play Install Referrer string (e.g. `room=ABC123` or
+     * `room=ABC123&utm_source=...`). The referrer is a bare query string with no leading
+     * `?`, so we prepend one and reuse [extractRoomCode]'s query parsing. Returns null for
+     * organic installs (no `room=`) or a malformed code.
+     */
+    fun extractRoomCodeFromReferrer(referrer: String?): String? =
+        extractRoomCode(referrer?.let { "?$it" })
 }
