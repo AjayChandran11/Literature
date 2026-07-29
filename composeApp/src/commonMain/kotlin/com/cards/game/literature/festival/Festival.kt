@@ -63,11 +63,12 @@ object FestivalCalendar {
     private fun inIndia(): Boolean = Locale.current.region == "IN"
 
     /** The festival whose ACCENT window covers [epochDay] (default today), or null. The tricolour
-     *  wordmark accent runs for a 5-day window; the greeting is shorter (see [bannerActive]). */
+     *  wordmark accent runs Aug 15–20 — nothing shows before the festival day; the greeting is
+     *  shorter, Aug 15 only (see [bannerActive]). */
     fun active(epochDay: Long = currentEpochDay()): Festival? {
         if (!inIndia()) return null
         val (_, m, d) = civilFromDays(epochDay)
-        return if (m == 8 && d in 13..17) Festival.INDEPENDENCE_DAY else null
+        return if (m == 8 && d in 15..20) Festival.INDEPENDENCE_DAY else null
     }
 
     /** The greeting shows only on the day itself (Aug 15). */
@@ -198,7 +199,7 @@ fun IndependenceDayGreeting(modifier: Modifier = Modifier) {
     }
 }
 
-// The date/region gate is off outside Aug 13-17 in India, so this preview is how to see the
+// The date/region gate is off outside Aug 15-20 in India, so this preview is how to see the
 // festival otherwise (animations are static in a preview — run it on a device to see them move).
 @Preview(name = "Independence Day — Home accent")
 @Composable

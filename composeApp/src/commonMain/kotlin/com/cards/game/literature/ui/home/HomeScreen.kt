@@ -70,7 +70,7 @@ fun HomeScreen(
     var showSetupDialog by remember { mutableStateOf(false) }
     var showOnlineGateDialog by remember { mutableStateOf(false) }
     // Festival theming — date + region gated, extensible (see FestivalCalendar). Only Independence
-    // Day (India) is defined: the wordmark accent runs Aug 13-17, the banner only on Aug 15.
+    // Day (India) is defined: the wordmark accent runs Aug 15-20, the banner only on Aug 15.
     val festival = remember { FestivalCalendar.active() }
     val isIndependenceDay = festival == Festival.INDEPENDENCE_DAY
     val showFestivalBanner = remember { FestivalCalendar.bannerActive() }
