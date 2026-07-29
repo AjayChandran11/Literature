@@ -35,15 +35,6 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
             return@webSocket
         }
 
-        // Rollout canary (temporary): a v1 client is one that sent no ?v= param. The
-        // tokenless-reconnect WARN only catches v1 clients that reconnect — this catches
-        // every v1 connect, so we can confirm legacy traffic is gone before raising
-        // Protocol.MIN_SUPPORTED to 2 (which hard-rejects v1 at the handshake above).
-        // Remove once the flip lands.
-        if (clientVersion == 1) {
-            log.warn("Legacy v1 client connected (no ?v= param) from {}", ip)
-        }
-
         var currentRoom: GameRoom? = null
         var currentPlayerId: String? = null
 
@@ -218,22 +209,15 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Player not found in room")
                                 continue
                             }
-                            // Token validation (soft rollout):
-                            // - a wrong token is always rejected
-                            // - v2+ clients must present their token (they always
-                            //   receive one in RoomCreated)
-                            // - legacy v1 clients may reconnect tokenless until
-                            //   Protocol.MIN_SUPPORTED is raised to 2
-                            val tokenValid = message.token == session.reconnectToken
-                            if (!tokenValid && (message.token.isNotEmpty() || clientVersion >= 2)) {
+                            // Token validation: v1 is rejected at the handshake, so every
+                            // client here is v2+ and was issued a reconnect token in
+                            // RoomCreated. A missing or wrong token is always rejected —
+                            // this closes the tokenless-reconnect session-hijack window.
+                            if (message.token != session.reconnectToken) {
                                 log.warn("[{}] Rejected reconnect for {} — invalid token (client v{})",
                                     room.roomCode, message.playerId, clientVersion)
                                 sendError("Session invalid — please rejoin the room")
                                 continue
-                            }
-                            if (!tokenValid) {
-                                log.warn("[{}] Tokenless legacy reconnect accepted for {} (client v{})",
-                                    room.roomCode, message.playerId, clientVersion)
                             }
                             session.session = this
                             session.protocolVersion = clientVersion

@@ -20,10 +20,12 @@ object Protocol {
     const val VERSION: Int = 3
 
     /**
-     * Oldest client protocol version the server still accepts. Raising this
-     * above 1 will reject outdated apps at connect time with an
-     * "update required" close reason — only do that once the active userbase
-     * has largely moved past the old versions.
+     * Oldest client protocol version the server still accepts. Set to 2 on
+     * 2026-07-29 to hard-reject legacy v1 clients (which sent no `?v=` param and
+     * could be session-hijacked via tokenless reconnect) at connect time with an
+     * "update required" close reason — done after the rollout canary confirmed no
+     * v1 traffic remained over ~2 weeks. Raise further only once the active
+     * userbase has largely moved past the intervening versions.
      */
-    const val MIN_SUPPORTED: Int = 1
+    const val MIN_SUPPORTED: Int = 2
 }
