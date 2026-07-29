@@ -70,6 +70,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -80,6 +82,10 @@ import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.model.Suit
+import com.cards.game.literature.model.isLow
+import com.cards.game.literature.model.isRed
+import com.cards.game.literature.model.suit
+import com.cards.game.literature.model.symbol
 import androidx.compose.foundation.border
 import com.cards.game.literature.stats.Achievement
 import androidx.activity.compose.BackHandler
@@ -118,8 +124,18 @@ import literature.composeapp.generated.resources.result_debrief_body
 import literature.composeapp.generated.resources.result_debrief_title
 import literature.composeapp.generated.resources.result_draw
 import literature.composeapp.generated.resources.result_lose
+import literature.composeapp.generated.resources.ask_filter_high
+import literature.composeapp.generated.resources.ask_filter_low
+import literature.composeapp.generated.resources.cd_deck_open
+import literature.composeapp.generated.resources.cd_deck_ours
+import literature.composeapp.generated.resources.cd_deck_ours_stolen
+import literature.composeapp.generated.resources.cd_deck_theirs
+import literature.composeapp.generated.resources.cd_deck_theirs_stolen
+import literature.composeapp.generated.resources.deck_tracker_open
+import literature.composeapp.generated.resources.deck_tracker_ours
+import literature.composeapp.generated.resources.deck_tracker_theirs
 import literature.composeapp.generated.resources.result_show_log
-import literature.composeapp.generated.resources.result_unclaimed
+import literature.composeapp.generated.resources.result_steal_hint
 import literature.composeapp.generated.resources.result_win
 import literature.composeapp.generated.resources.result_share
 import literature.composeapp.generated.resources.share_result_caption
@@ -218,68 +234,157 @@ private fun ConfettiOverlay(modifier: Modifier = Modifier) {
     }
 }
 
-// ─── Breakdown row with stagger animation ─────────────────────────────────
+// ─── Half-suit breakdown: suit-chip grid ───────────────────────────────────
+
+/** Ownership of a half-suit from the local player's view: 1 = ours, 2 = theirs, 0 = open.
+ *  Online players can be on team 2, so this compares against the real [myTeamId], never "team_1". */
+private fun HalfSuitStatus.owner(myTeamId: String): Int = when (claimedByTeamId) {
+    null -> 0
+    myTeamId -> 1
+    else -> 2
+}
+
+/** A set is "stolen" when it was awarded to its owner by the OTHER team's failed claim
+ *  (claimCorrect == false) — the most dramatic beat in a game, marked with a ⚡. */
+private val HalfSuitStatus.isStolen: Boolean get() = claimCorrect == false
+
+/** Shared accessibility label for a half-suit cell — earned/stolen aware. */
+@Composable
+private fun deckContentDescription(status: HalfSuitStatus, myTeamId: String): String {
+    val name = status.halfSuit.displayName
+    return when (status.owner(myTeamId)) {
+        1 -> if (status.isStolen) stringResource(Res.string.cd_deck_ours_stolen, name)
+             else stringResource(Res.string.cd_deck_ours, name)
+        2 -> if (status.isStolen) stringResource(Res.string.cd_deck_theirs_stolen, name)
+             else stringResource(Res.string.cd_deck_theirs, name)
+        else -> stringResource(Res.string.cd_deck_open, name)
+    }
+}
+
+/** The eight half-suits as a 4×2 tinted chip grid — the whole breakdown.
+ *  Reuses the in-game DeckTracker vocabulary (suit glyph, Low/High, ownership tag);
+ *  a ⚡ marks any set won on the opponents' failed claim. */
+@Composable
+private fun SuitChipGrid(
+    statuses: List<HalfSuitStatus>,
+    myTeamId: String,
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        statuses.chunked(4).forEachIndexed { rowIndex, rowItems ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                rowItems.forEachIndexed { colIndex, status ->
+                    SuitChipCell(
+                        status = status,
+                        myTeamId = myTeamId,
+                        index = rowIndex * 4 + colIndex,
+                        visible = visible,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                // Pad a short final row so remaining cells keep their column width.
+                repeat(4 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        // Footnote: only when a set changed hands on a failed claim. Fades in just after
+        // the last chip (delay ≈ the 8th cell's) so it never pops ahead of the grid.
+        if (statuses.any { it.isStolen }) {
+            val hintAlpha by animateFloatAsState(
+                targetValue = if (visible) 1f else 0f,
+                animationSpec = tween(300, delayMillis = if (visible) 560 else 0, easing = EaseOut),
+                label = "stealHintAlpha"
+            )
+            Text(
+                text = "⚡ " + stringResource(Res.string.result_steal_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 2.dp)
+                    .graphicsLayer { alpha = hintAlpha }
+            )
+        }
+    }
+}
 
 @Composable
-private fun BreakdownRow(
+private fun SuitChipCell(
     status: HalfSuitStatus,
+    myTeamId: String,
     index: Int,
     visible: Boolean,
-    myTeamId: String,
-    myTeamName: String,
-    opponentTeamName: String,
+    modifier: Modifier = Modifier,
 ) {
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = 300,
-            delayMillis = if (visible) index * 60 else 0,
-            easing = EaseOut
-        ),
-        label = "rowAlpha$index"
+        animationSpec = tween(300, delayMillis = if (visible) 200 + index * 45 else 0, easing = EaseOut),
+        label = "chipAlpha$index"
     )
     val offsetY by animateFloatAsState(
-        targetValue = if (visible) 0f else 20f,
-        animationSpec = tween(
-            durationMillis = 300,
-            delayMillis = if (visible) index * 60 else 0,
-            easing = EaseOutBack
-        ),
-        label = "rowOffset$index"
+        targetValue = if (visible) 0f else 16f,
+        animationSpec = tween(300, delayMillis = if (visible) 200 + index * 45 else 0, easing = EaseOutBack),
+        label = "chipOffset$index"
     )
-    // Attribute each half-suit by the local player's actual team id — NOT the "team_1"
-    // literal. Online players can be on team 2, in which case team_1 is the opponent.
-    val claimedBy = when (status.claimedByTeamId) {
-        null -> stringResource(Res.string.result_unclaimed)
-        myTeamId -> myTeamName
-        else -> opponentTeamName
+
+    val owner = status.owner(myTeamId)
+    val bg = when (owner) {
+        1 -> LightGreen.copy(alpha = 0.20f)
+        2 -> CardRed.copy(alpha = 0.20f)
+        else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
     }
-    val claimColor = when (status.claimedByTeamId) {
-        null -> MaterialTheme.colorScheme.onSurfaceVariant
-        myTeamId -> LightGreen
-        else -> CardRed
+    val border = when (owner) {
+        1 -> LightGreen
+        2 -> CardRed
+        else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .graphicsLayer {
-                this.alpha = alpha
-                translationY = offsetY
-            },
-        horizontalArrangement = Arrangement.SpaceBetween
+    val ownLabel = when (owner) {
+        1 -> stringResource(Res.string.deck_tracker_ours)
+        2 -> stringResource(Res.string.deck_tracker_theirs)
+        else -> stringResource(Res.string.deck_tracker_open)
+    }
+    val ownColor = when (owner) {
+        1 -> LightGreen
+        2 -> CardRed
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val suit = status.halfSuit.suit
+    val suitColor = if (suit.isRed) CardRed else MaterialTheme.colorScheme.onSurface
+    val lowHigh = if (status.halfSuit.isLow) stringResource(Res.string.ask_filter_low)
+                  else stringResource(Res.string.ask_filter_high)
+    val cd = deckContentDescription(status, myTeamId)
+
+    Box(
+        modifier = modifier
+            .graphicsLayer { this.alpha = alpha; translationY = offsetY }
+            .clearAndSetSemantics { contentDescription = cd }
     ) {
-        Text(
-            status.halfSuit.displayName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            claimedBy,
-            style = MaterialTheme.typography.bodyMedium,
-            color = claimColor,
-            fontWeight = FontWeight.Medium
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(bg, RoundedCornerShape(9.dp))
+                .border(1.dp, border, RoundedCornerShape(9.dp))
+                .padding(vertical = 8.dp, horizontal = 3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(suit.symbol, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = suitColor)
+            Text(
+                lowHigh.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                ownLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = ownColor,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        if (status.isStolen) {
+            Text("⚡", fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+        }
     }
 }
 
@@ -532,24 +637,19 @@ fun ResultScreenContent(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                    .padding(12.dp)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                    .padding(14.dp)
             ) {
-                uiState.halfSuitBreakdown.forEachIndexed { index, status ->
-                    BreakdownRow(
-                        status = status,
-                        index = index,
-                        visible = breakdownVisible,
-                        myTeamId = uiState.myTeamId,
-                        myTeamName = myTeamDisplayName,
-                        opponentTeamName = opponentTeamDisplayName,
-                    )
-                }
+                SuitChipGrid(
+                    statuses = uiState.halfSuitBreakdown,
+                    myTeamId = uiState.myTeamId,
+                    visible = breakdownVisible
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -659,14 +759,15 @@ fun ResultScreenContent(
 // ─── Preview data ──────────────────────────────────────────────────────────
 
 private val previewBreakdown = listOf(
-    HalfSuitStatus(HalfSuit.SPADES_LOW, claimedByTeamId = "team_1"),
-    HalfSuitStatus(HalfSuit.SPADES_HIGH, claimedByTeamId = "team_1"),
-    HalfSuitStatus(HalfSuit.HEARTS_LOW, claimedByTeamId = "team_2"),
-    HalfSuitStatus(HalfSuit.HEARTS_HIGH, claimedByTeamId = "team_2"),
-    HalfSuitStatus(HalfSuit.DIAMONDS_LOW, claimedByTeamId = "team_1"),
-    HalfSuitStatus(HalfSuit.DIAMONDS_HIGH, claimedByTeamId = "team_2"),
-    HalfSuitStatus(HalfSuit.CLUBS_LOW, claimedByTeamId = "team_1"),
-    HalfSuitStatus(HalfSuit.CLUBS_HIGH, claimedByTeamId = null),
+    HalfSuitStatus(HalfSuit.SPADES_LOW, claimedByTeamId = "team_1", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.SPADES_HIGH, claimedByTeamId = "team_1", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.HEARTS_LOW, claimedByTeamId = "team_2", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.HEARTS_HIGH, claimedByTeamId = "team_2", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.DIAMONDS_LOW, claimedByTeamId = "team_1", claimCorrect = true),
+    // Awarded to us by team_2's failed claim → "stolen" (⚡).
+    HalfSuitStatus(HalfSuit.DIAMONDS_HIGH, claimedByTeamId = "team_1", claimCorrect = false),
+    HalfSuitStatus(HalfSuit.CLUBS_LOW, claimedByTeamId = "team_1", claimCorrect = true),
+    HalfSuitStatus(HalfSuit.CLUBS_HIGH, claimedByTeamId = "team_2", claimCorrect = true),
 )
 
 /** One-time teaching card shown on the result of a player's very first game — reinforces the
