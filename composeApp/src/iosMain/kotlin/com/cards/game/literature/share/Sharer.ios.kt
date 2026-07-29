@@ -17,4 +17,10 @@ actual object Sharer {
     actual fun shareImage(pngBytes: ByteArray, caption: String) {
         shareText(caption)
     }
+
+    // WhatsApp-first sharing is deferred to the iOS launch (like image sharing above); until
+    // then iOS callers fall back to the system share sheet via [shareText].
+    actual fun isWhatsAppAvailable(): Boolean = false
+
+    actual fun shareTextToWhatsApp(text: String): Boolean = false
 }

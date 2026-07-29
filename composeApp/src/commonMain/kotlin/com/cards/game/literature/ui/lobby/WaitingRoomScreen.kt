@@ -24,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -356,35 +357,75 @@ private fun RoomCodeCard(roomCode: String, modifier: Modifier = Modifier) {
     }
 }
 
+// WhatsApp brand green, with a dark ink for on-green text (white fails contrast on this green).
+private val WhatsAppGreen = Color(0xFF25D366)
+private val WhatsAppInk = Color(0xFF052E16)
+
 @Composable
 private fun InviteButton(roomCode: String, modifier: Modifier = Modifier) {
-    // Invite friends via the system share sheet (deep-link room invite).
+    // Deep-link room invite. WhatsApp-first: a direct WhatsApp CTA when it's installed (the
+    // dominant channel here), with the system share sheet as the "Other apps" fallback.
     val inviteText = stringResource(
         Res.string.invite_share_text,
         roomCode,
         InviteLink.forRoom(roomCode)
     )
-    OutlinedButton(
-        onClick = {
-            Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room"))
-            Sharer.shareText(inviteText)
-        },
-        enabled = roomCode.isNotBlank(),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
-        modifier = modifier
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Share,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(Res.string.waiting_room_invite),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+    val enabled = roomCode.isNotBlank()
+    // Resolved once — WhatsApp's install state won't change while this screen is up.
+    val whatsAppAvailable = remember { Sharer.isWhatsAppAvailable() }
+
+    val shareViaSystem = {
+        Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room", channel = "system"))
+        Sharer.shareText(inviteText)
+    }
+
+    if (whatsAppAvailable) {
+        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            Button(
+                onClick = {
+                    Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room", channel = "whatsapp"))
+                    // Fall back to the sheet if WhatsApp vanished between check and tap.
+                    if (!Sharer.shareTextToWhatsApp(inviteText)) Sharer.shareText(inviteText)
+                },
+                enabled = enabled,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = WhatsAppGreen,
+                    contentColor = WhatsAppInk,
+                ),
+            ) {
+                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(Res.string.waiting_room_invite_whatsapp),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            TextButton(onClick = shareViaSystem, enabled = enabled) {
+                Text(
+                    text = stringResource(Res.string.waiting_room_invite_other),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    } else {
+        // No WhatsApp installed — the original generic invite button.
+        OutlinedButton(
+            onClick = shareViaSystem,
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
+            modifier = modifier
+        ) {
+            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(Res.string.waiting_room_invite),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 

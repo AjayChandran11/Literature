@@ -56,7 +56,14 @@ class AnalyticsEventTest {
             solved.params,
         )
 
-        assertEquals(mapOf("surface" to "waiting_room"), AnalyticsEvent.InviteShared("waiting_room").params)
+        assertEquals(
+            mapOf("surface" to "waiting_room", "channel" to "system"),
+            AnalyticsEvent.InviteShared("waiting_room").params,
+        )
+        assertEquals(
+            mapOf("surface" to "waiting_room", "channel" to "whatsapp"),
+            AnalyticsEvent.InviteShared("waiting_room", channel = "whatsapp").params,
+        )
         assertEquals(mapOf("achievement_id" to "CASE_MASTER"), AnalyticsEvent.AchievementUnlocked("CASE_MASTER").params)
         assertEquals(mapOf("completed" to true), AnalyticsEvent.OnboardingFinished(true).params)
         assertEquals(mapOf("completed" to false), AnalyticsEvent.OnboardingFinished(false).params)
