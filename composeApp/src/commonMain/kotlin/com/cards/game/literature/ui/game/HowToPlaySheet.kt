@@ -40,6 +40,9 @@ fun HowToPlaySheet(onDismiss: () -> Unit) {
             )
 
             val sections = listOf(
+                Res.string.help_objective_title to Res.string.help_objective_body,
+                Res.string.help_deck_title to Res.string.help_deck_body,
+                Res.string.help_teams_title to Res.string.help_teams_body,
                 Res.string.help_asking_title to Res.string.help_asking_body,
                 Res.string.help_claiming_title to Res.string.help_claiming_body,
                 Res.string.help_no_cards_title to Res.string.help_no_cards_body,

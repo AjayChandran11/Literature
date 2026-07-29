@@ -9,4 +9,18 @@ actual object TutorialPrefs {
     actual fun markFirstGameCompleted() {
         NSUserDefaults.standardUserDefaults.setBool(true, forKey = "tutorial_done")
     }
+
+    actual fun isOnlineGateDismissed(): Boolean =
+        NSUserDefaults.standardUserDefaults.boolForKey("online_gate_dismissed")
+
+    actual fun markOnlineGateDismissed() {
+        NSUserDefaults.standardUserDefaults.setBool(true, forKey = "online_gate_dismissed")
+    }
+
+    actual fun isFirstGameDebriefShown(): Boolean =
+        NSUserDefaults.standardUserDefaults.boolForKey("first_debrief_shown")
+
+    actual fun markFirstGameDebriefShown() {
+        NSUserDefaults.standardUserDefaults.setBool(true, forKey = "first_debrief_shown")
+    }
 }

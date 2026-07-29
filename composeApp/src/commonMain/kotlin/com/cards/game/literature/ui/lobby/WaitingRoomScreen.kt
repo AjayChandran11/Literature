@@ -16,9 +16,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +36,8 @@ import com.cards.game.literature.bot.BotPersonalities
 import com.cards.game.literature.deeplink.InviteLink
 import com.cards.game.literature.repository.PlayerConnectionEvent
 import com.cards.game.literature.share.Sharer
+import com.cards.game.literature.stats.StatsStore
+import com.cards.game.literature.ui.game.HowToPlaySheet
 import com.cards.game.literature.ui.common.ConnectionBanner
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
@@ -56,6 +60,13 @@ fun WaitingRoomScreen(
     var selectedDifficulty by remember { mutableStateOf(BotDifficulty.MEDIUM) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
+    var showHowToPlay by remember { mutableStateOf(false) }
+    // Dismissible, and rememberSaveable so a uiMode/config recreation doesn't un-dismiss it.
+    var primerDismissed by rememberSaveable { mutableStateOf(false) }
+    // Primer targets a player who's never finished a game (e.g. a deep-link novice landing
+    // cold). gamesPlayed also covers online-first players, who never mark the offline tutorial.
+    val isNovice = remember { StatsStore.stats.value.gamesPlayed == 0 }
+    val showPrimer = isNovice && !primerDismissed
 
     BackHandler {
         showLeaveDialog = true
@@ -86,6 +97,10 @@ fun WaitingRoomScreen(
                 }
             }
         )
+    }
+
+    if (showHowToPlay) {
+        HowToPlaySheet(onDismiss = { showHowToPlay = false })
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -178,6 +193,13 @@ fun WaitingRoomScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         InviteButton(uiState.roomCode)
                         Spacer(modifier = Modifier.height(if (isCompact) 12.dp else 20.dp))
+                        if (showPrimer) {
+                            WaitingRoomPrimer(
+                                onHowToPlay = { showHowToPlay = true },
+                                onDismiss = { primerDismissed = true }
+                            )
+                            Spacer(modifier = Modifier.height(if (isCompact) 12.dp else 20.dp))
+                        }
                         if (uiState.isHost) {
                             HostSetupControls(
                                 players = uiState.players,
@@ -249,11 +271,21 @@ fun WaitingRoomScreen(
                 PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount)
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Portrait budget is tight: as a fixed sibling the primer starved the
+                // weight(1f) list to zero height. Ride it inside the list's own scroll instead.
                 PlayerList(
                     players = uiState.players,
                     myPlayerId = uiState.myPlayerId,
                     onSwitchTeam = viewModel::switchTeam,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    header = if (showPrimer) {
+                        {
+                            WaitingRoomPrimer(
+                                onHowToPlay = { showHowToPlay = true },
+                                onDismiss = { primerDismissed = true }
+                            )
+                        }
+                    } else null
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -372,12 +404,16 @@ private fun PlayerList(
     players: List<WaitingRoomPlayer>,
     myPlayerId: String,
     onSwitchTeam: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    header: (@Composable () -> Unit)? = null
 ) {
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        if (header != null) {
+            item { header() }
+        }
         items(players, key = { it.id }) { player ->
             // Same spring language as the card hand: joins fade+settle in,
             // leavers fade out, team switches glide to their new slot.
@@ -642,5 +678,65 @@ private fun ErrorSection(error: String, onClearError: () -> Unit) {
     LaunchedEffect(error) {
         kotlinx.coroutines.delay(3000)
         onClearError()
+    }
+}
+
+/** A dismissible "what is this game" card for first-timers waiting in the room — the invited
+ *  novice who lands here cold via a deep link. Reuses the objective/teams help copy and opens
+ *  the full [HowToPlaySheet] for the rest. Shown only when [gamesPlayed] is 0. */
+@Composable
+private fun WaitingRoomPrimer(
+    onHowToPlay: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(Res.string.waiting_room_primer_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = stringResource(Res.string.cd_dismiss),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+            Text(
+                text = stringResource(Res.string.help_objective_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = stringResource(Res.string.help_teams_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            TextButton(
+                onClick = onHowToPlay,
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(Res.string.waiting_room_primer_cta),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+        }
     }
 }
