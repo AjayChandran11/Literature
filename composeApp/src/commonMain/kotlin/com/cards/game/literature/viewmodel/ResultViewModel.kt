@@ -135,7 +135,10 @@ class ResultViewModel(
                 isWinner = myScore > oppScore,
                 isDraw = myScore == oppScore,
                 halfSuitBreakdown = state.halfSuitStatuses,
-                gameLog = state.events,
+                // Online, state.events is the wire view's ~20-event tail — the repo's
+                // client-accumulated log has the whole match. Offline state.events is
+                // already complete (and the accumulated fallback covers older servers).
+                gameLog = onlineRepository?.eventLog?.takeIf { it.isNotEmpty() } ?: state.events,
                 canRematch = onlineRepository != null &&
                     onlineRepository.roomState.value?.hostPlayerId == myPlayerId,
                 isFirstGame = isFirstGame

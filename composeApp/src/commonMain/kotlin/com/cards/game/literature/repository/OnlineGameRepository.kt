@@ -43,6 +43,17 @@ class OnlineGameRepository(
     private val _gameEvents = MutableSharedFlow<GameEvent>(replay = 0, extraBufferCapacity = 64)
     override val gameEvents: Flow<GameEvent> = _gameEvents.asSharedFlow()
 
+    // Full per-match event log, accumulated CLIENT-side. The wire view carries only
+    // the last ~20 events (PlayerGameView.recentEvents), which is all the synthetic
+    // GameState — and therefore the result screen — would otherwise ever see. The
+    // events streamed over the whole match are the complete story (minus anything
+    // missed while disconnected longer than the replay window). Copy-on-write list:
+    // appended from the socket loop, snapshot-read by ResultViewModel at construction;
+    // reset whenever a view for a NEW gameId arrives (rematch, next room).
+    private var _eventLog: List<GameEvent> = emptyList()
+    private var eventLogGameId: String? = null
+    val eventLog: List<GameEvent> get() = _eventLog
+
     private val _roomState = MutableStateFlow<RoomState?>(null)
     val roomState: StateFlow<RoomState?> = _roomState.asStateFlow()
 
@@ -409,6 +420,7 @@ class OnlineGameRepository(
                 applyGameView(message.view)
             }
             is ServerMessage.GameEventOccurred -> {
+                _eventLog = _eventLog + message.event
                 _gameEvents.emit(message.event)
                 lastSeenEventTimestamp = message.event.timestamp
 
@@ -535,6 +547,13 @@ class OnlineGameRepository(
 
         _gameState.value = syntheticState
 
+        // A view for a new match starts a fresh accumulated log. The first GameUpdate
+        // of a match arrives before its turn events, so nothing is lost to the reset.
+        if (syntheticState.gameId != eventLogGameId) {
+            eventLogGameId = syntheticState.gameId
+            _eventLog = emptyList()
+        }
+
         // On reconnect, replay events we missed while disconnected into _gameEvents
         // so the ViewModel's gameLog catches up. Only do this once after reconnecting,
         // not on every GameUpdate (which would duplicate events already arriving via
@@ -542,11 +561,29 @@ class OnlineGameRepository(
         // preventing a concurrent reconnect from being lost.
         if (needsEventReplay.compareAndSet(expect = true, update = false)) {
             val missedEvents = view.recentEvents.filter { it.timestamp > lastSeenEventTimestamp }
+            _eventLog = _eventLog + missedEvents
             for (event in missedEvents) {
                 _gameEvents.emit(event)
             }
             if (view.recentEvents.isNotEmpty()) {
                 lastSeenEventTimestamp = view.recentEvents.maxOf { it.timestamp }
+            }
+        }
+
+        // The engine's early-end path (a team runs out of cards -> bonus award, the
+        // way most real games finish) appends GameEnded to the state's event list
+        // WITHOUT returning it as a discrete event, so the server never broadcasts
+        // it and the streamed log has no closing line. Splice it from the view's
+        // tail — it is always the final event there — which completes the result
+        // log, the board strip's "Game Over" line, and the game-over notification.
+        // Final-claim endings arrive live via GameEventOccurred; the guard skips them.
+        if (view.phase == GamePhase.FINISHED && _eventLog.none { it is GameEvent.GameEnded }) {
+            view.recentEvents.lastOrNull { it is GameEvent.GameEnded }?.let { ended ->
+                _eventLog = _eventLog + ended
+                _gameEvents.emit(ended)
+                if (ended.timestamp > lastSeenEventTimestamp) {
+                    lastSeenEventTimestamp = ended.timestamp
+                }
             }
         }
 
