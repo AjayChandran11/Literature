@@ -164,10 +164,19 @@ fun GameBoardContent(
     // tutorial owns the screen, so it suppresses AND consumes the intro — otherwise
     // the curtain would pop mid-game the moment the tutorial finishes.
     var introDoneForGame by rememberSaveable { mutableStateOf("") }
-    val introVisible = uiState.phase == GamePhase.IN_PROGRESS &&
-        uiState.gameId.isNotEmpty() &&
+    // "An intro is still owed for this match": true from the moment the match id
+    // exists until the curtain's onDone consumes it. The your-turn cue defers on
+    // THIS, not on the curtain being rendered — a render-dependent guard left a
+    // frame hole where the turn's rising edge could land one composition before
+    // the curtain's first frame, chiming under it and again at the reveal.
+    val introPending = uiState.gameId.isNotEmpty() &&
         introDoneForGame != uiState.gameId &&
         tutorialState?.isActive != true
+    val introVisible = introPending && uiState.phase == GamePhase.IN_PROGRESS
+    // Arbitration between the two game-start cue sites (rising-edge effect and the
+    // intro's onDone): whichever plays first marks the match, the other stays
+    // silent. Mid-game turn chimes are unaffected — only onDone consults it.
+    var startCueDoneFor by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(uiState.gameId, tutorialState?.isActive) {
         if (tutorialState?.isActive == true && uiState.gameId.isNotEmpty()) {
             introDoneForGame = uiState.gameId
@@ -265,9 +274,17 @@ fun GameBoardContent(
     val autoSwitchWindowInfo = currentWindowAdaptiveInfo()
     LaunchedEffect(uiState.isMyTurn, tutorialState?.isActive) {
         if (uiState.isMyTurn && !previouslyMyTurn) {
-            // While the match-intro curtain is up the cue is deferred — the intro's
-            // onDone replays it so it lands with the board reveal, not under it.
-            if (!introVisible) {
+            // While an intro is still owed for this match the cue is deferred — the
+            // curtain's onDone replays it so it lands with the board reveal, never
+            // under it. Decided from LIVE state reads HERE, at execution time: this
+            // effect's lambda is retained from the composition where its keys last
+            // changed, so a captured composition-local (the old guard) could be a
+            // state-update stale — which is exactly how the chime doubled.
+            val introOwed = uiState.gameId.isNotEmpty() &&
+                introDoneForGame != uiState.gameId &&
+                tutorialState?.isActive != true
+            if (!introOwed) {
+                startCueDoneFor = uiState.gameId
                 SoundPlayer.play(SoundEvent.YOUR_TURN)
                 if (tutorialState?.isActive != true && !autoSwitchWindowInfo.useSideBySide) {
                     selectedTab = GameTab.HAND
@@ -659,11 +676,17 @@ fun GameBoardContent(
                     firstMoveName = uiState.activePlayerName
                 ),
                 onDone = {
-                    introDoneForGame = uiState.gameId
-                    // Replay the deferred "your turn" cue now that the board is revealed.
-                    if (uiState.isMyTurn) {
-                        SoundPlayer.play(SoundEvent.YOUR_TURN)
-                        if (!autoSwitchWindowInfo.useSideBySide) selectedTab = GameTab.HAND
+                    // Idempotent — a double-tap skip must not double the cue.
+                    if (introDoneForGame != uiState.gameId) {
+                        introDoneForGame = uiState.gameId
+                        // Replay the deferred "your turn" cue now that the board is
+                        // revealed — unless the rising-edge effect already played it
+                        // for this match (startCueDoneFor arbitrates the two sites).
+                        if (uiState.isMyTurn && startCueDoneFor != uiState.gameId) {
+                            startCueDoneFor = uiState.gameId
+                            SoundPlayer.play(SoundEvent.YOUR_TURN)
+                            if (!autoSwitchWindowInfo.useSideBySide) selectedTab = GameTab.HAND
+                        }
                     }
                 }
             )
