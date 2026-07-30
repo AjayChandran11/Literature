@@ -1,6 +1,5 @@
 package com.cards.game.literature.ui.result
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.EaseOutBack
@@ -13,9 +12,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -520,31 +516,44 @@ fun ResultScreenContent(
             verticalArrangement = Arrangement.Center
         ) {
             // ── Winner banner ─────────────────────────────────────────────
-            AnimatedVisibility(
-                visible = bannerVisible,
-                enter = slideInVertically(
-                    initialOffsetY = { -it / 2 },
-                    animationSpec = tween(500, easing = EaseOutBack)
-                ) + scaleIn(
-                    initialScale = 0.6f,
-                    animationSpec = tween(500, easing = EaseOutBack)
-                ) + fadeIn(animationSpec = tween(300))
-            ) {
-                Text(
-                    text = when {
-                        uiState.isDraw -> stringResource(Res.string.result_draw)
-                        uiState.isWinner -> stringResource(Res.string.result_win)
-                        else -> stringResource(Res.string.result_lose)
-                    },
-                    style = MaterialTheme.typography.displaySmall,
-                    color = when {
-                        uiState.isDraw -> MaterialTheme.colorScheme.secondary
-                        uiState.isWinner -> LightGreen
-                        else -> CardRed
-                    },
-                    modifier = Modifier.scale(if (uiState.isWinner) bannerScale else 1f)
-                )
-            }
+            // Space is reserved from the first frame (graphicsLayer reveal, not
+            // AnimatedVisibility): the banner entering must not reflow the column
+            // and shove the chrome below it around while the screen settles.
+            val bannerAlpha by animateFloatAsState(
+                targetValue = if (bannerVisible) 1f else 0f,
+                animationSpec = tween(300),
+                label = "bannerAlpha"
+            )
+            val bannerEnterScale by animateFloatAsState(
+                targetValue = if (bannerVisible) 1f else 0.6f,
+                animationSpec = tween(500, easing = EaseOutBack),
+                label = "bannerEnterScale"
+            )
+            val bannerDrop by animateFloatAsState(
+                targetValue = if (bannerVisible) 0f else -60f,
+                animationSpec = tween(500, easing = EaseOutBack),
+                label = "bannerDrop"
+            )
+            Text(
+                text = when {
+                    uiState.isDraw -> stringResource(Res.string.result_draw)
+                    uiState.isWinner -> stringResource(Res.string.result_win)
+                    else -> stringResource(Res.string.result_lose)
+                },
+                style = MaterialTheme.typography.displaySmall,
+                color = when {
+                    uiState.isDraw -> MaterialTheme.colorScheme.secondary
+                    uiState.isWinner -> LightGreen
+                    else -> CardRed
+                },
+                modifier = Modifier.graphicsLayer {
+                    alpha = bannerAlpha
+                    translationY = bannerDrop
+                    val s = bannerEnterScale * (if (uiState.isWinner) bannerScale else 1f)
+                    scaleX = s
+                    scaleY = s
+                }
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -605,16 +614,31 @@ fun ResultScreenContent(
                     delay(1200) // let the score count-up land first
                     achievementsVisible = true
                 }
+                val achievementsAlpha by animateFloatAsState(
+                    targetValue = if (achievementsVisible) 1f else 0f,
+                    animationSpec = tween(300),
+                    label = "achievementsAlpha"
+                )
+                val achievementsScale by animateFloatAsState(
+                    targetValue = if (achievementsVisible) 1f else 0.8f,
+                    animationSpec = tween(450, easing = EaseOutBack),
+                    label = "achievementsScale"
+                )
+                val achievementsRise by animateFloatAsState(
+                    targetValue = if (achievementsVisible) 0f else 48f,
+                    animationSpec = tween(450, easing = EaseOutBack),
+                    label = "achievementsRise"
+                )
                 Spacer(modifier = Modifier.height(20.dp))
-                AnimatedVisibility(
-                    visible = achievementsVisible,
-                    enter = slideInVertically(
-                        initialOffsetY = { it / 3 },
-                        animationSpec = tween(450, easing = EaseOutBack)
-                    ) + scaleIn(
-                        initialScale = 0.8f,
-                        animationSpec = tween(450, easing = EaseOutBack)
-                    ) + fadeIn(animationSpec = tween(300))
+                // Space reserved from the first frame — this card entering mid-reveal
+                // must not shove the breakdown down the screen.
+                Box(
+                    modifier = Modifier.graphicsLayer {
+                        alpha = achievementsAlpha
+                        translationY = achievementsRise
+                        scaleX = achievementsScale
+                        scaleY = achievementsScale
+                    }
                 ) {
                     AchievementUnlockCard(uiState.unlockedAchievements)
                 }
@@ -623,25 +647,41 @@ fun ResultScreenContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── Breakdown ─────────────────────────────────────────────────
-            Text(
-                stringResource(Res.string.result_breakdown_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary
+            // Title + surface card fade in WITH the chip reveal: an empty container
+            // arriving ahead of its content reads as broken chrome, especially on the
+            // light theme's bright background. Alpha, not visibility — space stays
+            // reserved so nothing below shifts.
+            val breakdownAlpha by animateFloatAsState(
+                targetValue = if (breakdownVisible) 1f else 0f,
+                animationSpec = tween(350),
+                label = "breakdownAlpha"
             )
-            Spacer(modifier = Modifier.height(10.dp))
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
-                    .padding(14.dp)
+                    .graphicsLayer { alpha = breakdownAlpha },
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                SuitChipGrid(
-                    statuses = uiState.halfSuitBreakdown,
-                    myTeamId = uiState.myTeamId,
-                    visible = breakdownVisible
+                Text(
+                    stringResource(Res.string.result_breakdown_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary
                 )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                        .padding(14.dp)
+                ) {
+                    SuitChipGrid(
+                        statuses = uiState.halfSuitBreakdown,
+                        myTeamId = uiState.myTeamId,
+                        visible = breakdownVisible
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

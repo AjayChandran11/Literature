@@ -269,7 +269,7 @@ private fun FinaleSequenceStage() = CeremonyStage(live = true) {
                 FakeBoard()
                 val dim by animateFloatAsState(
                     targetValue = if (dimmed) 0.55f else 0f,
-                    animationSpec = tween(700),
+                    animationSpec = tween(500),
                     label = "previewFinaleDim"
                 )
                 if (dim > 0f) {

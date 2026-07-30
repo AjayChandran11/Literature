@@ -174,11 +174,21 @@ fun GameBoardContent(
         }
     }
 
+    // Claim celebration: set by the game-event observer below, rendered as an
+    // overlay on top of the board, self-dismissing. The id keys re-animation
+    // when claims land back-to-back. Declared above the finale so its effect can
+    // check whether the ending move popped a celebration.
+    var claimCelebration by remember { mutableStateOf<ClaimCelebrationData?>(null) }
+    var claimCelebrationId by remember { mutableStateOf(0L) }
+
     // ── Match finale ─────────────────────────────────────────────────────
     // When the game finishes, hold navigation briefly instead of leaving the same
-    // frame the last claim lands (which cut its celebration off): the board dims
-    // while the claim banner plays out (~2s), the win/lose/draw stinger punches in,
-    // then the usual navigation to the result screen. Tap anywhere skips ahead.
+    // frame (which cut any final claim's celebration off): the board dims, the
+    // win/lose/draw stinger punches in, then the usual navigation to the result
+    // screen. Tap anywhere skips ahead. The hold ADAPTS: most real games end
+    // claim-less (a team runs out of cards and the engine awards the rest — no
+    // DeckClaimed fires), which needs only a short dim beat; a true final claim
+    // gets room for its celebration to breathe.
     var finaleDimmed by remember { mutableStateOf(false) }
     var showStinger by remember { mutableStateOf(false) }
     var finaleNavigated by remember { mutableStateOf(false) }
@@ -201,7 +211,10 @@ fun GameBoardContent(
             return@LaunchedEffect
         }
         finaleDimmed = true
-        delay(1800) // the final claim's celebration breathes (it self-dismisses at ~2s)
+        // Let the event observer process the update batch that flipped the phase —
+        // it's what sets claimCelebration when the ending move was a claim.
+        delay(150)
+        delay(if (claimCelebration != null) 1650 else 450)
         showStinger = true
         if (!finaleFeedbackDone) {
             finaleFeedbackDone = true
@@ -273,12 +286,6 @@ fun GameBoardContent(
             showClaimSheet = false
         }
     }
-
-    // Claim celebration: set by the game-event observer below, rendered as an
-    // overlay on top of the board, self-dismissing. The id keys re-animation
-    // when claims land back-to-back.
-    var claimCelebration by remember { mutableStateOf<ClaimCelebrationData?>(null) }
-    var claimCelebrationId by remember { mutableStateOf(0L) }
 
     // Sounds + haptics for game events
     LaunchedEffect(gameLog.size) {
@@ -605,7 +612,7 @@ fun GameBoardContent(
         // tapping it skips straight to the result screen.
         val finaleDim by animateFloatAsState(
             targetValue = if (finaleDimmed) 0.55f else 0f,
-            animationSpec = tween(700),
+            animationSpec = tween(500),
             label = "finaleDim"
         )
         if (finaleDim > 0f) {
