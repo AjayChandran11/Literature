@@ -7,7 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +35,7 @@ import com.cards.game.literature.model.isRed
 import com.cards.game.literature.ui.theme.CardFaceInk
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.LiteratureTheme
+import kotlinx.coroutines.delay
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.cd_card
 import org.jetbrains.compose.resources.stringResource
@@ -48,15 +49,24 @@ fun CardHand(
     val sortedEntries = handByHalfSuit.entries
         .sortedBy { it.key.ordinal }
 
+    // Deal window: for the first moment of this hand's life the cards cascade in
+    // row by row like a deal; cards that arrive later (successful asks) appear
+    // instantly — a stagger there would read as lag, not ceremony.
+    var dealStagger by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(1200)
+        dealStagger = false
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(
+        itemsIndexed(
             items = sortedEntries.toList(),
-            key = { it.key.ordinal }
-        ) { (halfSuit, cards) ->
+            key = { _, entry -> entry.key.ordinal }
+        ) { rowIndex, (halfSuit, cards) ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -79,12 +89,13 @@ fun CardHand(
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(
+                    itemsIndexed(
                         items = cards,
-                        key = { "${it.suit}_${it.value}" }
-                    ) { card ->
+                        key = { _, card -> "${card.suit}_${card.value}" }
+                    ) { colIndex, card ->
                         AnimatedCardView(
                             card = card,
+                            appearDelayMillis = if (dealStagger) rowIndex * 80 + colIndex * 40 else 0,
                             modifier = Modifier.animateItem(
                                 fadeInSpec = tween(250),
                                 fadeOutSpec = tween(250),
@@ -102,9 +113,17 @@ fun CardHand(
 }
 
 @Composable
-private fun AnimatedCardView(card: Card, modifier: Modifier = Modifier) {
+private fun AnimatedCardView(
+    card: Card,
+    modifier: Modifier = Modifier,
+    // Staggers the mount animation so an initial hand deals in card by card.
+    appearDelayMillis: Int = 0
+) {
     var appeared by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { appeared = true }
+    LaunchedEffect(Unit) {
+        if (appearDelayMillis > 0) delay(appearDelayMillis.toLong())
+        appeared = true
+    }
 
     val alpha by animateFloatAsState(
         targetValue = if (appeared) 1f else 0f,

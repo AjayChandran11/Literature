@@ -186,7 +186,14 @@ fun HomeScreen(
 
             OutlinedTextField(
                 value = playerName,
-                onValueChange = { playerName = it; session.playerName = it },
+                onValueChange = {
+                    // Cap at the server's name limit (GameWebSocket trims to 20) so what
+                    // you type is exactly what every player sees — and so offline games,
+                    // which never pass through the server, can't get a layout-breaking name.
+                    val capped = it.take(20)
+                    playerName = capped
+                    session.playerName = capped
+                },
                 label = { Text(stringResource(Res.string.home_player_name_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(0.8f),

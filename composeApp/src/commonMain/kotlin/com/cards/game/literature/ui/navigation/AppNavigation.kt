@@ -152,7 +152,12 @@ fun AppNavigation() {
             // setup dialog instead of sliding in like a regular page.
             enterTransition = {
                 scaleIn(initialScale = 0.92f, animationSpec = tween(350)) + fadeIn(tween(350))
-            }
+            },
+            // Leaving forward is the finale handoff: the stinger's full-screen wash
+            // must dissolve into the result screen — the default sideways slide
+            // smears it and reads as a glitch. Quitting home still pops with the
+            // default slide (popExitTransition is untouched).
+            exitTransition = { fadeOut(tween(350)) }
         ) { backStackEntry ->
             val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
             val playerCount = backStackEntry.arguments?.getString("playerCount")?.toIntOrNull() ?: 6
@@ -213,10 +218,12 @@ fun AppNavigation() {
         }
         composable(
             Routes.ONLINE_GAME,
-            // Same "deal into the game" entrance as the offline board.
+            // Same "deal into the game" entrance as the offline board, and the same
+            // finale-handoff dissolve on the way out (see Routes.GAME).
             enterTransition = {
                 scaleIn(initialScale = 0.92f, animationSpec = tween(350)) + fadeIn(tween(350))
-            }
+            },
+            exitTransition = { fadeOut(tween(350)) }
         ) {
             val onlineRepo = koinInject<OnlineGameRepository>()
             OnlineGameScreen(
@@ -231,7 +238,11 @@ fun AppNavigation() {
                 }
             )
         }
-        composable(Routes.RESULT) { backStackEntry ->
+        composable(
+            Routes.RESULT,
+            // Arrives from under the stinger wash — fade in place, no slide.
+            enterTransition = { fadeIn(tween(350)) }
+        ) { backStackEntry ->
             val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
             val playerCount = backStackEntry.arguments?.getString("playerCount")?.toIntOrNull() ?: 6
             val difficulty = backStackEntry.arguments?.getString("difficulty")
@@ -250,7 +261,11 @@ fun AppNavigation() {
                 }
             )
         }
-        composable(Routes.RESULT_ONLINE) {
+        composable(
+            Routes.RESULT_ONLINE,
+            // Arrives from under the stinger wash — fade in place, no slide.
+            enterTransition = { fadeIn(tween(350)) }
+        ) {
             ResultScreen(
                 viewModel = koinViewModel(qualifier = named("online")),
                 onPlayAgain = {
