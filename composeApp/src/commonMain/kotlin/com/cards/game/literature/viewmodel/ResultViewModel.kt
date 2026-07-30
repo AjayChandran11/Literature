@@ -6,6 +6,7 @@ import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.GamePhase
 import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.preferences.TutorialPrefs
+import com.cards.game.literature.protocol.RoomPhase
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.OnlineGameRepository
 import com.cards.game.literature.review.AppReview
@@ -65,7 +66,11 @@ class ResultViewModel(
     // (vs. closing it on a real exit to Home).
     private var isRematching = false
 
-    private val _rematchStarted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    // replay=1: the init block may emit BEFORE the screen's collector subscribes
+    // (fast-host rematch detected at construction). Safe here — this ViewModel
+    // lives for exactly one result screen, so the replayed value can't leak into
+    // a later game the way a repository-level replay would.
+    private val _rematchStarted = MutableSharedFlow<Unit>(replay = 1)
     /** Emits when the host resets the room — everyone navigates back. */
     val rematchStarted: Flow<Unit> = _rematchStarted.asSharedFlow()
 
@@ -93,6 +98,21 @@ class ResultViewModel(
                 isRematching = true
                 _rematchStarted.emit(Unit)
             }
+        }
+
+        // A fast host can reset the room while this player is still watching the
+        // match finale — the repo's one-shot rematch signal then fired before this
+        // ViewModel existed and was dropped, and the game state is already cleared.
+        // The aftermath is durable though: no game state + room back in WAITING.
+        // Detect it and re-raise the signal so this player follows into the waiting
+        // room instead of stranding on an empty result screen (where Home would
+        // even leave the room the others are sitting in).
+        if (onlineRepository != null &&
+            repository.gameState.value == null &&
+            onlineRepository.roomState.value?.phase == RoomPhase.WAITING
+        ) {
+            isRematching = true
+            _rematchStarted.tryEmit(Unit)
         }
 
         val state = repository.gameState.value

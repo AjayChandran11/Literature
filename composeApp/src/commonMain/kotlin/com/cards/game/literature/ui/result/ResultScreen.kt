@@ -775,8 +775,12 @@ fun ResultScreenContent(
             }
         }
 
-        // ── Confetti (win only; hidden while the log page is open) ────────
-        if (uiState.isWinner && !showLog && playConfetti) {
+        // ── Confetti (win only) ────────────────────────────────────────────
+        // Stays COMPOSED while the log page covers it — gating on !showLog
+        // unmounted the overlay, and its one-shot rain restarted on every log
+        // round-trip. Composed once, the rain plays once and finishes invisible
+        // (alpha reaches 0 at full progress), never invalidating again.
+        if (uiState.isWinner && playConfetti) {
             ConfettiOverlay()
         }
 
