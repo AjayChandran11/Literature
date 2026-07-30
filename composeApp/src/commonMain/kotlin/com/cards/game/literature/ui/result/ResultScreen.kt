@@ -52,15 +52,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInspectionMode
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
-import com.cards.game.literature.audio.SoundEvent
-import com.cards.game.literature.audio.SoundPlayer
-import com.cards.game.literature.preferences.GamePrefs
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -428,45 +424,20 @@ fun ResultScreenContent(
     onGoHome: () -> Unit,
     onRematch: () -> Unit = {}
 ) {
-    val hapticFeedback = LocalHapticFeedback.current
     // In a @Preview the LaunchedEffect entrance animations never fire, so start the reveal
     // flags already-visible under inspection — the preview then shows the full screen
     // (banner + breakdown rows + achievements) instead of a half-empty one.
     val inInspection = LocalInspectionMode.current
 
-    // ── Sound + haptics ──────────────────────────────────────────────────
-    LaunchedEffect(Unit) {
-        when {
-            // A draw is neither a win nor a loss — don't play the sour GAME_LOSE sound.
-            // A single soft haptic marks the moment without celebrating or mourning.
-            uiState.isDraw -> {
-                if (GamePrefs.isHapticsEnabled()) {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
-            }
-            uiState.isWinner -> {
-                SoundPlayer.play(SoundEvent.GAME_WIN)
-                if (GamePrefs.isHapticsEnabled()) {
-                    repeat(3) {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        delay(80)
-                    }
-                }
-            }
-            else -> {
-                SoundPlayer.play(SoundEvent.GAME_LOSE)
-                if (GamePrefs.isHapticsEnabled()) {
-                    repeat(2) {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        delay(80)
-                    }
-                }
-            }
-        }
-    }
+    // The win/lose/draw sound + haptics fire at the on-board finale stinger
+    // (MatchStingerOverlay), so the audio lands on the word punch — nothing may
+    // replay them here.
 
+    // Reveal flags are SAVEABLE: an Activity recreation (system theme toggle is a
+    // uiMode config change) restores them as true, so the entrance choreography
+    // plays once per arrival instead of replaying on every recreation.
     // ── Banner entrance: visible after short delay ────────────────────────
-    var bannerVisible by remember { mutableStateOf(inInspection) }
+    var bannerVisible by rememberSaveable { mutableStateOf(inInspection) }
     LaunchedEffect(Unit) {
         delay(100)
         bannerVisible = true
@@ -497,10 +468,31 @@ fun ResultScreenContent(
     )
 
     // ── Breakdown stagger: reveal rows progressively ──────────────────────
-    var breakdownVisible by remember { mutableStateOf(inInspection) }
+    var breakdownVisible by rememberSaveable { mutableStateOf(inInspection) }
     LaunchedEffect(Unit) {
         delay(800)
         breakdownVisible = true
+    }
+
+    // ── Win confetti: a one-arrival flourish ──────────────────────────────
+    // The saveable flag survives recreation; the plain remember freezes the decision
+    // for this composition so flipping the flag doesn't cut the rain off mid-fall.
+    var confettiSpent by rememberSaveable { mutableStateOf(false) }
+    val playConfetti = remember { !confettiSpent }
+    LaunchedEffect(Unit) { confettiSpent = true }
+
+    // ── Share nudge: one gentle pulse once the reveal has settled ─────────
+    // The result moment is the share moment; saveable so a recreation can't re-pulse.
+    var sharePulseSpent by rememberSaveable { mutableStateOf(false) }
+    val sharePulseScale = remember { Animatable(1f) }
+    LaunchedEffect(Unit) {
+        if (sharePulseSpent || inInspection) return@LaunchedEffect
+        delay(2600)
+        sharePulseSpent = true
+        repeat(2) {
+            sharePulseScale.animateTo(1.08f, tween(170, easing = EaseOut))
+            sharePulseScale.animateTo(1f, tween(220))
+        }
     }
 
     val myTeamDisplayName = uiState.myTeamName.ifEmpty { stringResource(Res.string.label_your_team) }
@@ -608,7 +600,7 @@ fun ResultScreenContent(
 
             // ── Achievement unlocks ───────────────────────────────────────
             if (uiState.unlockedAchievements.isNotEmpty()) {
-                var achievementsVisible by remember { mutableStateOf(inInspection) }
+                var achievementsVisible by rememberSaveable { mutableStateOf(inInspection) }
                 LaunchedEffect(Unit) {
                     delay(1200) // let the score count-up land first
                     achievementsVisible = true
@@ -687,7 +679,7 @@ fun ResultScreenContent(
                             Sharer.shareImage(imageBitmapToPng(bitmap), shareCaption)
                         }
                     },
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier.weight(1f).height(48.dp).scale(sharePulseScale.value),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
@@ -744,7 +736,7 @@ fun ResultScreenContent(
         }
 
         // ── Confetti (win only; hidden while the log page is open) ────────
-        if (uiState.isWinner && !showLog) {
+        if (uiState.isWinner && !showLog && playConfetti) {
             ConfettiOverlay()
         }
 

@@ -62,7 +62,11 @@ fun OnlineGameScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    BackHandler { showQuitDialog = true }
+    BackHandler {
+        // During the finale (FINISHED) back is swallowed — quitting there would skip
+        // the result screen; tapping the stinger is the fast path forward instead.
+        if (uiState.phase != GamePhase.FINISHED) showQuitDialog = true
+    }
 
     if (showQuitDialog) {
         AlertDialog(
@@ -114,13 +118,6 @@ fun OnlineGameScreen(
         )
     }
 
-    // Navigate to result when game ends
-    LaunchedEffect(uiState.phase) {
-        if (uiState.phase == GamePhase.FINISHED) {
-            onGameEnd()
-        }
-    }
-
     // Reaction state
     var activeReactions by remember { mutableStateOf<List<DisplayReaction>>(emptyList()) }
     var reactionIdCounter by remember { mutableLongStateOf(0L) }
@@ -148,6 +145,8 @@ fun OnlineGameScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         GameBoardContent(
             viewModel = viewModel,
+            // The board runs the match finale (hold + stinger) and invokes this when done.
+            onGameEnd = onGameEnd,
             headerOverlay = {
                 if (!isQuitting) {
                     ConnectionBanner(connectionState = onlineRepository.connectionState)

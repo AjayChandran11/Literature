@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -74,7 +75,11 @@ fun GameBoardScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
 
-    BackHandler { showQuitDialog = true }
+    BackHandler {
+        // During the finale (FINISHED) back is swallowed — quitting there would skip
+        // the result screen; tapping the stinger is the fast path forward instead.
+        if (uiState.phase != GamePhase.FINISHED) showQuitDialog = true
+    }
 
     if (showQuitDialog) {
         AlertDialog(
@@ -108,13 +113,6 @@ fun GameBoardScreen(
         }
     }
 
-    // Navigate to result when game ends
-    LaunchedEffect(uiState.phase) {
-        if (uiState.phase == GamePhase.FINISHED) {
-            onGameEnd()
-        }
-    }
-
     val isFirstGame = remember { !TutorialPrefs.isFirstGameCompleted() }
     val tutorialState = rememberTutorialState(isFirstGame)
 
@@ -126,7 +124,7 @@ fun GameBoardScreen(
         }
     }
 
-    GameBoardContent(viewModel = viewModel, tutorialState = tutorialState)
+    GameBoardContent(viewModel = viewModel, tutorialState = tutorialState, onGameEnd = onGameEnd)
 }
 
 @Composable
@@ -134,7 +132,11 @@ fun GameBoardContent(
     viewModel: GameViewModel,
     headerOverlay: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
-    tutorialState: TutorialState? = null
+    tutorialState: TutorialState? = null,
+    // Navigation to the result screen. The board owns the moment of game over (the
+    // match-finale hold + stinger), so it decides WHEN to invoke this — callers must
+    // not navigate on FINISHED themselves.
+    onGameEnd: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val gameLog by viewModel.gameLog.collectAsState()
@@ -155,6 +157,72 @@ fun GameBoardContent(
     // recent claim's celebration. gameLog.size means we react only to events that land while present.
     var processedLogSize by remember { mutableStateOf(gameLog.size) }
     val hapticFeedback = LocalHapticFeedback.current
+
+    // ── Match intro ──────────────────────────────────────────────────────
+    // Shown once per match, keyed by gameId (stable across reconnects, fresh on
+    // rematch/play-again) and saved across Activity recreation. The first-game
+    // tutorial owns the screen, so it suppresses AND consumes the intro — otherwise
+    // the curtain would pop mid-game the moment the tutorial finishes.
+    var introDoneForGame by rememberSaveable { mutableStateOf("") }
+    val introVisible = uiState.phase == GamePhase.IN_PROGRESS &&
+        uiState.gameId.isNotEmpty() &&
+        introDoneForGame != uiState.gameId &&
+        tutorialState?.isActive != true
+    LaunchedEffect(uiState.gameId, tutorialState?.isActive) {
+        if (tutorialState?.isActive == true && uiState.gameId.isNotEmpty()) {
+            introDoneForGame = uiState.gameId
+        }
+    }
+
+    // ── Match finale ─────────────────────────────────────────────────────
+    // When the game finishes, hold navigation briefly instead of leaving the same
+    // frame the last claim lands (which cut its celebration off): the board dims
+    // while the claim banner plays out (~2s), the win/lose/draw stinger punches in,
+    // then the usual navigation to the result screen. Tap anywhere skips ahead.
+    var finaleDimmed by remember { mutableStateOf(false) }
+    var showStinger by remember { mutableStateOf(false) }
+    var finaleNavigated by remember { mutableStateOf(false) }
+    // Sound/haptics fire once per match even across a theme-toggle recreation — a
+    // replayed stinger visual is cosmetic, a replayed GAME_WIN chime is a bug.
+    var finaleFeedbackDone by rememberSaveable { mutableStateOf(false) }
+    val isWinner = uiState.myTeamScore > uiState.opponentTeamScore
+    val isDraw = uiState.myTeamScore == uiState.opponentTeamScore
+    val skipFinale: () -> Unit = {
+        if (!finaleNavigated) {
+            finaleNavigated = true
+            onGameEnd?.invoke()
+        }
+    }
+    LaunchedEffect(uiState.phase) {
+        if (uiState.phase != GamePhase.FINISHED || onGameEnd == null) return@LaunchedEffect
+        // The tutorial's flow stays untouched: straight to the result screen.
+        if (tutorialState?.isActive == true) {
+            skipFinale()
+            return@LaunchedEffect
+        }
+        finaleDimmed = true
+        delay(1800) // the final claim's celebration breathes (it self-dismisses at ~2s)
+        showStinger = true
+        if (!finaleFeedbackDone) {
+            finaleFeedbackDone = true
+            if (isDraw) {
+                // A draw is neither a win nor a loss — one soft haptic, no sound.
+                if (GamePrefs.isHapticsEnabled()) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+            } else {
+                SoundPlayer.play(if (isWinner) SoundEvent.GAME_WIN else SoundEvent.GAME_LOSE)
+                if (GamePrefs.isHapticsEnabled()) {
+                    repeat(if (isWinner) 3 else 2) {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        delay(80)
+                    }
+                }
+            }
+        }
+        delay(1500)
+        skipFinale()
+    }
 
     // Clear suit selection if the selected half suit is claimed OR the player lost all its cards
     LaunchedEffect(uiState.halfSuitStatuses, uiState.myHandByHalfSuit) {
@@ -184,9 +252,13 @@ fun GameBoardContent(
     val autoSwitchWindowInfo = currentWindowAdaptiveInfo()
     LaunchedEffect(uiState.isMyTurn, tutorialState?.isActive) {
         if (uiState.isMyTurn && !previouslyMyTurn) {
-            SoundPlayer.play(SoundEvent.YOUR_TURN)
-            if (tutorialState?.isActive != true && !autoSwitchWindowInfo.useSideBySide) {
-                selectedTab = GameTab.HAND
+            // While the match-intro curtain is up the cue is deferred — the intro's
+            // onDone replays it so it lands with the board reveal, not under it.
+            if (!introVisible) {
+                SoundPlayer.play(SoundEvent.YOUR_TURN)
+                if (tutorialState?.isActive != true && !autoSwitchWindowInfo.useSideBySide) {
+                    selectedTab = GameTab.HAND
+                }
             }
         }
         previouslyMyTurn = uiState.isMyTurn
@@ -528,15 +600,66 @@ fun GameBoardContent(
             }
         }
 
+        // Finale dim under the last claim's banner, so the stinger doesn't pop over
+        // a fully lit board. It also swallows board taps once the match is decided;
+        // tapping it skips straight to the result screen.
+        val finaleDim by animateFloatAsState(
+            targetValue = if (finaleDimmed) 0.55f else 0f,
+            animationSpec = tween(700),
+            label = "finaleDim"
+        )
+        if (finaleDim > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = finaleDim))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = skipFinale
+                    )
+            )
+        }
+
         // Claim celebration banner + burst over the board
         ClaimCelebrationOverlay(
             celebration = claimCelebration,
             onDone = { claimCelebration = null }
         )
 
+        // Match finale stinger — between the final claim's celebration and the result.
+        MatchStingerOverlay(
+            visible = showStinger,
+            isWinner = isWinner,
+            isDraw = isDraw,
+            onSkip = skipFinale
+        )
+
         // Tutorial overlay on top of everything
         if (tutorialState?.isActive == true) {
             TutorialOverlay(state = tutorialState)
+        }
+
+        // Match intro — a ~2.6s skippable curtain: team reveal, first move, then the
+        // board. The live state has been underneath the whole time.
+        if (introVisible) {
+            MatchIntroOverlay(
+                data = MatchIntroData(
+                    myTeamLabels = listOf(stringResource(Res.string.match_intro_you)) +
+                        uiState.teammates.map { it.matchIntroLabel() },
+                    opponentLabels = uiState.opponents.map { it.matchIntroLabel() },
+                    firstMoveIsMine = uiState.isMyTurn,
+                    firstMoveName = uiState.activePlayerName
+                ),
+                onDone = {
+                    introDoneForGame = uiState.gameId
+                    // Replay the deferred "your turn" cue now that the board is revealed.
+                    if (uiState.isMyTurn) {
+                        SoundPlayer.play(SoundEvent.YOUR_TURN)
+                        if (!autoSwitchWindowInfo.useSideBySide) selectedTab = GameTab.HAND
+                    }
+                }
+            )
         }
     }
 
