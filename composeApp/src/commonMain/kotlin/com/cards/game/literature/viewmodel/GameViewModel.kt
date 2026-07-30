@@ -45,6 +45,9 @@ data class PassSelectionUiState(
 
 data class GameUiState(
     val isOnline: Boolean = false,
+    // Server-issued (or engine-issued offline) match id: stable across reconnects,
+    // fresh on rematch/play-again — the key for once-per-match UI like the intro.
+    val gameId: String = "",
     val isMyTurn: Boolean = false,
     val myHand: List<Card> = emptyList(),
     val myHandByHalfSuit: Map<HalfSuit, List<Card>> = emptyMap(),
@@ -320,6 +323,7 @@ class GameViewModel(
 
         _uiState.value = GameUiState(
             isOnline = isOnline,
+            gameId = state.gameId,
             isMyTurn = state.currentPlayer.id == myPlayerId,
             myHand = myHand,
             myHandByHalfSuit = handByHalfSuit,

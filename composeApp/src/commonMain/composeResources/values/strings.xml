@@ -482,4 +482,14 @@
     <string name="ach_puzzle_fifty_desc">Solve 50 daily puzzles</string>
     <string name="ach_puzzle_flawless">First Glance</string>
     <string name="ach_puzzle_flawless_desc">Solve a daily puzzle on your first guess</string>
+
+    <!-- Match ceremony: pre-game intro + game-over stinger -->
+    <string name="match_intro_you">You</string>
+    <string name="match_intro_vs">vs</string>
+    <string name="match_intro_first_move_you">You go first</string>
+    <string name="match_intro_first_move_other">%1$s goes first</string>
+    <string name="match_intro_skip_hint">Tap to skip</string>
+    <string name="stinger_victory">Victory!</string>
+    <string name="stinger_defeat">Defeat</string>
+    <string name="stinger_draw">It's a Draw</string>
 </resources>
