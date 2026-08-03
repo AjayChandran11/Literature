@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -24,10 +25,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.analytics.Analytics
@@ -40,6 +41,7 @@ import com.cards.game.literature.share.Sharer
 import com.cards.game.literature.stats.StatsStore
 import com.cards.game.literature.ui.game.HowToPlaySheet
 import com.cards.game.literature.ui.common.ConnectionBanner
+import com.cards.game.literature.ui.theme.LiteratureTheme
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
 import com.cards.game.literature.ui.common.WindowSize.useSideBySide
@@ -348,75 +350,47 @@ private fun RoomCodeCard(roomCode: String, modifier: Modifier = Modifier) {
                 letterSpacing = 4.sp,
                 color = MaterialTheme.colorScheme.secondary
             )
-            Text(
-                text = stringResource(Res.string.waiting_room_share_code),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // No "share this code with friends" caption — the labelled invite button sits
+            // directly below and says the same thing, actionably. Dropping it keeps the code
+            // itself the hero of the card and buys the players list back ~18dp in portrait.
         }
     }
 }
 
-// WhatsApp brand green, with a dark ink for on-green text (white fails contrast on this green).
-private val WhatsAppGreen = Color(0xFF25D366)
-private val WhatsAppInk = Color(0xFF052E16)
+/** Uniform height for both invite variants, so the block's vertical cost never changes. */
+private val InviteRowHeight = 48.dp
 
 @Composable
-private fun InviteButton(roomCode: String, modifier: Modifier = Modifier) {
+private fun InviteButton(
+    roomCode: String,
+    modifier: Modifier = Modifier,
+    // Hoisted so previews can force either branch. The real check reads the PackageManager,
+    // which a @Preview has no access to — left un-hoisted it always renders "not installed".
+    // Resolved once in production: WhatsApp can't be installed while this screen is up.
+    whatsAppAvailable: Boolean = remember { Sharer.isWhatsAppAvailable() },
+) {
     // Deep-link room invite. WhatsApp-first: a direct WhatsApp CTA when it's installed (the
-    // dominant channel here), with the system share sheet as the "Other apps" fallback.
+    // dominant channel here), with the system share sheet as the fallback.
     val inviteText = stringResource(
         Res.string.invite_share_text,
         roomCode,
         InviteLink.forRoom(roomCode)
     )
     val enabled = roomCode.isNotBlank()
-    // Resolved once — WhatsApp's install state won't change while this screen is up.
-    val whatsAppAvailable = remember { Sharer.isWhatsAppAvailable() }
 
     val shareViaSystem = {
         Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room", channel = "system"))
         Sharer.shareText(inviteText)
     }
 
-    if (whatsAppAvailable) {
-        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-            Button(
-                onClick = {
-                    Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room", channel = "whatsapp"))
-                    // Fall back to the sheet if WhatsApp vanished between check and tap.
-                    if (!Sharer.shareTextToWhatsApp(inviteText)) Sharer.shareText(inviteText)
-                },
-                enabled = enabled,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = WhatsAppGreen,
-                    contentColor = WhatsAppInk,
-                ),
-            ) {
-                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(Res.string.waiting_room_invite_whatsapp),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            TextButton(onClick = shareViaSystem, enabled = enabled) {
-                Text(
-                    text = stringResource(Res.string.waiting_room_invite_other),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    } else {
-        // No WhatsApp installed — the original generic invite button.
+    if (!whatsAppAvailable) {
+        // No WhatsApp installed — a single generic invite button.
         OutlinedButton(
             onClick = shareViaSystem,
             enabled = enabled,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
-            modifier = modifier
+            modifier = modifier.height(InviteRowHeight)
         ) {
             Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
@@ -424,9 +398,163 @@ private fun InviteButton(roomCode: String, modifier: Modifier = Modifier) {
                 text = stringResource(Res.string.waiting_room_invite),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        }
+        return
+    }
+
+    // WhatsApp installed. Two deliberate calls here:
+    //
+    // 1. One row, not a stacked Column: "other apps" is a trailing icon rather than a second
+    //    full-height TextButton. Portrait is where this matters — PlayerList is the only
+    //    weight(1f) child, so every dp spent here comes straight out of the players list.
+    // 2. Tonal, NOT WhatsApp brand green. Saturated #25D366 only earns that much attention when
+    //    it carries the actual WhatsApp mark and reads as recognition; with a generic Chat glyph
+    //    it paid the full cost of standing out and collected none of the benefit — and its
+    //    hand-picked on-green ink didn't adapt to the dark theme. Tonal keeps this obviously the
+    //    screen's main action while leaving StartGameButton the only filled-primary button, so
+    //    the hierarchy reads status -> invite -> start.
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        FilledTonalButton(
+            onClick = {
+                Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room", channel = "whatsapp"))
+                // Fall back to the sheet if WhatsApp vanished between check and tap.
+                if (!Sharer.shareTextToWhatsApp(inviteText)) Sharer.shareText(inviteText)
+            },
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.height(InviteRowHeight)
+        ) {
+            // Chat, not Share — the trailing button is the share-sheet one, and two identical
+            // share glyphs side by side read as the same action twice.
+            Icon(Icons.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(Res.string.waiting_room_invite_whatsapp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        }
+        // Plain, containerless — a second tonal surface next to the button would read as an
+        // equal-weight action rather than the quiet fallback it is.
+        IconButton(
+            onClick = shareViaSystem,
+            enabled = enabled,
+            modifier = Modifier.size(InviteRowHeight)
+        ) {
+            Icon(
+                Icons.Filled.Share,
+                contentDescription = stringResource(Res.string.cd_invite_other_apps),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
             )
         }
     }
+}
+
+// ─── Invite previews ───────────────────────────────────────────────────────────────────────────
+// InviteButton's real WhatsApp check reads the PackageManager, which a @Preview has no access to,
+// so it would always render the "not installed" branch. `whatsAppAvailable` is a parameter purely
+// so these can force both branches without hunting for a device that has WhatsApp installed.
+
+@Preview(name = "Invite — WhatsApp installed", showBackground = true)
+@Composable
+private fun InviteButtonWhatsAppPreview() {
+    LiteratureTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            InviteButton(roomCode = "KRA7QM", whatsAppAvailable = true)
+        }
+    }
+}
+
+@Preview(name = "Invite — no WhatsApp (fallback)", showBackground = true)
+@Composable
+private fun InviteButtonNoWhatsAppPreview() {
+    LiteratureTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            InviteButton(roomCode = "KRA7QM", whatsAppAvailable = false)
+        }
+    }
+}
+
+@Preview(name = "Invite — blank code (disabled)", showBackground = true)
+@Composable
+private fun InviteButtonDisabledPreview() {
+    LiteratureTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            InviteButton(roomCode = "", whatsAppAvailable = true)
+        }
+    }
+}
+
+private val previewPlayers = listOf(
+    WaitingRoomPlayer("p1", "Ajay", "team1", isHost = true, isConnected = true),
+    WaitingRoomPlayer("p2", "Divya", "team2", isHost = false, isConnected = true),
+    WaitingRoomPlayer("p3", "Karthik", "team1", isHost = false, isConnected = true),
+)
+
+/**
+ * The portrait hero block at a real phone size — title, room code, invite, players list — so the
+ * invite row's vertical cost is visible against the list it competes with. PlayerList is the only
+ * weight(1f) child on the real screen, so this is where space either goes or gets taken.
+ */
+@Composable
+private fun WaitingRoomHeroPreviewBody(whatsAppAvailable: Boolean) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(Res.string.waiting_room_title),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.secondary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        RoomCodeCard("KRA7QM")
+        Spacer(modifier = Modifier.height(12.dp))
+        InviteButton(roomCode = "KRA7QM", whatsAppAvailable = whatsAppAvailable)
+        Spacer(modifier = Modifier.height(24.dp))
+        PlayersCountHeader(previewPlayers.size, target = 6)
+        Spacer(modifier = Modifier.height(12.dp))
+        PlayerList(
+            players = previewPlayers,
+            myPlayerId = "p1",
+            onSwitchTeam = {},
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Preview(name = "Waiting room hero — phone, WhatsApp", showBackground = true, widthDp = 360, heightDp = 720)
+@Composable
+private fun WaitingRoomHeroPhonePreview() {
+    LiteratureTheme { WaitingRoomHeroPreviewBody(whatsAppAvailable = true) }
+}
+
+@Preview(name = "Waiting room hero — phone, dark", showBackground = true, widthDp = 360, heightDp = 720)
+@Composable
+private fun WaitingRoomHeroDarkPreview() {
+    LiteratureTheme(darkTheme = true) { WaitingRoomHeroPreviewBody(whatsAppAvailable = true) }
+}
+
+/** Short/compact phone — the case where the invite block used to squeeze the list hardest. */
+@Preview(name = "Waiting room hero — short phone", showBackground = true, widthDp = 360, heightDp = 560)
+@Composable
+private fun WaitingRoomHeroShortPreview() {
+    LiteratureTheme { WaitingRoomHeroPreviewBody(whatsAppAvailable = true) }
+}
+
+/** Narrow phone — checks the green label and the trailing icon still fit on one row. */
+@Preview(name = "Waiting room hero — narrow (320dp)", showBackground = true, widthDp = 320, heightDp = 640)
+@Composable
+private fun WaitingRoomHeroNarrowPreview() {
+    LiteratureTheme { WaitingRoomHeroPreviewBody(whatsAppAvailable = true) }
 }
 
 @Composable

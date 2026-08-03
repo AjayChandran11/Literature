@@ -73,6 +73,7 @@
     <string name="waiting_room_invite">Invite Friends</string>
     <string name="waiting_room_invite_whatsapp">Invite on WhatsApp</string>
     <string name="waiting_room_invite_other">Other apps</string>
+    <string name="cd_invite_other_apps">Invite using other apps</string>
     <string name="invite_share_text">Join my Literature game! 🃏\nRoom code: %1$s\n%2$s</string>
     <string name="waiting_room_players_count">Players (%1$d/%2$d)</string>
     <string name="waiting_room_team_1">Team 1</string>
