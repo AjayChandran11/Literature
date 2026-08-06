@@ -87,7 +87,6 @@ import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.GameEvent
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.isRed
-import com.cards.game.literature.model.symbol
 import com.cards.game.literature.puzzle.DailyPuzzle
 import com.cards.game.literature.puzzle.HalfSuitClaim
 import com.cards.game.literature.puzzle.LocateCard
@@ -113,6 +112,7 @@ import com.cards.game.literature.notifications.RequestNotificationPermissionOnce
 import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.cards.game.literature.ui.common.emoji
 
 
 @Composable
@@ -732,7 +732,7 @@ private fun FocusCard(card: Card) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(card.value.displayName, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = ink, lineHeight = 28.sp)
-        Text(card.suit.symbol, fontSize = 22.sp, color = ink, lineHeight = 24.sp)
+        Text(card.suit.emoji, fontSize = 22.sp, color = ink, lineHeight = 24.sp)
     }
 }
 
@@ -754,7 +754,7 @@ private fun MiniCard(card: Card, modifier: Modifier = Modifier, dimmed: Boolean 
         verticalArrangement = Arrangement.Center
     ) {
         Text(card.value.displayName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ink, lineHeight = 14.sp)
-        Text(card.suit.symbol, fontSize = 11.sp, color = ink, lineHeight = 12.sp)
+        Text(card.suit.emoji, fontSize = 11.sp, color = ink, lineHeight = 12.sp)
     }
 }
 
@@ -771,7 +771,7 @@ private fun HalfSuitTile(hs: HalfSuit, onClick: () -> Unit, modifier: Modifier =
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(suit.symbol, fontSize = 26.sp, color = if (suit.isRed) CardRed else MaterialTheme.colorScheme.onSurface)
+        Text(suit.emoji, fontSize = 26.sp, color = if (suit.isRed) CardRed else MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(2.dp))
         Text(
             if (isLow) "Low" else "High",

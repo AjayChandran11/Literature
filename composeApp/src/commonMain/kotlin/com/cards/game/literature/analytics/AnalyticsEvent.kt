@@ -77,14 +77,20 @@ sealed class AnalyticsEvent(
         },
     )
 
-    /** Player shared a room-invite link — top of the Phase 2 invite funnel. [surface] e.g. "waiting_room". */
-    class InviteShared(surface: String) : AnalyticsEvent(
+    /** Player shared a room-invite link — top of the Phase 2 invite funnel. [surface] e.g.
+     *  "waiting_room"; [channel] is "whatsapp" (direct) or "system" (the OS share sheet), so we
+     *  can measure the WhatsApp-first lift. */
+    class InviteShared(surface: String, channel: String = "system") : AnalyticsEvent(
         name = "invite_shared",
-        params = mapOf("surface" to surface),
+        params = mapOf("surface" to surface, "channel" to channel),
     )
 
     /** App opened via a room-invite deep link — bottom of the Phase 2 invite funnel. */
     data object InviteOpened : AnalyticsEvent(name = "invite_opened")
+
+    /** A fresh install that came through an invite link auto-surfaced its room on first
+     *  launch, read from the Play Install Referrer (join.html → Play → install → open). */
+    data object InstallReferrerJoin : AnalyticsEvent(name = "install_referrer_join")
 
     /** An achievement was unlocked (gameplay or puzzle). */
     class AchievementUnlocked(id: String) : AnalyticsEvent(

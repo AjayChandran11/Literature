@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -27,6 +28,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.analytics.Analytics
@@ -39,6 +42,7 @@ import com.cards.game.literature.share.Sharer
 import com.cards.game.literature.stats.StatsStore
 import com.cards.game.literature.ui.game.HowToPlaySheet
 import com.cards.game.literature.ui.common.ConnectionBanner
+import com.cards.game.literature.ui.theme.LiteratureTheme
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
 import com.cards.game.literature.ui.common.WindowSize.useSideBySide
@@ -253,7 +257,9 @@ fun WaitingRoomScreen(
                     .padding(if (isCompact) 16.dp else 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 32.dp))
+                // Every dp of fixed chrome here comes straight out of the players list
+                // (the only weight(1f) child), so the gaps stay lean in portrait too.
+                Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 12.dp))
 
                 Text(
                     text = stringResource(Res.string.waiting_room_title),
@@ -266,10 +272,10 @@ fun WaitingRoomScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 InviteButton(uiState.roomCode)
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount)
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Portrait budget is tight: as a fixed sibling the primer starved the
                 // weight(1f) list to zero height. Ride it inside the list's own scroll instead.
@@ -288,7 +294,7 @@ fun WaitingRoomScreen(
                     } else null
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 if (uiState.isHost) {
                     HostSetupControls(
@@ -323,14 +329,16 @@ fun WaitingRoomScreen(
 
 @Composable
 private fun RoomCodeCard(roomCode: String, modifier: Modifier = Modifier) {
+    // No outer margin and a tighter vertical inset — the card is centred by its
+    // parent, so the old padding(8) was pure air billed to the players list.
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = modifier.padding(8.dp)
+        modifier = modifier
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Text(
                 text = stringResource(Res.string.waiting_room_code_label),
@@ -347,45 +355,213 @@ private fun RoomCodeCard(roomCode: String, modifier: Modifier = Modifier) {
                 letterSpacing = 4.sp,
                 color = MaterialTheme.colorScheme.secondary
             )
-            Text(
-                text = stringResource(Res.string.waiting_room_share_code),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // No "share this code with friends" caption — the labelled invite button sits
+            // directly below and says the same thing, actionably. Dropping it keeps the code
+            // itself the hero of the card and buys the players list back ~18dp in portrait.
         }
     }
 }
 
+/** Uniform height for both invite variants, so the block's vertical cost never changes. */
+private val InviteRowHeight = 48.dp
+
 @Composable
-private fun InviteButton(roomCode: String, modifier: Modifier = Modifier) {
-    // Invite friends via the system share sheet (deep-link room invite).
+private fun InviteButton(
+    roomCode: String,
+    modifier: Modifier = Modifier,
+    // Hoisted so previews can force either branch. The real check reads the PackageManager,
+    // which a @Preview has no access to — left un-hoisted it always renders "not installed".
+    // Resolved once in production: WhatsApp can't be installed while this screen is up.
+    whatsAppAvailable: Boolean = remember { Sharer.isWhatsAppAvailable() },
+) {
+    // Deep-link room invite. WhatsApp-first: a direct WhatsApp CTA when it's installed (the
+    // dominant channel here), with the system share sheet as the fallback.
     val inviteText = stringResource(
         Res.string.invite_share_text,
         roomCode,
         InviteLink.forRoom(roomCode)
     )
-    OutlinedButton(
-        onClick = {
-            Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room"))
-            Sharer.shareText(inviteText)
-        },
-        enabled = roomCode.isNotBlank(),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
-        modifier = modifier
+    val enabled = roomCode.isNotBlank()
+
+    val shareViaSystem = {
+        Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room", channel = "system"))
+        Sharer.shareText(inviteText)
+    }
+
+    if (!whatsAppAvailable) {
+        // No WhatsApp installed — a single generic invite button.
+        OutlinedButton(
+            onClick = shareViaSystem,
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
+            modifier = modifier.height(InviteRowHeight)
+        ) {
+            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(Res.string.waiting_room_invite),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        }
+        return
+    }
+
+    // WhatsApp installed. Two deliberate calls here:
+    //
+    // 1. One row, not a stacked Column: "other apps" is a trailing icon rather than a second
+    //    full-height TextButton. Portrait is where this matters — PlayerList is the only
+    //    weight(1f) child, so every dp spent here comes straight out of the players list.
+    // 2. Tonal, NOT WhatsApp brand green. Saturated #25D366 only earns that much attention when
+    //    it carries the actual WhatsApp mark and reads as recognition; with a generic Chat glyph
+    //    it paid the full cost of standing out and collected none of the benefit — and its
+    //    hand-picked on-green ink didn't adapt to the dark theme. Tonal keeps this obviously the
+    //    screen's main action while leaving StartGameButton the only filled-primary button, so
+    //    the hierarchy reads status -> invite -> start.
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Icon(
-            imageVector = Icons.Filled.Share,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
+        FilledTonalButton(
+            onClick = {
+                Analytics.log(AnalyticsEvent.InviteShared(surface = "waiting_room", channel = "whatsapp"))
+                // Fall back to the sheet if WhatsApp vanished between check and tap.
+                if (!Sharer.shareTextToWhatsApp(inviteText)) Sharer.shareText(inviteText)
+            },
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.height(InviteRowHeight)
+        ) {
+            // Chat, not Share — the trailing button is the share-sheet one, and two identical
+            // share glyphs side by side read as the same action twice.
+            Icon(Icons.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(Res.string.waiting_room_invite_whatsapp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        }
+        FilledTonalIconButton(
+            onClick = shareViaSystem,
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            modifier = Modifier.size(InviteRowHeight)
+        ) {
+            Icon(
+                Icons.Filled.Share,
+                contentDescription = stringResource(Res.string.cd_invite_other_apps),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+// ─── Invite previews ───────────────────────────────────────────────────────────────────────────
+// InviteButton's real WhatsApp check reads the PackageManager, which a @Preview has no access to,
+// so it would always render the "not installed" branch. `whatsAppAvailable` is a parameter purely
+// so these can force both branches without hunting for a device that has WhatsApp installed.
+
+@Preview(name = "Invite — WhatsApp installed", showBackground = true)
+@Composable
+private fun InviteButtonWhatsAppPreview() {
+    LiteratureTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            InviteButton(roomCode = "KRA7QM", whatsAppAvailable = true)
+        }
+    }
+}
+
+@Preview(name = "Invite — no WhatsApp (fallback)", showBackground = true)
+@Composable
+private fun InviteButtonNoWhatsAppPreview() {
+    LiteratureTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            InviteButton(roomCode = "KRA7QM", whatsAppAvailable = false)
+        }
+    }
+}
+
+@Preview(name = "Invite — blank code (disabled)", showBackground = true)
+@Composable
+private fun InviteButtonDisabledPreview() {
+    LiteratureTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            InviteButton(roomCode = "", whatsAppAvailable = true)
+        }
+    }
+}
+
+private val previewPlayers = listOf(
+    WaitingRoomPlayer("p1", "Ajay", "team1", isHost = true, isConnected = true),
+    WaitingRoomPlayer("p2", "Divya", "team2", isHost = false, isConnected = true),
+    WaitingRoomPlayer("p3", "Karthik", "team1", isHost = false, isConnected = true),
+)
+
+/**
+ * The portrait hero block at a real phone size — title, room code, invite, players list — so the
+ * invite row's vertical cost is visible against the list it competes with. PlayerList is the only
+ * weight(1f) child on the real screen, so this is where space either goes or gets taken.
+ */
+@Composable
+private fun WaitingRoomHeroPreviewBody(whatsAppAvailable: Boolean) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(
-            text = stringResource(Res.string.waiting_room_invite),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            text = stringResource(Res.string.waiting_room_title),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.secondary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        RoomCodeCard("KRA7QM")
+        Spacer(modifier = Modifier.height(12.dp))
+        InviteButton(roomCode = "KRA7QM", whatsAppAvailable = whatsAppAvailable)
+        Spacer(modifier = Modifier.height(24.dp))
+        PlayersCountHeader(previewPlayers.size, target = 6)
+        Spacer(modifier = Modifier.height(12.dp))
+        PlayerList(
+            players = previewPlayers,
+            myPlayerId = "p1",
+            onSwitchTeam = {},
+            modifier = Modifier.weight(1f)
         )
     }
+}
+
+@Preview(name = "Waiting room hero — phone, WhatsApp", showBackground = true, widthDp = 360, heightDp = 720)
+@Composable
+private fun WaitingRoomHeroPhonePreview() {
+    LiteratureTheme { WaitingRoomHeroPreviewBody(whatsAppAvailable = true) }
+}
+
+@Preview(name = "Waiting room hero — phone, dark", showBackground = true, widthDp = 360, heightDp = 720)
+@Composable
+private fun WaitingRoomHeroDarkPreview() {
+    LiteratureTheme(darkTheme = true) { WaitingRoomHeroPreviewBody(whatsAppAvailable = true) }
+}
+
+/** Short/compact phone — the case where the invite block used to squeeze the list hardest. */
+@Preview(name = "Waiting room hero — short phone", showBackground = true, widthDp = 360, heightDp = 560)
+@Composable
+private fun WaitingRoomHeroShortPreview() {
+    LiteratureTheme { WaitingRoomHeroPreviewBody(whatsAppAvailable = true) }
+}
+
+/** Narrow phone — checks the green label and the trailing icon still fit on one row. */
+@Preview(name = "Waiting room hero — narrow (320dp)", showBackground = true, widthDp = 320, heightDp = 640)
+@Composable
+private fun WaitingRoomHeroNarrowPreview() {
+    LiteratureTheme { WaitingRoomHeroPreviewBody(whatsAppAvailable = true) }
 }
 
 @Composable
@@ -431,8 +607,14 @@ private fun PlayerList(
                         )
                     )
             ) {
+                // Every row is pinned to the same 48dp height. Without this, my own
+                // row grows taller than everyone else's: the Switch TextButton brings
+                // Material's 40dp min height + 48dp touch-target inflation, while other
+                // rows top out at the ~24dp name text — reading as uneven padding.
                 Row(
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Connection indicator
@@ -474,15 +656,22 @@ private fun PlayerList(
 
                     if (player.id == myPlayerId) {
                         Spacer(modifier = Modifier.width(4.dp))
-                        TextButton(
-                            onClick = onSwitchTeam,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        // Opt out of the 48dp touch-target inflation so the button's
+                        // 40dp min height fits inside the shared 48dp row instead of
+                        // stretching it; the row itself keeps the tap area generous.
+                        CompositionLocalProvider(
+                            LocalMinimumInteractiveComponentSize provides Dp.Unspecified
                         ) {
-                            Text(
-                                text = stringResource(Res.string.waiting_room_switch_team),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            TextButton(
+                                onClick = onSwitchTeam,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.waiting_room_switch_team),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
 
@@ -544,29 +733,25 @@ private fun HostSetupControls(
             )
         }
 
-        // Bot difficulty selector — shown when filling with bots
+        // Bot difficulty selector — shown when filling with bots. No caption row: the
+        // Easy/Medium/Hard chips directly under the bots checkbox are self-describing,
+        // and in portrait every fixed row here is paid for by the players list. (The
+        // Game Setup sheet keeps its caption — it has the room.)
         if (fillWithBots) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(Res.string.game_setup_difficulty_label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(0.8f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val difficultyLabels = mapOf(
-                    BotDifficulty.EASY to Pair(stringResource(Res.string.difficulty_easy), stringResource(Res.string.difficulty_easy_desc)),
-                    BotDifficulty.MEDIUM to Pair(stringResource(Res.string.difficulty_medium), stringResource(Res.string.difficulty_medium_desc)),
-                    BotDifficulty.HARD to Pair(stringResource(Res.string.difficulty_hard), stringResource(Res.string.difficulty_hard_desc))
+                    BotDifficulty.EASY to stringResource(Res.string.difficulty_easy),
+                    BotDifficulty.MEDIUM to stringResource(Res.string.difficulty_medium),
+                    BotDifficulty.HARD to stringResource(Res.string.difficulty_hard)
                 )
                 BotDifficulty.entries.forEach { difficulty ->
                     val isSelected = selectedDifficulty == difficulty
-                    val (label, desc) = difficultyLabels[difficulty] ?: Pair(difficulty.label, "")
+                    val label = difficultyLabels[difficulty] ?: difficulty.label
                     val primary = MaterialTheme.colorScheme.primary
-                    val secondary = MaterialTheme.colorScheme.secondary
 
                     Box(
                         modifier = Modifier
@@ -582,22 +767,18 @@ private fun HostSetupControls(
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { onDifficulty(difficulty) }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = label,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = desc,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (isSelected) secondary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        // Single line — the "Forgiving/Balanced/Expert" blurbs live in the
+                        // Game Setup sheet; here they doubled the chip height for words the
+                        // host has already seen.
+                        Text(
+                            text = label,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }

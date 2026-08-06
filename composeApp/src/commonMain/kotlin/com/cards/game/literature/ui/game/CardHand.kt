@@ -39,6 +39,7 @@ import kotlinx.coroutines.delay
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.cd_card
 import org.jetbrains.compose.resources.stringResource
+import com.cards.game.literature.ui.common.emoji
 
 @Composable
 fun CardHand(
@@ -192,14 +193,7 @@ fun CardView(
                 color = cardColor
             )
             Text(
-                text = card.suit.let { suit ->
-                    when (suit) {
-                        Suit.SPADES -> "\u2660"
-                        Suit.HEARTS -> "\u2665"
-                        Suit.DIAMONDS -> "\u2666"
-                        Suit.CLUBS -> "\u2663"
-                    }
-                },
+                text = card.suit.emoji,
                 fontSize = 20.sp,
                 color = cardColor
             )

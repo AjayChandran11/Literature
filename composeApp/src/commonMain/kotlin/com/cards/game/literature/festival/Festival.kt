@@ -213,7 +213,7 @@ private fun IndependenceDayPreview() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             TricolorWordmark(
-                text = "♠ ♥ ♦ ♣",
+                text = "♠\uFE0F ♥\uFE0F ♦\uFE0F ♣\uFE0F",
                 baseStyle = LocalTextStyle.current,
                 fontSize = 48.sp,
                 textAlign = TextAlign.Center
