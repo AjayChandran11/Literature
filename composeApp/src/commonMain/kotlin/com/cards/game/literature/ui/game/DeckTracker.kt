@@ -26,12 +26,12 @@ import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.model.isLow
 import com.cards.game.literature.model.isRed
 import com.cards.game.literature.model.suit
-import com.cards.game.literature.model.symbol
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.LightGreen
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import com.cards.game.literature.ui.common.emoji
 
 /**
  * Claim-state color, eased over 450ms so a tracker cell visibly transitions
@@ -266,7 +266,7 @@ private fun SideBySideDeckCell(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            text = suit.symbol,
+            text = suit.emoji,
             fontSize = 22.sp,
             color = suitColor,
             fontWeight = FontWeight.Bold

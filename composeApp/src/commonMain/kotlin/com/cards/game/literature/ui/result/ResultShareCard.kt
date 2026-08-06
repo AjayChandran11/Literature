@@ -69,10 +69,10 @@ fun ResultShareCard(uiState: ResultUiState, modifier: Modifier = Modifier) {
         )
     ) {
         // Faded corner suits — subtle brand texture (mirrors the Home screen).
-        CornerSuit("♠", Alignment.TopStart)
-        CornerSuit("♥", Alignment.TopEnd, CardRed)
-        CornerSuit("♦", Alignment.BottomStart, CardRed)
-        CornerSuit("♣", Alignment.BottomEnd)
+        CornerSuit("♠\uFE0F", Alignment.TopStart)
+        CornerSuit("♥\uFE0F", Alignment.TopEnd, CardRed)
+        CornerSuit("♦\uFE0F", Alignment.BottomStart, CardRed)
+        CornerSuit("♣\uFE0F", Alignment.BottomEnd)
 
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 30.dp, vertical = 34.dp),
@@ -139,10 +139,10 @@ fun ResultShareCard(uiState: ResultUiState, modifier: Modifier = Modifier) {
 @Composable
 private fun SuitRow() {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("♠", fontSize = 22.sp, color = InkWhite)
-        Text("♥", fontSize = 22.sp, color = CardRed)
-        Text("♦", fontSize = 22.sp, color = CardRed)
-        Text("♣", fontSize = 22.sp, color = InkWhite)
+        Text("♠\uFE0F", fontSize = 22.sp, color = InkWhite)
+        Text("♥\uFE0F", fontSize = 22.sp, color = CardRed)
+        Text("♦\uFE0F", fontSize = 22.sp, color = CardRed)
+        Text("♣\uFE0F", fontSize = 22.sp, color = InkWhite)
     }
 }
 

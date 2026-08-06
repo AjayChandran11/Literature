@@ -14,6 +14,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.cards.game.literature.audio.SoundPlayer
 import com.cards.game.literature.deeplink.DeepLinkHandler
+import com.cards.game.literature.deeplink.InstallReferrerReader
 import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.notifications.Notifier
 import com.cards.game.literature.preferences.GamePrefs
@@ -42,6 +43,14 @@ class MainActivity : ComponentActivity() {
 
         // Handle a room invite or notification tap that launched the app (cold start).
         handleIntent(intent)
+
+        // First launch after an invite-driven Play install: read the install referrer once
+        // and surface the room invite. Skipped when an explicit deep link this launch already
+        // delivered a room code (that path wins). Self-gates to run only once per install.
+        InstallReferrerReader.checkOnce(
+            this,
+            hasPendingInvite = DeepLinkHandler.pendingRoomCode.value != null,
+        )
 
         enableEdgeToEdge()
         setContent {

@@ -62,6 +62,7 @@ import kotlinx.coroutines.launch
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import com.cards.game.literature.ui.common.EMOJI_VS
 
 @Composable
 fun GameBoardScreen(
@@ -503,6 +504,10 @@ fun GameBoardContent(
                     val leftWeight = if (expandedWidth) 0.35f else 0.4f
                     val rightWeight = if (expandedWidth) 0.65f else 0.6f
                     val panelPadding = if (expandedWidth) 12.dp else 8.dp
+                    // Unlike the portrait tabs, the panes sit directly under the
+                    // TurnIndicatorBanner (no TabRow buffer) — give them air on top,
+                    // a little less when height is at a premium (phone landscape).
+                    val panelTopPadding = if (compactHeight) 8.dp else 12.dp
 
                     Row(modifier = Modifier.weight(1f)) {
                         // Left panel: Players + DeckTracker
@@ -511,7 +516,7 @@ fun GameBoardContent(
                                 .weight(leftWeight)
                                 .fillMaxHeight()
                                 .verticalScroll(rememberScrollState())
-                                .padding(horizontal = panelPadding, vertical = 4.dp)
+                                .padding(start = panelPadding, top = panelTopPadding, end = panelPadding, bottom = 4.dp)
                         ) {
                             if (compactHeight) {
                                 CompactSectionLabel(stringResource(Res.string.label_opponents_section))
@@ -571,7 +576,7 @@ fun GameBoardContent(
                             modifier = Modifier
                                 .weight(rightWeight)
                                 .fillMaxHeight()
-                                .padding(horizontal = panelPadding, vertical = 4.dp)
+                                .padding(start = panelPadding, top = panelTopPadding, end = panelPadding, bottom = 4.dp)
                                 .onGloballyPositioned { coords ->
                                     tutorialState?.reportBounds(TutorialStep.YOUR_HAND, coords.boundsInRoot())
                                 }
@@ -823,15 +828,16 @@ private fun consolidateEvents(
 }
 
 /**
- * Build an AnnotatedString that colors suit symbols for visibility:
- * ♥♦ → red, ♠♣ → bright [brightSuitColor] so they pop on dark backgrounds.
+ * Build an AnnotatedString that pins suit symbols to emoji presentation (so device
+ * font packs can never substitute their own glyphs — see [EMOJI_VS]) and colors them
+ * as a fallback for renderers that still pick text glyphs: ♥♦ → red, ♠♣ → bright.
  */
 private fun styleSuitSymbols(text: String, brightSuitColor: Color): androidx.compose.ui.text.AnnotatedString {
     return buildAnnotatedString {
         for (char in text) {
             when (char) {
-                '♥', '♦' -> withStyle(SpanStyle(color = CardRed, fontWeight = FontWeight.Bold)) { append(char) }
-                '♠', '♣' -> withStyle(SpanStyle(color = brightSuitColor, fontWeight = FontWeight.Bold)) { append(char) }
+                '♥', '♦' -> withStyle(SpanStyle(color = CardRed, fontWeight = FontWeight.Bold)) { append(char); append(EMOJI_VS) }
+                '♠', '♣' -> withStyle(SpanStyle(color = brightSuitColor, fontWeight = FontWeight.Bold)) { append(char); append(EMOJI_VS) }
                 else -> append(char)
             }
         }

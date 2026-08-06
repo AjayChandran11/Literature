@@ -32,6 +32,8 @@ import literature.composeapp.generated.resources.claim_celebration_failed
 import literature.composeapp.generated.resources.claim_celebration_ours
 import literature.composeapp.generated.resources.claim_celebration_theirs
 import org.jetbrains.compose.resources.stringResource
+import com.cards.game.literature.ui.common.emoji
+import com.cards.game.literature.model.suit
 
 /** One resolved claim, queued for its moment of on-board celebration. */
 data class ClaimCelebrationData(
@@ -44,12 +46,7 @@ data class ClaimCelebrationData(
 )
 
 private val HalfSuit.suitSymbol: String
-    get() = when (this) {
-        HalfSuit.SPADES_LOW, HalfSuit.SPADES_HIGH -> "♠"
-        HalfSuit.HEARTS_LOW, HalfSuit.HEARTS_HIGH -> "♥"
-        HalfSuit.DIAMONDS_LOW, HalfSuit.DIAMONDS_HIGH -> "♦"
-        HalfSuit.CLUBS_LOW, HalfSuit.CLUBS_HIGH -> "♣"
-    }
+    get() = this.suit.emoji
 
 private val HalfSuit.isRedSuit: Boolean
     get() = this == HalfSuit.HEARTS_LOW || this == HalfSuit.HEARTS_HIGH ||
