@@ -21,7 +21,6 @@ import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.Suit
-import com.cards.game.literature.model.symbol
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
 import com.cards.game.literature.ui.common.WindowSize.useSideBySide
@@ -29,6 +28,8 @@ import com.cards.game.literature.viewmodel.PlayerInfo
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import com.cards.game.literature.ui.common.emoji
+import com.cards.game.literature.ui.common.displayEmoji
 
 private fun Suit.accessibleName(): String = when (this) {
     Suit.SPADES -> "Spades"
@@ -178,7 +179,7 @@ fun AskBottomSheet(
                                         onIsLowSelected(null)
                                     }
                                 },
-                                label = { Text(suit.symbol, style = MaterialTheme.typography.titleMedium) }
+                                label = { Text(suit.emoji, style = MaterialTheme.typography.titleMedium) }
                             )
                         }
                     }
@@ -230,7 +231,7 @@ fun AskBottomSheet(
                                     FilterChip(
                                         selected = false,
                                         onClick = { selectedCards.remove(card) },
-                                        label = { Text("${card.value.displayName}${card.suit.symbol} \u00d7") }
+                                        label = { Text("${card.displayEmoji} \u00d7") }
                                     )
                                 }
                             }
@@ -304,7 +305,7 @@ fun AskBottomSheet(
                                     onIsLowSelected(null)
                                 }
                             },
-                            label = { Text(suit.symbol, style = MaterialTheme.typography.headlineSmall) }
+                            label = { Text(suit.emoji, style = MaterialTheme.typography.headlineSmall) }
                         )
                     }
                 }
@@ -357,7 +358,7 @@ fun AskBottomSheet(
                                 FilterChip(
                                     selected = false,
                                     onClick = { selectedCards.remove(card) },
-                                    label = { Text("${card.value.displayName}${card.suit.symbol} \u00d7") }
+                                    label = { Text("${card.displayEmoji} \u00d7") }
                                 )
                             }
                         }

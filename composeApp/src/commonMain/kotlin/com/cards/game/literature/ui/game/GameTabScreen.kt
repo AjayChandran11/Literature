@@ -255,7 +255,7 @@ private fun PreviewStripMock(rows: Int) {
                 ) {
                     Text("✓", style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold, color = LightGreen)
-                    Text("Player ${i + 1} got 7♠ from Priya",
+                    Text("Player ${i + 1} got 7♠\uFE0F from Priya",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface)
                 }

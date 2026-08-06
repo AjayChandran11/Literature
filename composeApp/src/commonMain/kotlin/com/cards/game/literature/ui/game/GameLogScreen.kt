@@ -52,6 +52,7 @@ import com.cards.game.literature.ui.theme.LiteratureTheme
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import com.cards.game.literature.ui.common.displayEmoji
 
 /**
  * Full-screen game log — a proper page (top bar + back), not a bottom sheet. The moves render as a
@@ -198,7 +199,7 @@ private fun StatusBadge(icon: ImageVector, color: Color) {
 private fun CardChip(card: Card) {
     Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
         Text(
-            text = card.displayName,
+            text = card.displayEmoji,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             fontWeight = FontWeight.Bold,
             color = if (card.suit.isRed) CardRed else MaterialTheme.colorScheme.onSurface

@@ -62,6 +62,7 @@ import kotlinx.coroutines.launch
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import com.cards.game.literature.ui.common.EMOJI_VS
 
 @Composable
 fun GameBoardScreen(
@@ -823,15 +824,16 @@ private fun consolidateEvents(
 }
 
 /**
- * Build an AnnotatedString that colors suit symbols for visibility:
- * ♥♦ → red, ♠♣ → bright [brightSuitColor] so they pop on dark backgrounds.
+ * Build an AnnotatedString that pins suit symbols to emoji presentation (so device
+ * font packs can never substitute their own glyphs — see [EMOJI_VS]) and colors them
+ * as a fallback for renderers that still pick text glyphs: ♥♦ → red, ♠♣ → bright.
  */
 private fun styleSuitSymbols(text: String, brightSuitColor: Color): androidx.compose.ui.text.AnnotatedString {
     return buildAnnotatedString {
         for (char in text) {
             when (char) {
-                '♥', '♦' -> withStyle(SpanStyle(color = CardRed, fontWeight = FontWeight.Bold)) { append(char) }
-                '♠', '♣' -> withStyle(SpanStyle(color = brightSuitColor, fontWeight = FontWeight.Bold)) { append(char) }
+                '♥', '♦' -> withStyle(SpanStyle(color = CardRed, fontWeight = FontWeight.Bold)) { append(char); append(EMOJI_VS) }
+                '♠', '♣' -> withStyle(SpanStyle(color = brightSuitColor, fontWeight = FontWeight.Bold)) { append(char); append(EMOJI_VS) }
                 else -> append(char)
             }
         }

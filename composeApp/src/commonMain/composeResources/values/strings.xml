@@ -29,11 +29,11 @@
     <string name="hand_empty_subtitle">Your team continues to play on your behalf</string>
 
     <!-- Suit symbols -->
-    <string name="suit_spades">♠</string>
-    <string name="suit_hearts">♥</string>
-    <string name="suit_diamonds">♦</string>
-    <string name="suit_clubs">♣</string>
-    <string name="suits_display">♠ ♥ ♦ ♣</string>
+    <string name="suit_spades">♠&#xFE0F;</string>
+    <string name="suit_hearts">♥&#xFE0F;</string>
+    <string name="suit_diamonds">♦&#xFE0F;</string>
+    <string name="suit_clubs">♣&#xFE0F;</string>
+    <string name="suits_display">♠&#xFE0F; ♥&#xFE0F; ♦&#xFE0F; ♣&#xFE0F;</string>
 
     <!-- Home Screen -->
     <string name="home_title">Literature</string>
@@ -184,7 +184,7 @@
     <string name="result_share">Share Result</string>
     <string name="result_card_tagline">Think. Ask. Claim. Win.</string>
     <string name="result_card_cta">Get it on Google Play</string>
-    <string name="share_result_caption">I just played Literature ♠♥♦♣ — beat my score! Get the app: %1$s</string>
+    <string name="share_result_caption">I just played Literature ♠&#xFE0F;♥&#xFE0F;♦&#xFE0F;♣&#xFE0F; — beat my score! Get the app: %1$s</string>
 
     <!-- Daily Claim Puzzle -->
     <string name="daily_puzzle_number">Puzzle #%1$d</string>
@@ -264,9 +264,9 @@
     <string name="onboarding_ask_subtitle">On your turn, ask an opponent for a card — you must already hold one from that half suit</string>
     <string name="onboarding_label_opponent">Opponent</string>
     <string name="onboarding_label_you">You</string>
-    <string name="onboarding_asking_spade7">Asking for ♠7…</string>
+    <string name="onboarding_asking_spade7">Asking for ♠&#xFE0F;7…</string>
     <string name="onboarding_got_it">✓  Got it! You can ask again</string>
-    <string name="onboarding_asking_spade6">Asking for ♠6…</string>
+    <string name="onboarding_asking_spade6">Asking for ♠&#xFE0F;6…</string>
     <string name="onboarding_denied">✗  Denied — turn passes</string>
     <string name="onboarding_your_turn_to_ask">Your turn to ask</string>
     <string name="onboarding_rule_icon_success">✓</string>
@@ -277,16 +277,16 @@
     <string name="onboarding_rule_must_hold">You must hold a card from that half suit</string>
     <string name="onboarding_claim_title">Claim &amp; Win</string>
     <string name="onboarding_claim_subtitle">When your team holds all 6 cards of a half suit — claim it for a point!</string>
-    <string name="onboarding_claim_badge">  ♠ Low Spades — CLAIMED!  </string>
+    <string name="onboarding_claim_badge">  ♠&#xFE0F; Low Spades — CLAIMED!  </string>
     <string name="onboarding_your_team">Your Team</string>
     <string name="onboarding_half_suits_claimed">half suits claimed</string>
     <string name="onboarding_most_wins">Most half suits wins!</string>
-    <string name="onboarding_lets_play">Let's Play!  ♠♥♦♣</string>
+    <string name="onboarding_lets_play">Let's Play!  ♠&#xFE0F;♥&#xFE0F;♦&#xFE0F;♣&#xFE0F;</string>
 
     <!-- Onboarding card demo labels -->
-    <string name="onboarding_card_spade7">♠7</string>
-    <string name="onboarding_card_spade6">♠6</string>
-    <string name="onboarding_card_spade">♠</string>
+    <string name="onboarding_card_spade7">♠&#xFE0F;7</string>
+    <string name="onboarding_card_spade6">♠&#xFE0F;6</string>
+    <string name="onboarding_card_spade">♠&#xFE0F;</string>
 
     <!-- Half Suit tile names (DeckPage) -->
     <string name="half_suit_low_spades">Low Spades</string>
@@ -308,7 +308,7 @@
     <string name="help_objective_title">Objective</string>
     <string name="help_objective_body">Claim more half-suits than the other team to win — there are 8 in all.</string>
     <string name="help_deck_title">The Deck</string>
-    <string name="help_deck_body">48 cards across 4 suits (♠ ♥ ♦ ♣). No 8s.\n\nEach suit splits into two half-suits:\n• Low: 2, 3, 4, 5, 6, 7\n• High: 9, 10, J, Q, K, A\n\nThat's 8 half-suits of 6 cards each.</string>
+    <string name="help_deck_body">48 cards across 4 suits (♠&#xFE0F; ♥&#xFE0F; ♦&#xFE0F; ♣&#xFE0F;). No 8s.\n\nEach suit splits into two half-suits:\n• Low: 2, 3, 4, 5, 6, 7\n• High: 9, 10, J, Q, K, A\n\nThat's 8 half-suits of 6 cards each.</string>
     <string name="help_teams_title">Teams</string>
     <string name="help_teams_body">Two equal teams (2v2 or 3v3). You can only ask opponents for cards — never your teammates.</string>
     <string name="help_asking_title">Asking for Cards</string>

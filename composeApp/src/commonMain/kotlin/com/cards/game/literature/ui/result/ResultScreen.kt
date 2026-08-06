@@ -77,7 +77,6 @@ import com.cards.game.literature.model.Suit
 import com.cards.game.literature.model.isLow
 import com.cards.game.literature.model.isRed
 import com.cards.game.literature.model.suit
-import com.cards.game.literature.model.symbol
 import androidx.compose.foundation.border
 import com.cards.game.literature.stats.Achievement
 import androidx.activity.compose.BackHandler
@@ -134,6 +133,7 @@ import literature.composeapp.generated.resources.share_result_caption
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.random.Random
+import com.cards.game.literature.ui.common.emoji
 
 // ─── Confetti particle model ───────────────────────────────────────────────
 
@@ -360,7 +360,7 @@ private fun SuitChipCell(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(suit.symbol, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = suitColor)
+            Text(suit.emoji, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = suitColor)
             Text(
                 lowHigh.uppercase(),
                 style = MaterialTheme.typography.labelSmall,
