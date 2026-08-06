@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cards.game.literature.analytics.Analytics
@@ -600,8 +601,14 @@ private fun PlayerList(
                         )
                     )
             ) {
+                // Every row is pinned to the same 48dp height. Without this, my own
+                // row grows taller than everyone else's: the Switch TextButton brings
+                // Material's 40dp min height + 48dp touch-target inflation, while other
+                // rows top out at the ~24dp name text — reading as uneven padding.
                 Row(
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Connection indicator
@@ -643,15 +650,22 @@ private fun PlayerList(
 
                     if (player.id == myPlayerId) {
                         Spacer(modifier = Modifier.width(4.dp))
-                        TextButton(
-                            onClick = onSwitchTeam,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        // Opt out of the 48dp touch-target inflation so the button's
+                        // 40dp min height fits inside the shared 48dp row instead of
+                        // stretching it; the row itself keeps the tap area generous.
+                        CompositionLocalProvider(
+                            LocalMinimumInteractiveComponentSize provides Dp.Unspecified
                         ) {
-                            Text(
-                                text = stringResource(Res.string.waiting_room_switch_team),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            TextButton(
+                                onClick = onSwitchTeam,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.waiting_room_switch_team),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
 
