@@ -257,7 +257,9 @@ fun WaitingRoomScreen(
                     .padding(if (isCompact) 16.dp else 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 32.dp))
+                // Every dp of fixed chrome here comes straight out of the players list
+                // (the only weight(1f) child), so the gaps stay lean in portrait too.
+                Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 12.dp))
 
                 Text(
                     text = stringResource(Res.string.waiting_room_title),
@@ -270,10 +272,10 @@ fun WaitingRoomScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 InviteButton(uiState.roomCode)
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount)
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Portrait budget is tight: as a fixed sibling the primer starved the
                 // weight(1f) list to zero height. Ride it inside the list's own scroll instead.
@@ -292,7 +294,7 @@ fun WaitingRoomScreen(
                     } else null
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 if (uiState.isHost) {
                     HostSetupControls(
@@ -327,14 +329,16 @@ fun WaitingRoomScreen(
 
 @Composable
 private fun RoomCodeCard(roomCode: String, modifier: Modifier = Modifier) {
+    // No outer margin and a tighter vertical inset — the card is centred by its
+    // parent, so the old padding(8) was pure air billed to the players list.
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = modifier.padding(8.dp)
+        modifier = modifier
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Text(
                 text = stringResource(Res.string.waiting_room_code_label),
@@ -727,29 +731,25 @@ private fun HostSetupControls(
             )
         }
 
-        // Bot difficulty selector — shown when filling with bots
+        // Bot difficulty selector — shown when filling with bots. No caption row: the
+        // Easy/Medium/Hard chips directly under the bots checkbox are self-describing,
+        // and in portrait every fixed row here is paid for by the players list. (The
+        // Game Setup sheet keeps its caption — it has the room.)
         if (fillWithBots) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(Res.string.game_setup_difficulty_label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(0.8f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val difficultyLabels = mapOf(
-                    BotDifficulty.EASY to Pair(stringResource(Res.string.difficulty_easy), stringResource(Res.string.difficulty_easy_desc)),
-                    BotDifficulty.MEDIUM to Pair(stringResource(Res.string.difficulty_medium), stringResource(Res.string.difficulty_medium_desc)),
-                    BotDifficulty.HARD to Pair(stringResource(Res.string.difficulty_hard), stringResource(Res.string.difficulty_hard_desc))
+                    BotDifficulty.EASY to stringResource(Res.string.difficulty_easy),
+                    BotDifficulty.MEDIUM to stringResource(Res.string.difficulty_medium),
+                    BotDifficulty.HARD to stringResource(Res.string.difficulty_hard)
                 )
                 BotDifficulty.entries.forEach { difficulty ->
                     val isSelected = selectedDifficulty == difficulty
-                    val (label, desc) = difficultyLabels[difficulty] ?: Pair(difficulty.label, "")
+                    val label = difficultyLabels[difficulty] ?: difficulty.label
                     val primary = MaterialTheme.colorScheme.primary
-                    val secondary = MaterialTheme.colorScheme.secondary
 
                     Box(
                         modifier = Modifier
@@ -765,22 +765,18 @@ private fun HostSetupControls(
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { onDifficulty(difficulty) }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = label,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = desc,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (isSelected) secondary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        // Single line — the "Forgiving/Balanced/Expert" blurbs live in the
+                        // Game Setup sheet; here they doubled the chip height for words the
+                        // host has already seen.
+                        Text(
+                            text = label,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
