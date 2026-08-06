@@ -85,7 +85,7 @@ internal fun StatsScreenContent(
                 .padding(padding)
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 24.dp)
+            contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
         ) {
             item { OverviewTiles(stats) }
             item { StreakRow(stats) }
