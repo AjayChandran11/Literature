@@ -504,6 +504,10 @@ fun GameBoardContent(
                     val leftWeight = if (expandedWidth) 0.35f else 0.4f
                     val rightWeight = if (expandedWidth) 0.65f else 0.6f
                     val panelPadding = if (expandedWidth) 12.dp else 8.dp
+                    // Unlike the portrait tabs, the panes sit directly under the
+                    // TurnIndicatorBanner (no TabRow buffer) — give them air on top,
+                    // a little less when height is at a premium (phone landscape).
+                    val panelTopPadding = if (compactHeight) 8.dp else 12.dp
 
                     Row(modifier = Modifier.weight(1f)) {
                         // Left panel: Players + DeckTracker
@@ -512,7 +516,7 @@ fun GameBoardContent(
                                 .weight(leftWeight)
                                 .fillMaxHeight()
                                 .verticalScroll(rememberScrollState())
-                                .padding(horizontal = panelPadding, vertical = 4.dp)
+                                .padding(start = panelPadding, top = panelTopPadding, end = panelPadding, bottom = 4.dp)
                         ) {
                             if (compactHeight) {
                                 CompactSectionLabel(stringResource(Res.string.label_opponents_section))
@@ -572,7 +576,7 @@ fun GameBoardContent(
                             modifier = Modifier
                                 .weight(rightWeight)
                                 .fillMaxHeight()
-                                .padding(horizontal = panelPadding, vertical = 4.dp)
+                                .padding(start = panelPadding, top = panelTopPadding, end = panelPadding, bottom = 4.dp)
                                 .onGloballyPositioned { coords ->
                                     tutorialState?.reportBounds(TutorialStep.YOUR_HAND, coords.boundsInRoot())
                                 }
