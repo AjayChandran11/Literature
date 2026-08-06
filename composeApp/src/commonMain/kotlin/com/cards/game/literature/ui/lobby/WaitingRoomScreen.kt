@@ -423,7 +423,7 @@ private fun InviteButton(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FilledTonalButton(
             onClick = {
@@ -446,17 +446,19 @@ private fun InviteButton(
                 maxLines = 1,
             )
         }
-        // Plain, containerless — a second tonal surface next to the button would read as an
-        // equal-weight action rather than the quiet fallback it is.
-        IconButton(
+        FilledTonalIconButton(
             onClick = shareViaSystem,
             enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
             modifier = Modifier.size(InviteRowHeight)
         ) {
             Icon(
                 Icons.Filled.Share,
                 contentDescription = stringResource(Res.string.cd_invite_other_apps),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
