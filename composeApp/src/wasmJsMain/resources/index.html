@@ -23,7 +23,9 @@
 </head>
 <body>
 <div id="splash">
-    <div class="suits">&spades; &hearts; &diams; &clubs;</div>
+    <!-- U+FE0E pins text presentation: Android browsers otherwise render bare suits as
+         fixed-color emoji (red hearts, near-invisible dark spades) instead of the gold CSS. -->
+    <div class="suits">&spades;&#xFE0E; &hearts;&#xFE0E; &diams;&#xFE0E; &clubs;&#xFE0E;</div>
     <div>Dealing the cards&hellip;</div>
     <div class="spin"></div>
 </div>
