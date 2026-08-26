@@ -10,8 +10,6 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import org.koin.compose.KoinApplication
 
-private fun removeSplash(): Unit = js("document.getElementById('splash')?.remove()")
-
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     AppLifecycleObserver.init()
@@ -19,9 +17,11 @@ fun main() {
     // Invite links carry ?room=CODE — the common parser already understands this shape.
     DeepLinkHandler.submit(window.location.href)
     ComposeViewport(document.body!!) {
-        KoinApplication(application = { modules(appModule) }) {
-            App()
+        // Splash stays until the emoji fallback font is registered (see WebFonts.kt).
+        WithEmojiFallback {
+            KoinApplication(application = { modules(appModule) }) {
+                App()
+            }
         }
     }
-    removeSplash()
 }
