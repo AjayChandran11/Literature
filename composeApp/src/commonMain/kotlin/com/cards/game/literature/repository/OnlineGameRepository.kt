@@ -120,7 +120,7 @@ class OnlineGameRepository(
                     if (_connectionState.value == ConnectionState.CONNECTED
                         && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()
                     ) {
-                        try { webSocketSession?.close() } catch (_: Exception) {}
+                        try { webSocketSession?.close() } catch (_: Throwable) {}
                     }
                 } else {
                     // Network restored — reconnect immediately. Gated on shouldAutoReconnect so a
@@ -157,7 +157,7 @@ class OnlineGameRepository(
             log.i { "Server warm-up successful" }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) { // not Exception: Kotlin/Wasm wraps JS errors in JsException : Throwable
             log.w { "Server warm-up finished (${e.message})" }
         }
     }
@@ -309,7 +309,7 @@ class OnlineGameRepository(
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) { // Throwable, not Exception — see warmUp
                 log.e(e) { "Connection error" }
                 // Surface to the user only on the INITIAL connect (lobby create/join),
                 // i.e. before the server has admitted us to a room. Once a session is
@@ -380,7 +380,7 @@ class OnlineGameRepository(
             session.send(Frame.Text(text))
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) { // Throwable, not Exception — see warmUp
             _errors.emit("Send failed: ${e.message}")
         }
     }
