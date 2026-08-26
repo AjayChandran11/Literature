@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.savedstate.read
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.stats.PuzzleStore
@@ -159,9 +160,9 @@ fun AppNavigation() {
             // default slide (popExitTransition is untouched).
             exitTransition = { fadeOut(tween(350)) }
         ) { backStackEntry ->
-            val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
-            val playerCount = backStackEntry.arguments?.getString("playerCount")?.toIntOrNull() ?: 6
-            val difficulty = backStackEntry.arguments?.getString("difficulty")
+            val playerName = backStackEntry.arguments?.read { getStringOrNull("playerName") } ?: "Player"
+            val playerCount = backStackEntry.arguments?.read { getStringOrNull("playerCount") }?.toIntOrNull() ?: 6
+            val difficulty = backStackEntry.arguments?.read { getStringOrNull("difficulty") }
                 ?.let { runCatching { BotDifficulty.valueOf(it) }.getOrNull() }
                 ?: BotDifficulty.MEDIUM
             GameBoardScreen(
@@ -188,8 +189,8 @@ fun AppNavigation() {
                 }
             )
         ) { backStackEntry ->
-            val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
-            val initialRoomCode = backStackEntry.arguments?.getString("roomCode")
+            val playerName = backStackEntry.arguments?.read { getStringOrNull("playerName") } ?: "Player"
+            val initialRoomCode = backStackEntry.arguments?.read { getStringOrNull("roomCode") }
             LobbyScreen(
                 playerName = playerName,
                 initialRoomCode = initialRoomCode,
@@ -204,7 +205,7 @@ fun AppNavigation() {
             )
         }
         composable(Routes.WAITING_ROOM) { backStackEntry ->
-            val roomCode = backStackEntry.arguments?.getString("roomCode") ?: ""
+            val roomCode = backStackEntry.arguments?.read { getStringOrNull("roomCode") } ?: ""
             WaitingRoomScreen(
                 onGameStart = {
                     navController.navigate(Routes.ONLINE_GAME) {
@@ -243,9 +244,9 @@ fun AppNavigation() {
             // Arrives from under the stinger wash — fade in place, no slide.
             enterTransition = { fadeIn(tween(350)) }
         ) { backStackEntry ->
-            val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
-            val playerCount = backStackEntry.arguments?.getString("playerCount")?.toIntOrNull() ?: 6
-            val difficulty = backStackEntry.arguments?.getString("difficulty")
+            val playerName = backStackEntry.arguments?.read { getStringOrNull("playerName") } ?: "Player"
+            val playerCount = backStackEntry.arguments?.read { getStringOrNull("playerCount") }?.toIntOrNull() ?: 6
+            val difficulty = backStackEntry.arguments?.read { getStringOrNull("difficulty") }
                 ?.let { runCatching { BotDifficulty.valueOf(it) }.getOrNull() }
                 ?: BotDifficulty.MEDIUM
             ResultScreen(

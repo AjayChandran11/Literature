@@ -1,6 +1,7 @@
 package com.cards.game.literature.ui.lobby
 
-import androidx.activity.compose.BackHandler
+import com.cards.game.literature.ui.common.BackHandler
+import com.cards.game.literature.ui.common.formatArgs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -124,10 +125,10 @@ fun WaitingRoomScreen(
     LaunchedEffect(Unit) {
         viewModel.snackbarEvents.collect { event ->
             val message = when (event) {
-                is PlayerConnectionEvent.Disconnected -> disconnectedFmt.format(event.playerName)
-                is PlayerConnectionEvent.Reconnected -> reconnectedFmt.format(event.playerName)
-                is PlayerConnectionEvent.HostChanged -> hostChangedFmt.format(event.newHostName)
-                is PlayerConnectionEvent.ReplacedByBot -> replacedByBotFmt.format(event.playerName)
+                is PlayerConnectionEvent.Disconnected -> disconnectedFmt.formatArgs(event.playerName)
+                is PlayerConnectionEvent.Reconnected -> reconnectedFmt.formatArgs(event.playerName)
+                is PlayerConnectionEvent.HostChanged -> hostChangedFmt.formatArgs(event.newHostName)
+                is PlayerConnectionEvent.ReplacedByBot -> replacedByBotFmt.formatArgs(event.playerName)
             }
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }

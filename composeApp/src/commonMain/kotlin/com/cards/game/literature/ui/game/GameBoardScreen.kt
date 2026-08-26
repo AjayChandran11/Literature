@@ -1,6 +1,7 @@
 package com.cards.game.literature.ui.game
 
-import androidx.activity.compose.BackHandler
+import com.cards.game.literature.ui.common.BackHandler
+import com.cards.game.literature.ui.common.formatArgs
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -929,12 +930,12 @@ private fun LastEventStrip(events: List<GameEvent>) {
 
     val messages = consolidateEvents(
         events = displayEvents,
-        fmtGot = { a, c, t -> fmtGotCard.format(a, c, t) },
-        fmtDenied = { a, t, c -> fmtAskedNoStrip.format(a, t, c) },
-        fmtClaimedOk = { c, h -> fmtClaimedOk.format(c, h) },
-        fmtClaimedBad = { c, h -> fmtClaimedBad.format(c, h) },
+        fmtGot = { a, c, t -> fmtGotCard.formatArgs(a, c, t) },
+        fmtDenied = { a, t, c -> fmtAskedNoStrip.formatArgs(a, t, c) },
+        fmtClaimedOk = { c, h -> fmtClaimedOk.formatArgs(c, h) },
+        fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, h) },
         textGameOver = textGameOver,
-        fmtTimedOut = { p -> fmtTimedOut.format(p) }
+        fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) }
     )
     if (messages.isEmpty()) return
 
@@ -1239,12 +1240,12 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
 
     val messages = consolidateEvents(
         events = displayEvents,
-        fmtGot = { a, c, t -> fmtGotCard.format(a, c, t) },
-        fmtDenied = { a, t, c -> fmtAskedNoStrip.format(a, t, c) },
-        fmtClaimedOk = { c, h -> fmtClaimedOk.format(c, h) },
-        fmtClaimedBad = { c, h -> fmtClaimedBad.format(c, h) },
+        fmtGot = { a, c, t -> fmtGotCard.formatArgs(a, c, t) },
+        fmtDenied = { a, t, c -> fmtAskedNoStrip.formatArgs(a, t, c) },
+        fmtClaimedOk = { c, h -> fmtClaimedOk.formatArgs(c, h) },
+        fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, h) },
         textGameOver = textGameOver,
-        fmtTimedOut = { p -> fmtTimedOut.format(p) },
+        fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) },
         limit = 1
     )
     if (messages.isEmpty()) return

@@ -1,6 +1,6 @@
 package com.cards.game.literature.ui.navigation
 
-import androidx.activity.compose.BackHandler
+import com.cards.game.literature.ui.common.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
