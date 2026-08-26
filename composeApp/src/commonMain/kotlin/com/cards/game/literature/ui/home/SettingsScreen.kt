@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.cards.game.literature.di.appVersionCode
 import com.cards.game.literature.di.appVersionName
 import com.cards.game.literature.notifications.PuzzleReminderScheduler
+import com.cards.game.literature.isWebPlatform
 import com.cards.game.literature.preferences.GamePrefs
 import com.cards.game.literature.ui.theme.ThemeController
 import com.cards.game.literature.ui.theme.ThemeMode
@@ -75,31 +76,34 @@ fun SettingsScreen(onBack: () -> Unit) {
                     GamePrefs.setSoundEnabled(it)
                 }
             )
-            SettingsToggleRow(
-                label = stringResource(Res.string.settings_haptic_feedback),
-                checked = hapticsEnabled,
-                onCheckedChange = {
-                    hapticsEnabled = it
-                    GamePrefs.setHapticsEnabled(it)
-                }
-            )
-            SettingsToggleRow(
-                label = stringResource(Res.string.settings_notifications),
-                checked = notificationsEnabled,
-                onCheckedChange = {
-                    notificationsEnabled = it
-                    GamePrefs.setNotificationsEnabled(it)
-                }
-            )
-            SettingsToggleRow(
-                label = stringResource(Res.string.settings_daily_reminder),
-                checked = puzzleReminderEnabled,
-                onCheckedChange = {
-                    puzzleReminderEnabled = it
-                    GamePrefs.setPuzzleReminderEnabled(it)
-                    if (it) PuzzleReminderScheduler.schedule() else PuzzleReminderScheduler.cancel()
-                }
-            )
+            // No haptics or notifications on web — hide toggles that would do nothing.
+            if (!isWebPlatform()) {
+                SettingsToggleRow(
+                    label = stringResource(Res.string.settings_haptic_feedback),
+                    checked = hapticsEnabled,
+                    onCheckedChange = {
+                        hapticsEnabled = it
+                        GamePrefs.setHapticsEnabled(it)
+                    }
+                )
+                SettingsToggleRow(
+                    label = stringResource(Res.string.settings_notifications),
+                    checked = notificationsEnabled,
+                    onCheckedChange = {
+                        notificationsEnabled = it
+                        GamePrefs.setNotificationsEnabled(it)
+                    }
+                )
+                SettingsToggleRow(
+                    label = stringResource(Res.string.settings_daily_reminder),
+                    checked = puzzleReminderEnabled,
+                    onCheckedChange = {
+                        puzzleReminderEnabled = it
+                        GamePrefs.setPuzzleReminderEnabled(it)
+                        if (it) PuzzleReminderScheduler.schedule() else PuzzleReminderScheduler.cancel()
+                    }
+                )
+            }
 
             // Theme: a value-picker row sized like the toggle rows — the current choice reads
             // inline, the three options live in a dropdown. (Material You dynamic color was

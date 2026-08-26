@@ -145,6 +145,7 @@ fun OnlineGameScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         GameBoardContent(
             viewModel = viewModel,
+            resumedGameId = onlineRepository.resumedGameId,
             // The board runs the match finale (hold + stinger) and invokes this when done.
             onGameEnd = onGameEnd,
             headerOverlay = {

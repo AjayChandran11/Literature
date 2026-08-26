@@ -1,21 +1,38 @@
 package com.cards.game.literature.share
 
-// Web Share API where available (mobile browsers); otherwise hand the text to WhatsApp Web.
-private fun jsShareText(text: String): Unit = js(
-    "navigator.share ? navigator.share({ text: text }) : window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank')"
-)
+// wa.me works everywhere — WhatsApp app on phones, WhatsApp Web on desktop — so the waiting
+// room's WhatsApp-first invite UI lights up on web too.
+private fun openWhatsApp(text: String): Unit =
+    js("window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank')")
+
+private fun shareOrWhatsApp(text: String): Unit =
+    js(
+        "navigator.share ? navigator.share({ text: text }).catch(function(){}) : " +
+            "window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank')"
+    )
+
+private fun clipboardWrite(text: String): Unit =
+    js("navigator.clipboard && navigator.clipboard.writeText(text)")
 
 actual object Sharer {
     actual fun shareText(text: String) {
-        jsShareText(text)
+        shareOrWhatsApp(text)
     }
 
-    // Image sharing needs a PNG encoder first (see ImageCodec); share the caption for now.
+    // Result-card image sharing needs a PNG encoder on wasm first (see ImageCodec); caption only.
     actual fun shareImage(pngBytes: ByteArray, caption: String) {
         shareText(caption)
     }
 
-    actual fun isWhatsAppAvailable(): Boolean = false
+    actual fun isWhatsAppAvailable(): Boolean = true
 
-    actual fun shareTextToWhatsApp(text: String): Boolean = false
+    actual fun shareTextToWhatsApp(text: String): Boolean {
+        openWhatsApp(text)
+        return true
+    }
+
+    actual fun copyText(text: String): Boolean {
+        clipboardWrite(text)
+        return true
+    }
 }

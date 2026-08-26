@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Literature — Card Game</title>
     <style>
-        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #14342b; }
+        /* overscroll-behavior kills mobile pull-to-refresh — a one-swipe game killer. */
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #14342b; overscroll-behavior-y: none; }
         #splash {
             position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column;
             gap: 14px; align-items: center; justify-content: center;
@@ -19,6 +20,20 @@
         }
         @keyframes r { to { transform: rotate(360deg); } }
     </style>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#14342b">
+    <!-- GA4: create a Web data stream in the Firebase/GA4 console, then uncomment and set the
+         measurement ID. The app's Analytics facade no-ops until window.gtag exists.
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX');
+    </script>
+    -->
     <script type="application/javascript" src="composeApp.js"></script>
 </head>
 <body>

@@ -70,6 +70,8 @@
     <string name="waiting_room_title">Waiting Room</string>
     <string name="waiting_room_code_label">Room Code</string>
     <string name="waiting_room_share_code">Share this code with friends</string>
+    <string name="cd_copy_room_code">Copy room code</string>
+    <string name="resume_rejoining">Rejoining your game…</string>
     <string name="waiting_room_invite">Invite Friends</string>
     <string name="waiting_room_invite_whatsapp">Invite on WhatsApp</string>
     <string name="waiting_room_invite_other">Other apps</string>

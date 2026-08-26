@@ -31,6 +31,11 @@ import com.cards.game.literature.ui.onboarding.OnboardingScreen
 import com.cards.game.literature.ui.dailypuzzle.DailyPuzzleScreen
 import com.cards.game.literature.ui.result.ResultScreen
 import com.cards.game.literature.ui.stats.StatsScreen
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.qualifier.named
@@ -61,6 +66,7 @@ object Routes {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    PlatformNavigationEffects(navController)
     val startDestination = if (OnboardingPrefs.isCompleted()) Routes.HOME else Routes.ONBOARDING
 
     // Jump straight to a screen the app was launched into (e.g. the daily-puzzle reminder tap).
@@ -79,6 +85,28 @@ fun AppNavigation() {
             }
             null -> {}
         }
+    }
+
+    // Web tab-refresh rejoin: the platform entry point found a live session snapshot.
+    // Reconnect with the saved identity and land back in the room; if the game is already
+    // running, WaitingRoomViewModel forwards to the board as soon as gameState arrives.
+    val pendingResume by DeepLinkHandler.pendingResume.collectAsState()
+    val onlineRepository = koinInject<OnlineGameRepository>()
+    LaunchedEffect(pendingResume) {
+        val resume = pendingResume ?: return@LaunchedEffect
+        DeepLinkHandler.consumeResume()
+        onlineRepository.resumeSession(resume.roomCode, resume.playerId, resume.reconnectToken)
+        navController.navigate(Routes.waitingRoom(resume.roomCode)) { launchSingleTop = true }
+        // Hold the rejoin curtain (see App) until the session state lands — or a failure
+        // becomes visible underneath (fatal dialog / error banner).
+        withTimeoutOrNull(15_000) {
+            merge(
+                onlineRepository.roomState.filterNotNull().map { },
+                onlineRepository.gameState.filterNotNull().map { },
+                onlineRepository.fatalError.filterNotNull().map { },
+            ).first()
+        }
+        DeepLinkHandler.finishResume()
     }
 
     // One consistent motion language for the whole app (previously all defaults):

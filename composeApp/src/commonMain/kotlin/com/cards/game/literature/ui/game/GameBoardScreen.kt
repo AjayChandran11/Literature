@@ -1,5 +1,6 @@
 package com.cards.game.literature.ui.game
 
+import com.cards.game.literature.PageUnloadGuard
 import com.cards.game.literature.ui.common.BackHandler
 import com.cards.game.literature.ui.common.formatArgs
 import androidx.compose.animation.*
@@ -77,6 +78,12 @@ fun GameBoardScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
 
+    // Web: an offline game dies with the tab — have the browser confirm refresh/close.
+    DisposableEffect(Unit) {
+        PageUnloadGuard.setGameInProgress(true)
+        onDispose { PageUnloadGuard.setGameInProgress(false) }
+    }
+
     BackHandler {
         // During the finale (FINISHED) back is swallowed — quitting there would skip
         // the result screen; tapping the stinger is the fast path forward instead.
@@ -135,6 +142,8 @@ fun GameBoardContent(
     headerOverlay: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     tutorialState: TutorialState? = null,
+    // A game entered via session resume (web tab refresh) — its intro already played.
+    resumedGameId: String? = null,
     // Navigation to the result screen. The board owns the moment of game over (the
     // match-finale hold + stinger), so it decides WHEN to invoke this — callers must
     // not navigate on FINISHED themselves.
@@ -173,14 +182,17 @@ fun GameBoardContent(
     // the curtain's first frame, chiming under it and again at the reveal.
     val introPending = uiState.gameId.isNotEmpty() &&
         introDoneForGame != uiState.gameId &&
-        tutorialState?.isActive != true
+        tutorialState?.isActive != true &&
+        uiState.gameId != resumedGameId
     val introVisible = introPending && uiState.phase == GamePhase.IN_PROGRESS
     // Arbitration between the two game-start cue sites (rising-edge effect and the
     // intro's onDone): whichever plays first marks the match, the other stays
     // silent. Mid-game turn chimes are unaffected — only onDone consults it.
     var startCueDoneFor by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(uiState.gameId, tutorialState?.isActive) {
-        if (tutorialState?.isActive == true && uiState.gameId.isNotEmpty()) {
+        val consumedByTutorial = tutorialState?.isActive == true
+        val consumedByResume = resumedGameId != null && resumedGameId == uiState.gameId
+        if ((consumedByTutorial || consumedByResume) && uiState.gameId.isNotEmpty()) {
             introDoneForGame = uiState.gameId
         }
     }

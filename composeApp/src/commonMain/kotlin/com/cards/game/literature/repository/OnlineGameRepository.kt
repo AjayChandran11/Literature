@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.model.*
 import com.cards.game.literature.network.NetworkMonitor
+import com.cards.game.literature.preferences.OnlineSessionBackup
 import com.cards.game.literature.protocol.*
 import io.ktor.client.*
 import io.ktor.client.plugins.*
@@ -111,6 +112,12 @@ class OnlineGameRepository(
     // Proof of identity for reconnects, issued by the server in RoomCreated.
     private var reconnectToken: String = ""
 
+    // The game a web tab-refresh resumed into — its match intro already played pre-refresh,
+    // so the board must not replay it. Set on the first game view after resumeSession().
+    var resumedGameId: String? = null
+        private set
+    private var markNextGameAsResumed = false
+
     init {
         scope.launch {
             NetworkMonitor.isNetworkAvailable.collect { available ->
@@ -175,6 +182,18 @@ class OnlineGameRepository(
         connectAndSend(ClientMessage.JoinRoom(roomCode, playerName))
     }
 
+    /** Resumes a session restored from [OnlineSessionBackup] (web tab refresh). */
+    suspend fun resumeSession(code: String, playerId: String, token: String) {
+        roomCode = code
+        myPlayerId = playerId
+        reconnectToken = token
+        _fatalError.value = null
+        needsEventReplay.value = true
+        markNextGameAsResumed = true
+        log.i { "Resuming session: code=$roomCode, playerId=$myPlayerId" }
+        connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId, token))
+    }
+
     suspend fun startGame(fillWithBots: Boolean = true, botDifficulty: String = "MEDIUM") {
         sendMessage(ClientMessage.StartGame(fillWithBots, botDifficulty))
     }
@@ -235,6 +254,7 @@ class OnlineGameRepository(
     }
 
     private fun reset() {
+        OnlineSessionBackup.clear()
         _gameState.value = null
         _roomState.value = null
         _reconnectCountdowns.value = emptyMap()
@@ -305,6 +325,7 @@ class OnlineGameRepository(
                     if (closeReason.await()?.code == CloseReason.Codes.CANNOT_ACCEPT.code) {
                         shouldAutoReconnect = false
                         _fatalError.value = FatalSessionError.UPDATE_REQUIRED
+                        OnlineSessionBackup.clear()
                     }
                 }
             } catch (e: CancellationException) {
@@ -398,12 +419,14 @@ class OnlineGameRepository(
         // (a rejected client is closed at the handshake and never gets this far). This is the
         // correct place to reset the reconnect backoff — see the note at the handshake above.
         reconnectAttempts = 0
+        OnlineSessionBackup.touch()
 
         when (message) {
             is ServerMessage.RoomCreated -> {
                 roomCode = message.roomCode
                 myPlayerId = message.playerId
                 reconnectToken = message.reconnectToken
+                OnlineSessionBackup.save(roomCode, myPlayerId, reconnectToken)
                 log.i { "Room created: code=$roomCode, playerId=$myPlayerId" }
                 if (message.protocolVersion > Protocol.VERSION) {
                     log.w { "Server protocol ${message.protocolVersion} is newer than client ${Protocol.VERSION} — app update recommended" }
@@ -466,6 +489,7 @@ class OnlineGameRepository(
                 // failed lobby join, which the lobby surfaces as an ordinary error instead.
                 if (roomCode.isNotEmpty() && message.message.contains("Room not found", ignoreCase = true)) {
                     _fatalError.value = FatalSessionError.ROOM_GONE
+                    OnlineSessionBackup.clear()
                     disconnect()
                 } else {
                     _errors.emit(message.message)
@@ -500,6 +524,10 @@ class OnlineGameRepository(
     }
 
     private suspend fun applyGameView(view: PlayerGameView) {
+        if (markNextGameAsResumed) {
+            resumedGameId = view.gameId
+            markNextGameAsResumed = false
+        }
         // Convert PlayerGameView into a synthetic GameState
         // The view has our hand but only card counts for others
         val players = view.players.map { info ->

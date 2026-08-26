@@ -18,6 +18,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -39,6 +41,7 @@ import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.bot.BotPersonalities
 import com.cards.game.literature.deeplink.InviteLink
 import com.cards.game.literature.repository.PlayerConnectionEvent
+import com.cards.game.literature.isWebPlatform
 import com.cards.game.literature.share.Sharer
 import com.cards.game.literature.stats.StatsStore
 import com.cards.game.literature.ui.game.HowToPlaySheet
@@ -346,16 +349,42 @@ private fun RoomCodeCard(roomCode: String, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = roomCode,
-                style = MaterialTheme.typography.displaySmall,
-                // The code mixes caps and digits; Playfair's old-style figures render the
-                // numbers small and low next to the caps. Monospace gives every glyph the
-                // same metrics, so the code reads evenly — and like the code it is.
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 4.sp,
-                color = MaterialTheme.colorScheme.secondary
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = roomCode,
+                    style = MaterialTheme.typography.displaySmall,
+                    // The code mixes caps and digits; Playfair's old-style figures render the
+                    // numbers small and low next to the caps. Monospace gives every glyph the
+                    // same metrics, so the code reads evenly — and like the code it is.
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 4.sp,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                // Web has no share sheet muscle memory; a copy affordance is the browser norm.
+                if (isWebPlatform()) {
+                    var copied by remember { mutableStateOf(false) }
+                    LaunchedEffect(copied) {
+                        if (copied) {
+                            kotlinx.coroutines.delay(1500)
+                            copied = false
+                        }
+                    }
+                    IconButton(
+                        onClick = { if (Sharer.copyText(roomCode)) copied = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (copied) Icons.Filled.Check else Icons.Filled.ContentCopy,
+                            contentDescription = stringResource(Res.string.cd_copy_room_code),
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
             // No "share this code with friends" caption — the labelled invite button sits
             // directly below and says the same thing, actionably. Dropping it keeps the code
             // itself the hero of the card and buys the players list back ~18dp in portrait.
