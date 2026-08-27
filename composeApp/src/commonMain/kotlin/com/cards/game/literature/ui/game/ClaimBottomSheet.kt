@@ -1,11 +1,13 @@
 package com.cards.game.literature.ui.game
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -178,9 +180,14 @@ fun ClaimBottomSheet(
                                             )
                                         }
                                     }
+                                    // Same themed dropdown treatment as the Settings pickers.
                                     DropdownMenu(
                                         expanded = expanded,
-                                        onDismissRequest = { expanded = false }
+                                        onDismissRequest = { expanded = false },
+                                        shape = RoundedCornerShape(12.dp),
+                                        containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+                                            .compositeOver(MaterialTheme.colorScheme.surface),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                                     ) {
                                         teammates.forEach { player ->
                                             DropdownMenuItem(

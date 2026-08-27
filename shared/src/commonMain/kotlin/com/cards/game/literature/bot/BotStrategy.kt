@@ -302,14 +302,23 @@ class BotStrategy(private val cardTracker: CardTracker = CardTracker()) {
             }
         }
 
-        // Fallback: ask a random opponent for any missing card from any unclaimed half-suit
+        // Fallback: reached when the tracker has ruled every missing card out of every
+        // opponent's hand — they're provably with our own team, so no ask can succeed, yet
+        // the rules still demand one. Returning the FIRST missing card here (the old code)
+        // made an endgame-stalled bot hammer the identical ask forever. Rotate across the
+        // cards we lack instead: each different (futile) ask is also a public hint of what
+        // this bot holds, which is how real teams break exactly this stalemate.
         val opponent = opponents.random()
-        for (halfSuit in myActiveHalfSuits) {
-            val missingCard = DeckUtils.getAllCardsForHalfSuit(halfSuit)
-                .firstOrNull { it !in bot.hand }
-            if (missingCard != null) {
-                return BotAction.Ask(targetId = opponent.id, card = missingCard)
-            }
+        val lastAskedCard = state.events
+            .filterIsInstance<GameEvent.CardAsked>()
+            .lastOrNull { it.askerId == bot.id }
+            ?.card
+        val fallbackCards = myActiveHalfSuits
+            .flatMap { DeckUtils.getAllCardsForHalfSuit(it) }
+            .filter { it !in bot.hand }
+        if (fallbackCards.isNotEmpty()) {
+            val rotated = fallbackCards.filter { it != lastAskedCard }.ifEmpty { fallbackCards }
+            return BotAction.Ask(targetId = opponent.id, card = rotated.random())
         }
 
         // Last resort: the bot's hand is made up entirely of complete half-suits, so
