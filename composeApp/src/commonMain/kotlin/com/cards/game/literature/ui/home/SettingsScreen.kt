@@ -1,6 +1,12 @@
 package com.cards.game.literature.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -24,7 +30,9 @@ import com.cards.game.literature.di.appVersionCode
 import com.cards.game.literature.di.appVersionName
 import com.cards.game.literature.notifications.PuzzleReminderScheduler
 import com.cards.game.literature.isWebPlatform
+import com.cards.game.literature.preferences.BotPacing
 import com.cards.game.literature.preferences.GamePrefs
+import kotlin.math.roundToInt
 import com.cards.game.literature.ui.theme.ThemeController
 import com.cards.game.literature.ui.theme.ThemeMode
 import literature.composeapp.generated.resources.Res
@@ -104,6 +112,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
                 )
             }
+
+            BotSpeedSetting()
 
             // Theme: a value-picker row sized like the toggle rows — the current choice reads
             // inline, the three options live in a dropdown. (Material You dynamic color was
@@ -212,6 +222,66 @@ private fun SettingsLinkRow(label: String, onClick: () -> Unit) {
             label,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+/** Bot pacing for offline games. The toggle keeps the stock pacing (identical to every
+ *  release so far) until the player opts in — only then does the slider appear. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BotSpeedSetting() {
+    var customEnabled by remember { mutableStateOf(GamePrefs.isBotSpeedCustomEnabled()) }
+    var seconds by remember { mutableStateOf(GamePrefs.getBotDelaySeconds()) }
+
+    SettingsToggleRow(
+        label = stringResource(Res.string.settings_bot_speed),
+        checked = customEnabled,
+        onCheckedChange = {
+            customEnabled = it
+            GamePrefs.setBotSpeedCustomEnabled(it)
+        }
+    )
+    AnimatedVisibility(
+        visible = customEnabled,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut()
+    ) {
+        // Snapped to halves, so whole values read clean ("4s", not "4.0s").
+        val thumbLabel = if (seconds % 1f == 0f) "${seconds.toInt()}s" else "${seconds}s"
+        Slider(
+            value = seconds,
+            // Snap to clean half-second values; float step math can land on 4.4999998.
+            onValueChange = { seconds = (it * 2).roundToInt() / 2f },
+            // Persist on release, not on every drag frame.
+            onValueChangeFinished = { GamePrefs.setBotDelaySeconds(seconds) },
+            valueRange = BotPacing.MIN_SECONDS..BotPacing.MAX_SECONDS,
+            steps = BotPacing.SLIDER_STEPS,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            thumb = {
+                Box(
+                    modifier = Modifier
+                        .size(width = 42.dp, height = 26.dp)
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(13.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        thumbLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        maxLines = 1
+                    )
+                }
+            },
+            track = { sliderState ->
+                // The default M3 track is chunky; slim it to read as a row control.
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    modifier = Modifier.height(6.dp)
+                )
+            }
         )
     }
 }

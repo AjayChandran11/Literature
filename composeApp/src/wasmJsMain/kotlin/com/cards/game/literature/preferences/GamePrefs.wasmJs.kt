@@ -51,4 +51,18 @@ actual object GamePrefs {
     actual fun setDynamicColorsEnabled(enabled: Boolean) {
         localStorage.setItem("dynamic_colors", enabled.toString())
     }
+
+    actual fun isBotSpeedCustomEnabled(): Boolean =
+        localStorage.getItem("bot_speed_custom")?.toBoolean() ?: false
+
+    actual fun setBotSpeedCustomEnabled(enabled: Boolean) {
+        localStorage.setItem("bot_speed_custom", enabled.toString())
+    }
+
+    actual fun getBotDelaySeconds(): Float =
+        localStorage.getItem("bot_delay_secs")?.toFloatOrNull() ?: BotPacing.DEFAULT_SECONDS
+
+    actual fun setBotDelaySeconds(seconds: Float) {
+        localStorage.setItem("bot_delay_secs", seconds.toString())
+    }
 }

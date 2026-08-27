@@ -17,4 +17,12 @@ expect object GamePrefs {
     fun setThemeMode(mode: String)
     fun isDynamicColorsEnabled(): Boolean
     fun setDynamicColorsEnabled(enabled: Boolean)
+
+    /** Whether the player overrides the stock bot pacing; the slider only applies when true. */
+    fun isBotSpeedCustomEnabled(): Boolean
+    fun setBotSpeedCustomEnabled(enabled: Boolean)
+
+    /** Offline bot thinking time in seconds; [BotPacing.DEFAULT_SECONDS] when unset. */
+    fun getBotDelaySeconds(): Float
+    fun setBotDelaySeconds(seconds: Float)
 }
