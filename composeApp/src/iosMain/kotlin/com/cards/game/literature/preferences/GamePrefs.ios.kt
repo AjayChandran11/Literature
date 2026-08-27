@@ -55,4 +55,19 @@ actual object GamePrefs {
     actual fun setDynamicColorsEnabled(enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = "dynamic_colors")
     }
+
+    actual fun isBotSpeedCustomEnabled(): Boolean =
+        NSUserDefaults.standardUserDefaults.boolForKey("bot_speed_custom")
+
+    actual fun setBotSpeedCustomEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = "bot_speed_custom")
+    }
+
+    actual fun getBotDelaySeconds(): Float =
+        if (NSUserDefaults.standardUserDefaults.objectForKey("bot_delay_secs") == null) 4f
+        else NSUserDefaults.standardUserDefaults.floatForKey("bot_delay_secs")
+
+    actual fun setBotDelaySeconds(seconds: Float) {
+        NSUserDefaults.standardUserDefaults.setFloat(seconds, forKey = "bot_delay_secs")
+    }
 }

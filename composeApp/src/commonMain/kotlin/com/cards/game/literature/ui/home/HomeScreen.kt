@@ -54,7 +54,6 @@ import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onStartGame: (playerName: String, playerCount: Int, difficulty: BotDifficulty) -> Unit,
@@ -67,14 +66,11 @@ fun HomeScreen(
     val session = koinInject<SessionStore>()
     var playerName by rememberSaveable { mutableStateOf(session.playerName) }
     val pendingInvite by DeepLinkHandler.pendingRoomCode.collectAsState()
-    var showSetupDialog by remember { mutableStateOf(false) }
-    var showOnlineGateDialog by remember { mutableStateOf(false) }
+    val stats by StatsStore.stats.collectAsState()
     // Festival theming — date + region gated, extensible (see FestivalCalendar). Only Independence
     // Day (India) is defined: the wordmark accent runs Aug 15-20, the banner only on Aug 15.
     val festival = remember { FestivalCalendar.active() }
-    val isIndependenceDay = festival == Festival.INDEPENDENCE_DAY
     val showFestivalBanner = remember { FestivalCalendar.bannerActive() }
-    val onBackground = MaterialTheme.colorScheme.onBackground
 
     // Flag the Daily Puzzle button with a "!" alert badge on the FIRST Home open of the day
     // only — and never again that day (even after visiting another screen and coming back).
@@ -87,6 +83,50 @@ fun HomeScreen(
         p.status != PuzzleStatus.SOLVED && p.status != PuzzleStatus.FAILED && p.readyHintShownDay != today
     }
     LaunchedEffect(Unit) { if (showPuzzleHighlight) PuzzleStore.markReadyHintShown(today) }
+
+    HomeScreenContent(
+        playerName = playerName,
+        onPlayerNameChange = {
+            playerName = it
+            session.playerName = it
+        },
+        pendingInvite = pendingInvite,
+        stats = stats,
+        showPuzzleHighlight = showPuzzleHighlight,
+        isIndependenceDay = festival == Festival.INDEPENDENCE_DAY,
+        showFestivalBanner = showFestivalBanner,
+        onConsumeInvite = { DeepLinkHandler.consume() },
+        onStartGame = onStartGame,
+        onPlayOnline = onPlayOnline,
+        onJoinRoom = onJoinRoom,
+        onOpenStats = onOpenStats,
+        onOpenDailyPuzzle = onOpenDailyPuzzle,
+        onOpenSettings = onOpenSettings
+    )
+}
+
+/** Stateless body of [HomeScreen] — all state hoisted so previews can render any state. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun HomeScreenContent(
+    playerName: String,
+    onPlayerNameChange: (String) -> Unit,
+    pendingInvite: String?,
+    stats: PlayerStats,
+    showPuzzleHighlight: Boolean,
+    isIndependenceDay: Boolean,
+    showFestivalBanner: Boolean,
+    onConsumeInvite: () -> Unit,
+    onStartGame: (playerName: String, playerCount: Int, difficulty: BotDifficulty) -> Unit,
+    onPlayOnline: (playerName: String) -> Unit = {},
+    onJoinRoom: (playerName: String, roomCode: String) -> Unit = { _, _ -> },
+    onOpenStats: () -> Unit = {},
+    onOpenDailyPuzzle: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}
+) {
+    var showSetupDialog by remember { mutableStateOf(false) }
+    var showOnlineGateDialog by remember { mutableStateOf(false) }
+    val onBackground = MaterialTheme.colorScheme.onBackground
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Corner suit symbols
@@ -168,14 +208,13 @@ fun HomeScreen(
                     roomCode = code,
                     canJoin = playerName.isNotBlank(),
                     onJoin = {
-                        DeepLinkHandler.consume()
+                        onConsumeInvite()
                         onJoinRoom(playerName.trim(), code)
                     },
-                    onDismiss = { DeepLinkHandler.consume() }
+                    onDismiss = onConsumeInvite
                 )
             }
 
-            val stats by StatsStore.stats.collectAsState()
             if (stats.gamesPlayed > 0) {
                 Spacer(modifier = Modifier.height(20.dp))
                 HomeStatsCard(stats = stats)
@@ -190,9 +229,7 @@ fun HomeScreen(
                     // Cap at the server's name limit (GameWebSocket trims to 20) so what
                     // you type is exactly what every player sees — and so offline games,
                     // which never pass through the server, can't get a layout-breaking name.
-                    val capped = it.take(20)
-                    playerName = capped
-                    session.playerName = capped
+                    onPlayerNameChange(it.take(20))
                 },
                 label = { Text(stringResource(Res.string.home_player_name_hint)) },
                 singleLine = true,
@@ -752,5 +789,64 @@ fun GameSetupDialog(
                 }
             }
         }
+    }
+}
+
+/** Full Home screen with a pending invite, as a returning player sees it after tapping a link. */
+@Preview(name = "Home — invite pending, name set", showBackground = true, heightDp = 1000)
+@Composable
+private fun HomeScreenInvitePreview() {
+    LiteratureTheme {
+        HomeScreenContent(
+            playerName = "Ajay",
+            onPlayerNameChange = {},
+            pendingInvite = "URJQ8M",
+            stats = PlayerStats(gamesPlayed = 9, wins = 3, currentStreak = 1),
+            showPuzzleHighlight = true,
+            isIndependenceDay = false,
+            showFestivalBanner = false,
+            onConsumeInvite = {},
+            onStartGame = { _, _, _ -> }
+        )
+    }
+}
+
+/** Max-content stress state: Aug 15 festival (tricolor wordmark + greeting banner) with a
+ *  pending invite, stats card and puzzle badge all stacked — if the column survives this,
+ *  every leaner combination fits. */
+@Preview(name = "Home — Independence Day + invite", showBackground = true, heightDp = 1200)
+@Composable
+private fun HomeScreenFestivalInvitePreview() {
+    LiteratureTheme {
+        HomeScreenContent(
+            playerName = "Ajay",
+            onPlayerNameChange = {},
+            pendingInvite = "URJQ8M",
+            stats = PlayerStats(gamesPlayed = 9, wins = 3, currentStreak = 1),
+            showPuzzleHighlight = true,
+            isIndependenceDay = true,
+            showFestivalBanner = true,
+            onConsumeInvite = {},
+            onStartGame = { _, _, _ -> }
+        )
+    }
+}
+
+/** The install-referrer first-launch state: invite pending, no name yet (Join disabled + hint). */
+@Preview(name = "Home — invite pending, fresh install", showBackground = true, heightDp = 1000)
+@Composable
+private fun HomeScreenInviteFreshInstallPreview() {
+    LiteratureTheme {
+        HomeScreenContent(
+            playerName = "",
+            onPlayerNameChange = {},
+            pendingInvite = "URJQ8M",
+            stats = PlayerStats(),
+            showPuzzleHighlight = true,
+            isIndependenceDay = false,
+            showFestivalBanner = false,
+            onConsumeInvite = {},
+            onStartGame = { _, _, _ -> }
+        )
     }
 }

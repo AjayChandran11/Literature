@@ -42,6 +42,63 @@ class BotStrategyTest {
     private fun asked(askerId: String, targetId: String, card: Card, success: Boolean) =
         GameEvent.CardAsked(askerId, askerId, targetId, targetId, card, success)
 
+    // ── Endgame stalemate fallback (Play-review regression) ─────────────────
+    // Every missing card of the bot's only half-suit is provably with its own team
+    // (all opponents denied all of them), so no ask can succeed — the bot must still
+    // ask, and used to hammer the identical first missing card forever.
+
+    private fun stalemateDenials(missing: List<Card>) = missing.flatMap { card ->
+        listOf("p2", "p4", "p6").map { opp -> asked("p1", opp, card, success = false) }
+    }
+
+    @Test
+    fun stalemateFallbackNeverRepeatsThePreviousAskWhenAlternativesExist() {
+        val high = DeckUtils.getAllCardsForHalfSuit(HalfSuit.HEARTS_HIGH)
+        val botCards = high.take(3)
+        val missing = high.drop(3)
+        val denials = stalemateDenials(missing)
+
+        repeat(20) {
+            val lastAsk = asked("p1", "p2", missing.first(), success = false)
+            val state = makeState(
+                botHand = botCards,
+                p3Hand = missing.take(2),
+                p5Hand = missing.drop(2),
+                events = denials + lastAsk
+            )
+            val action = strategy.decideMove(state, "p1", BotDifficulty.MEDIUM)
+            assertIs<BotAction.Ask>(action)
+            assertTrue(action.card in missing, "ask must stay within the bot's active half-suit")
+            assertTrue(action.card != missing.first(), "bot repeated its previous futile ask")
+        }
+    }
+
+    @Test
+    fun stalemateFallbackRotatesAcrossMissingCards() {
+        val high = DeckUtils.getAllCardsForHalfSuit(HalfSuit.HEARTS_HIGH)
+        val botCards = high.take(3)
+        val missing = high.drop(3)
+        var events = stalemateDenials(missing)
+
+        val askedCards = mutableSetOf<Card>()
+        repeat(12) {
+            val state = makeState(
+                botHand = botCards,
+                p3Hand = missing.take(2),
+                p5Hand = missing.drop(2),
+                events = events
+            )
+            val action = strategy.decideMove(state, "p1", BotDifficulty.MEDIUM)
+            assertIs<BotAction.Ask>(action)
+            askedCards += action.card
+            events = events + asked("p1", action.targetId, action.card, success = false)
+        }
+        assertTrue(
+            askedCards.size >= 2,
+            "expected the stalled bot to rotate its asks, but it only asked $askedCards"
+        )
+    }
+
     @Test
     fun claimsWhenTeamHasAllSixCardsConfirmed() {
         val spadesLow = DeckUtils.getAllCardsForHalfSuit(HalfSuit.SPADES_LOW)
