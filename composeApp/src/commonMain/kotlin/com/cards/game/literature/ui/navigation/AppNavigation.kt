@@ -90,23 +90,42 @@ fun AppNavigation() {
     // Web tab-refresh rejoin: the platform entry point found a live session snapshot.
     // Reconnect with the saved identity and land back in the room; if the game is already
     // running, WaitingRoomViewModel forwards to the board as soon as gameState arrives.
-    val pendingResume by DeepLinkHandler.pendingResume.collectAsState()
+    // Keyed on Unit, not pendingResume: consumeResume() nulls the flow, and a key change
+    // would cancel this effect mid-wait — leaving the curtain up forever.
     val onlineRepository = koinInject<OnlineGameRepository>()
-    LaunchedEffect(pendingResume) {
-        val resume = pendingResume ?: return@LaunchedEffect
+    LaunchedEffect(Unit) {
+        val resume = DeepLinkHandler.pendingResume.filterNotNull().first()
         DeepLinkHandler.consumeResume()
-        onlineRepository.resumeSession(resume.roomCode, resume.playerId, resume.reconnectToken)
-        navController.navigate(Routes.waitingRoom(resume.roomCode)) { launchSingleTop = true }
-        // Hold the rejoin curtain (see App) until the session state lands — or a failure
-        // becomes visible underneath (fatal dialog / error banner).
-        withTimeoutOrNull(15_000) {
-            merge(
-                onlineRepository.roomState.filterNotNull().map { },
-                onlineRepository.gameState.filterNotNull().map { },
-                onlineRepository.fatalError.filterNotNull().map { },
-            ).first()
+        try {
+            onlineRepository.resumeSession(resume.roomCode, resume.playerId, resume.reconnectToken)
+            // Wait (under the curtain, on Home) for the session to say where it is, then land
+            // there in ONE hop — routing through the waiting room let it flash for the length
+            // of its forward transition on every mid-game resume. A mid-game reconnect delivers
+            // GameUpdate before anything else (GameRoom.handleReconnect), a lobby reconnect
+            // RoomUpdate; an error or a fatal means the seat is gone — stay on Home.
+            val route = withTimeoutOrNull(15_000) {
+                merge<String?>(
+                    onlineRepository.gameState.filterNotNull().map { Routes.ONLINE_GAME },
+                    onlineRepository.roomState.filterNotNull().map { Routes.waitingRoom(resume.roomCode) },
+                    onlineRepository.fatalError.filterNotNull().map { null },
+                    onlineRepository.errors.map { null },
+                ).first()
+            }
+            if (route != null) {
+                val pattern = if (route == Routes.ONLINE_GAME) Routes.ONLINE_GAME else Routes.WAITING_ROOM
+                navController.navigate(route) {
+                    launchSingleTop = true
+                    if (pattern == Routes.ONLINE_GAME) popUpTo(Routes.HOME)
+                }
+                // Lift only after the destination has fully entered: visibleEntries shrinks
+                // back to a single entry once the transition settles.
+                withTimeoutOrNull(2_000) {
+                    navController.visibleEntries.first { it.singleOrNull()?.destination?.route == pattern }
+                }
+            }
+        } finally {
+            DeepLinkHandler.finishResume()
         }
-        DeepLinkHandler.finishResume()
     }
 
     // One consistent motion language for the whole app (previously all defaults):
