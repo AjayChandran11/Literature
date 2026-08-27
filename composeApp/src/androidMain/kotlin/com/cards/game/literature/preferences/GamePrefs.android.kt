@@ -43,6 +43,16 @@ actual object GamePrefs {
     }
 
     actual fun isDynamicColorsEnabled(): Boolean = prefs()?.getBoolean("dynamic_colors", false) ?: false
+
+    actual fun isBotSpeedCustomEnabled(): Boolean = prefs()?.getBoolean("bot_speed_custom", false) ?: false
+    actual fun setBotSpeedCustomEnabled(enabled: Boolean) {
+        prefs()?.edit()?.putBoolean("bot_speed_custom", enabled)?.apply()
+    }
+
+    actual fun getBotDelaySeconds(): Float = prefs()?.getFloat("bot_delay_secs", 4f) ?: 4f
+    actual fun setBotDelaySeconds(seconds: Float) {
+        prefs()?.edit()?.putFloat("bot_delay_secs", seconds)?.apply()
+    }
     actual fun setDynamicColorsEnabled(enabled: Boolean) {
         prefs()?.edit()?.putBoolean("dynamic_colors", enabled)?.apply()
     }

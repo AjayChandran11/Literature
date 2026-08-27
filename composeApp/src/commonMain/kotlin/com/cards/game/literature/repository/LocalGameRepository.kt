@@ -6,6 +6,8 @@ import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.bot.BotPlayer
 import com.cards.game.literature.logic.GameEngine
 import com.cards.game.literature.model.*
+import com.cards.game.literature.preferences.BotPacing
+import com.cards.game.literature.preferences.GamePrefs
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
@@ -128,7 +130,13 @@ class LocalGameRepository(
             val current = state.currentPlayer
             if (!current.isBot) return
 
-            val action = botPlayer.decideMove(state, current.id)
+            // Read the pacing each move so a settings change applies to the game in progress.
+            val thinkingDelay = if (GamePrefs.isBotSpeedCustomEnabled()) {
+                BotPacing.delayRangeFor(GamePrefs.getBotDelaySeconds())
+            } else {
+                BotPacing.PRODUCTION_DELAY
+            }
+            val action = botPlayer.decideMove(state, current.id, thinkingDelayMillis = thinkingDelay)
             log.d { "Bot ${current.name} action: ${action::class.simpleName}" }
             when (action) {
                 is BotAction.Ask -> {

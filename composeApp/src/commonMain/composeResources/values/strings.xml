@@ -362,6 +362,7 @@
     <string name="claim_celebration_failed">%1$s got it wrong</string>
 
     <!-- Theme settings -->
+    <string name="settings_bot_speed">Custom bot thinking time</string>
     <string name="settings_theme">Theme</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
