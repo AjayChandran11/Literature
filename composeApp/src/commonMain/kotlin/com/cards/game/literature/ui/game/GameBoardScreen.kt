@@ -65,6 +65,7 @@ import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.cards.game.literature.ui.common.EMOJI_VS
+import com.cards.game.literature.ui.common.displayEmoji
 
 @Composable
 fun GameBoardScreen(
@@ -805,12 +806,12 @@ private fun consolidateEvents(
                             } else break
                         }
                     }
-                    val cards = group.joinToString(", ") { it.card.displayName }
+                    val cards = group.joinToString(", ") { it.card.displayEmoji }
                     messages.add(StripMessage("✓", LightGreen, fmtGot(event.askerName, cards, event.targetName)))
                 } else {
                     messages.add(StripMessage(
                         "✗", CardRed,
-                        fmtDenied(event.askerName, event.targetName, event.card.displayName)
+                        fmtDenied(event.askerName, event.targetName, event.card.displayEmoji)
                     ))
                 }
             }
