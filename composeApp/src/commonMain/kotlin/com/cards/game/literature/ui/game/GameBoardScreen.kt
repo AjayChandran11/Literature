@@ -79,12 +79,6 @@ fun GameBoardScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
 
-    // Web: an offline game dies with the tab — have the browser confirm refresh/close.
-    DisposableEffect(Unit) {
-        PageUnloadGuard.setGameInProgress(true)
-        onDispose { PageUnloadGuard.setGameInProgress(false) }
-    }
-
     BackHandler {
         // During the finale (FINISHED) back is swallowed — quitting there would skip
         // the result screen; tapping the stinger is the fast path forward instead.
@@ -125,6 +119,15 @@ fun GameBoardScreen(
 
     val isFirstGame = remember { !TutorialPrefs.isFirstGameCompleted() }
     val tutorialState = rememberTutorialState(isFirstGame)
+
+    // Web: an offline game dies with the tab — have the browser confirm refresh/close.
+    // Only while there's a real game to lose: not during the FTUE tutorial (the funnel's
+    // most fragile moment) and not once the game is FINISHED.
+    val guardUnload = uiState.phase != GamePhase.FINISHED && !tutorialState.isActive
+    DisposableEffect(guardUnload) {
+        PageUnloadGuard.setGameInProgress(guardUnload)
+        onDispose { PageUnloadGuard.setGameInProgress(false) }
+    }
 
     // Mark tutorial complete when it finishes
     LaunchedEffect(tutorialState.isActive) {

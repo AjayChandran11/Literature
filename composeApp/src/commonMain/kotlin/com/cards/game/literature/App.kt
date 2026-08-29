@@ -33,7 +33,7 @@ fun App() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            Box {
+            Box(modifier = Modifier.fillMaxSize()) {
                 AppNavigation()
                 // Web session resume: covers the boot-time navigation hops until the
                 // reattached game state lands (or the failure UI shows underneath).

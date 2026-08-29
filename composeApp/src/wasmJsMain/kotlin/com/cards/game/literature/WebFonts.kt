@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.delay
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.noto_color_emoji
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -29,7 +30,16 @@ internal fun WithEmojiFallback(content: @Composable () -> Unit) {
     val resolver = LocalFontFamilyResolver.current
     LaunchedEffect(emojiFont) {
         emojiFont?.let {
-            resolver.preload(FontFamily(it))
+            runCatching { resolver.preload(FontFamily(it)) }
+            ready = true
+            removeSplash()
+        }
+    }
+    // A cosmetic asset must not be a boot single-point-of-failure: if the font fetch
+    // stalls or 404s, boot anyway — a tofu flash beats an eternal splash.
+    LaunchedEffect(Unit) {
+        delay(8_000)
+        if (!ready) {
             ready = true
             removeSplash()
         }

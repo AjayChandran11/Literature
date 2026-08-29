@@ -122,6 +122,11 @@ fun AppNavigation() {
                 withTimeoutOrNull(2_000) {
                     navController.visibleEntries.first { it.singleOrNull()?.destination?.route == pattern }
                 }
+            } else {
+                // Abandoned resume (timeout or rejection): kill the background auto-reconnect
+                // too, or it can silently re-seat the player while nothing observes the
+                // session from Home — teammates would see them "reconnected" but stalled.
+                onlineRepository.disconnect()
             }
         } finally {
             DeepLinkHandler.finishResume()

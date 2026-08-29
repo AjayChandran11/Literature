@@ -3,8 +3,8 @@ package com.cards.game.literature.analytics
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-// gtag exists only when index.html carries a GA4 snippet (see the commented block there);
-// without it these are silent no-ops, so the facade stays safe to call unconditionally.
+// gtag is loaded by index.html's GA4 snippet (LIVE since 2026-08-28, stream G-EQR8K69SN9);
+// if it's ever absent these degrade to silent no-ops, so the facade is safe to call anywhere.
 private fun gtagEvent(name: String, paramsJson: String): Unit =
     js("window.gtag && window.gtag('event', name, JSON.parse(paramsJson))")
 

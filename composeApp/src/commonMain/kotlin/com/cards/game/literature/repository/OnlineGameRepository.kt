@@ -164,6 +164,8 @@ class OnlineGameRepository(
             log.i { "Server warm-up successful" }
         } catch (e: CancellationException) {
             throw e
+        } catch (e: Error) {
+            throw e // JVM fatals (OOM etc.) must crash to Crashlytics, not be absorbed
         } catch (e: Throwable) { // not Exception: Kotlin/Wasm wraps JS errors in JsException : Throwable
             log.w { "Server warm-up finished (${e.message})" }
         }
@@ -332,6 +334,8 @@ class OnlineGameRepository(
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: Error) {
+                throw e // see warmUp: JVM fatals stay fatal
             } catch (e: Throwable) { // Throwable, not Exception — see warmUp
                 log.e(e) { "Connection error" }
                 // Surface to the user only on the INITIAL connect (lobby create/join),
@@ -403,6 +407,8 @@ class OnlineGameRepository(
             session.send(Frame.Text(text))
         } catch (e: CancellationException) {
             throw e
+        } catch (e: Error) {
+            throw e // see warmUp: JVM fatals stay fatal
         } catch (e: Throwable) { // Throwable, not Exception — see warmUp
             _errors.emit("Send failed: ${e.message}")
         }
@@ -501,6 +507,14 @@ class OnlineGameRepository(
                     OnlineSessionBackup.clear()
                     disconnect()
                 } else {
+                    // A rejected reconnect ("Player not found" = seat gone, "Session invalid" =
+                    // bad token) means the snapshot can never resume — clear it, or every web
+                    // page load retries the doomed resume and swallows any fresh ?room= invite.
+                    if (message.message.contains("Player not found", ignoreCase = true) ||
+                        message.message.contains("Session invalid", ignoreCase = true)
+                    ) {
+                        OnlineSessionBackup.clear()
+                    }
                     _errors.emit(message.message)
                 }
             }

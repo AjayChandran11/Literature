@@ -15,10 +15,12 @@ import org.koin.compose.KoinApplication
 fun main() {
     AppLifecycleObserver.init()
     NetworkMonitor.startMonitoring()
-    // A live session snapshot (tab refresh) beats any ?room= invite still in the URL:
-    // resume the seat instead of re-triggering the join flow.
+    // A live session snapshot (tab refresh) beats the ?room= invite still in the URL —
+    // unless the URL names a DIFFERENT room: that's an explicit new invite (e.g. a link
+    // opened into a tab that inherited sessionStorage) and must win over the old seat.
     val resume = OnlineSessionBackup.load()
-    if (resume != null) {
+    val urlRoom = DeepLinkHandler.extractRoomCode(window.location.href)
+    if (resume != null && (urlRoom == null || urlRoom == resume.roomCode)) {
         DeepLinkHandler.submitResume(
             DeepLinkHandler.PendingResume(resume.roomCode, resume.playerId, resume.reconnectToken)
         )
