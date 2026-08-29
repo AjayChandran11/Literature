@@ -14,6 +14,16 @@ private const val KEY_TOUCHED_AT = "lit_session_touched_at"
 private const val MAX_AGE_MS = 120_000L
 
 actual object OnlineSessionBackup {
+    init {
+        // The server's reconnect window starts at DISCONNECT, but touch() otherwise only runs
+        // on inbound server messages — an idle lobby tab (no traffic for 2 min) would wrongly
+        // fail the staleness check on refresh. Stamp the clock as the page goes away instead:
+        // pagehide is the exact moment the disconnect (and the server's window) begins.
+        window.addEventListener("pagehide", {
+            if (window.sessionStorage.getItem(KEY_ROOM) != null) touch()
+        })
+    }
+
     actual fun save(roomCode: String, playerId: String, reconnectToken: String) {
         val s = window.sessionStorage
         s.setItem(KEY_ROOM, roomCode)

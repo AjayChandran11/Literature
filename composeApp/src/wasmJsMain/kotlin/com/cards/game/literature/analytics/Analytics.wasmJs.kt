@@ -1,5 +1,8 @@
 package com.cards.game.literature.analytics
 
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+
 // gtag exists only when index.html carries a GA4 snippet (see the commented block there);
 // without it these are silent no-ops, so the facade stays safe to call unconditionally.
 private fun gtagEvent(name: String, paramsJson: String): Unit =
@@ -8,14 +11,16 @@ private fun gtagEvent(name: String, paramsJson: String): Unit =
 private fun gtagConsent(granted: Boolean): Unit =
     js("window.gtag && window.gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' })")
 
+// Same param typing as the Android facade's toBundle — GA4 custom dimensions are typed once,
+// so web and Android must not fork a param into different types: numbers stay numeric,
+// booleans (not a first-class Analytics type) and everything else go as readable strings.
 private fun Map<String, Any>.toJson(): String =
-    entries.joinToString(separator = ",", prefix = "{", postfix = "}") { (key, value) ->
-        val encoded = when (value) {
-            is Boolean, is Number -> value.toString()
-            else -> "\"" + value.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+    JsonObject(mapValues { (_, value) ->
+        when (value) {
+            is Int, is Long, is Double, is Float -> JsonPrimitive(value as Number)
+            else -> JsonPrimitive(value.toString())
         }
-        "\"$key\":$encoded"
-    }
+    }).toString()
 
 actual object Analytics {
     actual fun log(event: AnalyticsEvent) {

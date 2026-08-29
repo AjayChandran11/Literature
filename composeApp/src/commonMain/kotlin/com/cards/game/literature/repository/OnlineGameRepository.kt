@@ -265,6 +265,8 @@ class OnlineGameRepository(
         roomCode = ""
         reconnectToken = ""
         reconnectAttempts = 0
+        resumedGameId = null
+        markNextGameAsResumed = false
     }
 
     suspend fun reconnect(code: String, playerId: String) {
@@ -433,6 +435,13 @@ class OnlineGameRepository(
                 }
             }
             is ServerMessage.RoomUpdate -> {
+                // A resume that lands in the LOBBY has no intro to suppress: disarm the flag,
+                // or the next freshly started game would silently skip its match ceremony.
+                // (A mid-game resume delivers GameUpdate before any RoomUpdate, so the flag
+                // is already consumed by applyGameView when a game is actually running.)
+                if (markNextGameAsResumed && _gameState.value == null) {
+                    markNextGameAsResumed = false
+                }
                 _roomState.value = message.room
             }
             is ServerMessage.GameStarted -> {

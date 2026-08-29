@@ -11,8 +11,11 @@ private fun shareOrWhatsApp(text: String): Unit =
             "window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank')"
     )
 
+private fun hasClipboard(): Boolean =
+    js("!!(navigator.clipboard && navigator.clipboard.writeText)")
+
 private fun clipboardWrite(text: String): Unit =
-    js("navigator.clipboard && navigator.clipboard.writeText(text)")
+    js("navigator.clipboard.writeText(text).catch(function(){})")
 
 actual object Sharer {
     actual fun shareText(text: String) {
@@ -31,7 +34,10 @@ actual object Sharer {
         return true
     }
 
+    // In-app WebViews (WhatsApp et al.) often lack the clipboard API — report that honestly
+    // so the UI's "copied" confirmation never lies.
     actual fun copyText(text: String): Boolean {
+        if (!hasClipboard()) return false
         clipboardWrite(text)
         return true
     }
