@@ -3,6 +3,7 @@ package com.cards.game.literature.repository
 import co.touchlab.kermit.Logger
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.model.*
+import com.cards.game.literature.rethrowIfPlatformFatal
 import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.preferences.OnlineSessionBackup
 import com.cards.game.literature.protocol.*
@@ -164,9 +165,8 @@ class OnlineGameRepository(
             log.i { "Server warm-up successful" }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Error) {
-            throw e // JVM fatals (OOM etc.) must crash to Crashlytics, not be absorbed
         } catch (e: Throwable) { // not Exception: Kotlin/Wasm wraps JS errors in JsException : Throwable
+            rethrowIfPlatformFatal(e) // NOT `catch (Error)`: ktor wasm wraps fetch failures in kotlin.Error
             log.w { "Server warm-up finished (${e.message})" }
         }
     }
@@ -334,9 +334,8 @@ class OnlineGameRepository(
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Error) {
-                throw e // see warmUp: JVM fatals stay fatal
             } catch (e: Throwable) { // Throwable, not Exception — see warmUp
+                rethrowIfPlatformFatal(e)
                 log.e(e) { "Connection error" }
                 // Surface to the user only on the INITIAL connect (lobby create/join),
                 // i.e. before the server has admitted us to a room. Once a session is
@@ -407,9 +406,8 @@ class OnlineGameRepository(
             session.send(Frame.Text(text))
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Error) {
-            throw e // see warmUp: JVM fatals stay fatal
         } catch (e: Throwable) { // Throwable, not Exception — see warmUp
+            rethrowIfPlatformFatal(e)
             _errors.emit("Send failed: ${e.message}")
         }
     }

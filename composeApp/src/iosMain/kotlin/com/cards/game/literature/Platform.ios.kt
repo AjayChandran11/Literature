@@ -7,3 +7,8 @@ class IOSPlatform: Platform {
 }
 
 actual fun getPlatform(): Platform = IOSPlatform()
+
+// Native fatals (OutOfMemoryError etc.) must crash, never be absorbed.
+actual fun rethrowIfPlatformFatal(e: Throwable) {
+    if (e is Error) throw e
+}
