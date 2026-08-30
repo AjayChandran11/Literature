@@ -464,8 +464,10 @@ class OnlineGameRepository(
             is ServerMessage.GameEventOccurred -> {
                 // Broadcast copy of an event already spliced from the FINISHED view —
                 // it's in the log and the strip in the right order; drop the duplicate.
-                if (pendingSplicedEvents.firstOrNull() == message.event) {
-                    pendingSplicedEvents.removeFirst()
+                // Value match anywhere in the queue (NOT head order): the splice may also
+                // sweep never-broadcast events (game start, early-end GameEnded) that no
+                // broadcast copy will ever consume.
+                if (pendingSplicedEvents.remove(message.event)) {
                     return
                 }
                 _eventLog = _eventLog + message.event
