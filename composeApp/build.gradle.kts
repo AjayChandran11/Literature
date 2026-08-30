@@ -1,4 +1,5 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -9,6 +10,33 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.googleServices)
     alias(libs.plugins.firebaseCrashlytics)
+}
+
+val appVersionName = "1.1.12"
+val appVersionCode = 27
+
+// Single source of truth for the version on wasm: Android reads BuildConfig, but wasm has
+// no equivalent, so generate the AppInfo actual from the Gradle version at build time.
+val generateWasmAppInfo = tasks.register("generateWasmAppInfo") {
+    // Locals only in the action closure: capturing script-level vals breaks the config cache.
+    val dir = layout.buildDirectory.dir("generated/appInfo/wasmJs")
+    val versionName = appVersionName
+    val versionCode = appVersionCode
+    inputs.property("versionName", versionName)
+    inputs.property("versionCode", versionCode)
+    outputs.dir(dir)
+    doLast {
+        val file = dir.get().file("com/cards/game/literature/di/AppInfo.wasmJs.kt").asFile
+        file.parentFile.mkdirs()
+        file.writeText(
+            """
+            package com.cards.game.literature.di
+
+            actual val appVersionName: String = "$versionName"
+            actual val appVersionCode: Int = $versionCode
+            """.trimIndent() + "\n"
+        )
+    }
 }
 
 kotlin {
@@ -27,7 +55,17 @@ kotlin {
             isStatic = true
         }
     }
-    
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser {
+            commonWebpackConfig {
+                outputFileName = "composeApp.js"
+            }
+        }
+        binaries.executable()
+    }
+
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
@@ -40,6 +78,13 @@ kotlin {
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+        }
+        wasmJsMain {
+            kotlin.srcDir(generateWasmAppInfo)
+            dependencies {
+                implementation(libs.ktor.client.js)
+                implementation(libs.kotlinx.browser)
+            }
         }
         commonMain.dependencies {
             implementation(projects.shared)
@@ -78,8 +123,8 @@ android {
         applicationId = "com.cards.game.literature"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 26
-        versionName = "1.1.11"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
     buildFeatures {
         buildConfig = true

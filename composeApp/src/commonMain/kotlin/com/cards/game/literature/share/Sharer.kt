@@ -18,4 +18,7 @@ expect object Sharer {
     /** Sends [text] straight to WhatsApp, skipping the chooser. Returns false when WhatsApp
      *  isn't available (the caller should then fall back to [shareText]). */
     fun shareTextToWhatsApp(text: String): Boolean
+
+    /** Puts [text] on the system clipboard. Returns false when unavailable. */
+    fun copyText(text: String): Boolean
 }

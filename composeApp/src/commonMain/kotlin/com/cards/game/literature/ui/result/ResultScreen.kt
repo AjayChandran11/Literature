@@ -79,7 +79,7 @@ import com.cards.game.literature.model.isRed
 import com.cards.game.literature.model.suit
 import androidx.compose.foundation.border
 import com.cards.game.literature.stats.Achievement
-import androidx.activity.compose.BackHandler
+import com.cards.game.literature.ui.common.BackHandler
 import com.cards.game.literature.ui.game.GameLogScreen
 import com.cards.game.literature.ui.stats.AchievementUnlockCard
 import com.cards.game.literature.ui.stats.ui

@@ -1,6 +1,6 @@
 package com.cards.game.literature.ui.navigation
 
-import androidx.activity.compose.BackHandler
+import com.cards.game.literature.ui.common.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -145,6 +145,7 @@ fun OnlineGameScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         GameBoardContent(
             viewModel = viewModel,
+            resumedGameId = onlineRepository.resumedGameId,
             // The board runs the match finale (hold + stinger) and invokes this when done.
             onGameEnd = onGameEnd,
             headerOverlay = {

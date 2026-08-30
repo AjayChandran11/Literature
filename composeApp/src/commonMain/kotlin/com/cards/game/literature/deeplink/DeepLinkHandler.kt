@@ -60,6 +60,30 @@ object DeepLinkHandler {
         _pendingRoomCode.value = null
     }
 
+    /** A live session snapshot found at startup (web tab refresh) — resume instead of rejoining. */
+    class PendingResume(val roomCode: String, val playerId: String, val reconnectToken: String)
+
+    private val _pendingResume = MutableStateFlow<PendingResume?>(null)
+    val pendingResume: StateFlow<PendingResume?> = _pendingResume.asStateFlow()
+
+    /** True from resume submission until the session state lands — the UI holds a curtain
+     *  over the boot-time navigation hops while this is set (see App). */
+    private val _resumeInFlight = MutableStateFlow(false)
+    val resumeInFlight: StateFlow<Boolean> = _resumeInFlight.asStateFlow()
+
+    fun submitResume(resume: PendingResume) {
+        _pendingResume.value = resume
+        _resumeInFlight.value = true
+    }
+
+    fun consumeResume() {
+        _pendingResume.value = null
+    }
+
+    fun finishResume() {
+        _resumeInFlight.value = false
+    }
+
     /**
      * Pulls a room code out of a raw string. Handles:
      *  - a bare code: `ABC123`

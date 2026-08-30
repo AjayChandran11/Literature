@@ -3,7 +3,9 @@ package com.cards.game.literature.repository
 import co.touchlab.kermit.Logger
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.model.*
+import com.cards.game.literature.rethrowIfPlatformFatal
 import com.cards.game.literature.network.NetworkMonitor
+import com.cards.game.literature.preferences.OnlineSessionBackup
 import com.cards.game.literature.protocol.*
 import io.ktor.client.*
 import io.ktor.client.plugins.*
@@ -91,6 +93,11 @@ class OnlineGameRepository(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var shouldAutoReconnect = false
     private var lastSeenEventTimestamp: Long = 0L
+
+    // Events spliced into the log from a FINISHED view before their GameEventOccurred
+    // broadcasts arrived (the server sends views before events) — the copies are dropped
+    // on arrival by matching this queue's head. See the game-end splice in applyGameView.
+    private val pendingSplicedEvents = ArrayDeque<GameEvent>()
     private val needsEventReplay = MutableStateFlow(false)
 
     // Survives across connection failures so backoff genuinely grows; reset
@@ -111,6 +118,12 @@ class OnlineGameRepository(
     // Proof of identity for reconnects, issued by the server in RoomCreated.
     private var reconnectToken: String = ""
 
+    // The game a web tab-refresh resumed into — its match intro already played pre-refresh,
+    // so the board must not replay it. Set on the first game view after resumeSession().
+    var resumedGameId: String? = null
+        private set
+    private var markNextGameAsResumed = false
+
     init {
         scope.launch {
             NetworkMonitor.isNetworkAvailable.collect { available ->
@@ -120,7 +133,7 @@ class OnlineGameRepository(
                     if (_connectionState.value == ConnectionState.CONNECTED
                         && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()
                     ) {
-                        try { webSocketSession?.close() } catch (_: Exception) {}
+                        try { webSocketSession?.close() } catch (_: Throwable) {}
                     }
                 } else {
                     // Network restored — reconnect immediately. Gated on shouldAutoReconnect so a
@@ -157,7 +170,8 @@ class OnlineGameRepository(
             log.i { "Server warm-up successful" }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) { // not Exception: Kotlin/Wasm wraps JS errors in JsException : Throwable
+            rethrowIfPlatformFatal(e) // NOT `catch (Error)`: ktor wasm wraps fetch failures in kotlin.Error
             log.w { "Server warm-up finished (${e.message})" }
         }
     }
@@ -173,6 +187,18 @@ class OnlineGameRepository(
         log.i { "Joining room: code=$roomCode, player=$playerName" }
         _fatalError.value = null
         connectAndSend(ClientMessage.JoinRoom(roomCode, playerName))
+    }
+
+    /** Resumes a session restored from [OnlineSessionBackup] (web tab refresh). */
+    suspend fun resumeSession(code: String, playerId: String, token: String) {
+        roomCode = code
+        myPlayerId = playerId
+        reconnectToken = token
+        _fatalError.value = null
+        needsEventReplay.value = true
+        markNextGameAsResumed = true
+        log.i { "Resuming session: code=$roomCode, playerId=$myPlayerId" }
+        connectAndSend(ClientMessage.Reconnect(roomCode, myPlayerId, token))
     }
 
     suspend fun startGame(fillWithBots: Boolean = true, botDifficulty: String = "MEDIUM") {
@@ -235,16 +261,20 @@ class OnlineGameRepository(
     }
 
     private fun reset() {
+        OnlineSessionBackup.clear()
         _gameState.value = null
         _roomState.value = null
         _reconnectCountdowns.value = emptyMap()
         _fatalError.value = null
         lastSeenEventTimestamp = 0L
+        pendingSplicedEvents.clear()
         needsEventReplay.value = false
         myPlayerId = ""
         roomCode = ""
         reconnectToken = ""
         reconnectAttempts = 0
+        resumedGameId = null
+        markNextGameAsResumed = false
     }
 
     suspend fun reconnect(code: String, playerId: String) {
@@ -305,11 +335,13 @@ class OnlineGameRepository(
                     if (closeReason.await()?.code == CloseReason.Codes.CANNOT_ACCEPT.code) {
                         shouldAutoReconnect = false
                         _fatalError.value = FatalSessionError.UPDATE_REQUIRED
+                        OnlineSessionBackup.clear()
                     }
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) { // Throwable, not Exception — see warmUp
+                rethrowIfPlatformFatal(e)
                 log.e(e) { "Connection error" }
                 // Surface to the user only on the INITIAL connect (lobby create/join),
                 // i.e. before the server has admitted us to a room. Once a session is
@@ -380,7 +412,8 @@ class OnlineGameRepository(
             session.send(Frame.Text(text))
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) { // Throwable, not Exception — see warmUp
+            rethrowIfPlatformFatal(e)
             _errors.emit("Send failed: ${e.message}")
         }
     }
@@ -398,18 +431,27 @@ class OnlineGameRepository(
         // (a rejected client is closed at the handshake and never gets this far). This is the
         // correct place to reset the reconnect backoff — see the note at the handshake above.
         reconnectAttempts = 0
+        OnlineSessionBackup.touch()
 
         when (message) {
             is ServerMessage.RoomCreated -> {
                 roomCode = message.roomCode
                 myPlayerId = message.playerId
                 reconnectToken = message.reconnectToken
+                OnlineSessionBackup.save(roomCode, myPlayerId, reconnectToken)
                 log.i { "Room created: code=$roomCode, playerId=$myPlayerId" }
                 if (message.protocolVersion > Protocol.VERSION) {
                     log.w { "Server protocol ${message.protocolVersion} is newer than client ${Protocol.VERSION} — app update recommended" }
                 }
             }
             is ServerMessage.RoomUpdate -> {
+                // A resume that lands in the LOBBY has no intro to suppress: disarm the flag,
+                // or the next freshly started game would silently skip its match ceremony.
+                // (A mid-game resume delivers GameUpdate before any RoomUpdate, so the flag
+                // is already consumed by applyGameView when a game is actually running.)
+                if (markNextGameAsResumed && _gameState.value == null) {
+                    markNextGameAsResumed = false
+                }
                 _roomState.value = message.room
             }
             is ServerMessage.GameStarted -> {
@@ -420,6 +462,14 @@ class OnlineGameRepository(
                 applyGameView(message.view)
             }
             is ServerMessage.GameEventOccurred -> {
+                // Broadcast copy of an event already spliced from the FINISHED view —
+                // it's in the log and the strip in the right order; drop the duplicate.
+                // Value match anywhere in the queue (NOT head order): the splice may also
+                // sweep never-broadcast events (game start, early-end GameEnded) that no
+                // broadcast copy will ever consume.
+                if (pendingSplicedEvents.remove(message.event)) {
+                    return
+                }
                 _eventLog = _eventLog + message.event
                 _gameEvents.emit(message.event)
                 lastSeenEventTimestamp = message.event.timestamp
@@ -466,8 +516,17 @@ class OnlineGameRepository(
                 // failed lobby join, which the lobby surfaces as an ordinary error instead.
                 if (roomCode.isNotEmpty() && message.message.contains("Room not found", ignoreCase = true)) {
                     _fatalError.value = FatalSessionError.ROOM_GONE
+                    OnlineSessionBackup.clear()
                     disconnect()
                 } else {
+                    // A rejected reconnect ("Player not found" = seat gone, "Session invalid" =
+                    // bad token) means the snapshot can never resume — clear it, or every web
+                    // page load retries the doomed resume and swallows any fresh ?room= invite.
+                    if (message.message.contains("Player not found", ignoreCase = true) ||
+                        message.message.contains("Session invalid", ignoreCase = true)
+                    ) {
+                        OnlineSessionBackup.clear()
+                    }
                     _errors.emit(message.message)
                 }
             }
@@ -490,6 +549,7 @@ class OnlineGameRepository(
                 // auto-navigates to the game when gameState is non-null, so a
                 // stale FINISHED state would bounce players straight back out.
                 _gameState.value = null
+                pendingSplicedEvents.clear()
                 _reconnectCountdowns.value = emptyMap()
                 lastSeenEventTimestamp = 0L
                 needsEventReplay.value = false
@@ -500,6 +560,10 @@ class OnlineGameRepository(
     }
 
     private suspend fun applyGameView(view: PlayerGameView) {
+        if (markNextGameAsResumed) {
+            resumedGameId = view.gameId
+            markNextGameAsResumed = false
+        }
         // Convert PlayerGameView into a synthetic GameState
         // The view has our hand but only card counts for others
         val players = view.players.map { info ->
@@ -570,20 +634,23 @@ class OnlineGameRepository(
             }
         }
 
-        // The engine's early-end path (a team runs out of cards -> bonus award, the
-        // way most real games finish) appends GameEnded to the state's event list
-        // WITHOUT returning it as a discrete event, so the server never broadcasts
-        // it and the streamed log has no closing line. Splice it from the view's
-        // tail — it is always the final event there — which completes the result
-        // log, the board strip's "Game Over" line, and the game-over notification.
-        // Final-claim endings arrive live via GameEventOccurred; the guard skips them.
+        // Game-end splice. The server broadcasts each move's VIEW before its EVENTS, so
+        // the FINISHED view outruns the final DeckClaimed/TurnChanged/GameEnded frames —
+        // and the engine's early-end path (a team runs out of cards -> bonus award, the
+        // way most real games finish) never broadcasts its GameEnded at all. Splicing
+        // only GameEnded here put "Game Over" BEFORE the final claim in the log and the
+        // board strip. Instead, splice ALL not-yet-seen events from the view in engine
+        // order, and remember them so the duplicate broadcast copies arriving right
+        // behind this view are dropped (see GameEventOccurred).
         if (view.phase == GamePhase.FINISHED && _eventLog.none { it is GameEvent.GameEnded }) {
-            view.recentEvents.lastOrNull { it is GameEvent.GameEnded }?.let { ended ->
-                _eventLog = _eventLog + ended
-                _gameEvents.emit(ended)
-                if (ended.timestamp > lastSeenEventTimestamp) {
-                    lastSeenEventTimestamp = ended.timestamp
+            val missed = view.recentEvents.filter { it.timestamp > lastSeenEventTimestamp }
+            if (missed.isNotEmpty()) {
+                _eventLog = _eventLog + missed
+                for (event in missed) {
+                    _gameEvents.emit(event)
                 }
+                lastSeenEventTimestamp = missed.maxOf { it.timestamp }
+                pendingSplicedEvents.addAll(missed)
             }
         }
 

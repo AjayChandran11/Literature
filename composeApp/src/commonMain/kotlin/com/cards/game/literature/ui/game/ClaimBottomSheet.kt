@@ -22,6 +22,7 @@ import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.viewmodel.PlayerInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import com.cards.game.literature.ui.common.WindowSize.isCompactHeight
+import com.cards.game.literature.ui.common.displayEmoji
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -134,7 +135,7 @@ fun ClaimBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                card.displayName,
+                                card.displayEmoji,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.weight(1f)
@@ -277,7 +278,7 @@ fun ClaimBottomSheet(
                                 modifier = Modifier.width(72.dp)
                             )
                             Text(
-                                cards.joinToString(", ") { it.key.displayName },
+                                cards.joinToString(", ") { it.key.displayEmoji },
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f)

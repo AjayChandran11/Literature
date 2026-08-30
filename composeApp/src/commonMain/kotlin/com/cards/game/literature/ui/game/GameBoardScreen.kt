@@ -1,6 +1,8 @@
 package com.cards.game.literature.ui.game
 
-import androidx.activity.compose.BackHandler
+import com.cards.game.literature.PageUnloadGuard
+import com.cards.game.literature.ui.common.BackHandler
+import com.cards.game.literature.ui.common.formatArgs
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -63,6 +65,7 @@ import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.cards.game.literature.ui.common.EMOJI_VS
+import com.cards.game.literature.ui.common.displayEmoji
 
 @Composable
 fun GameBoardScreen(
@@ -117,6 +120,15 @@ fun GameBoardScreen(
     val isFirstGame = remember { !TutorialPrefs.isFirstGameCompleted() }
     val tutorialState = rememberTutorialState(isFirstGame)
 
+    // Web: an offline game dies with the tab — have the browser confirm refresh/close.
+    // Only while there's a real game to lose: not during the FTUE tutorial (the funnel's
+    // most fragile moment) and not once the game is FINISHED.
+    val guardUnload = uiState.phase != GamePhase.FINISHED && !tutorialState.isActive
+    DisposableEffect(guardUnload) {
+        PageUnloadGuard.setGameInProgress(guardUnload)
+        onDispose { PageUnloadGuard.setGameInProgress(false) }
+    }
+
     // Mark tutorial complete when it finishes
     LaunchedEffect(tutorialState.isActive) {
         if (isFirstGame && !tutorialState.isActive) {
@@ -134,6 +146,8 @@ fun GameBoardContent(
     headerOverlay: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     tutorialState: TutorialState? = null,
+    // A game entered via session resume (web tab refresh) — its intro already played.
+    resumedGameId: String? = null,
     // Navigation to the result screen. The board owns the moment of game over (the
     // match-finale hold + stinger), so it decides WHEN to invoke this — callers must
     // not navigate on FINISHED themselves.
@@ -172,14 +186,17 @@ fun GameBoardContent(
     // the curtain's first frame, chiming under it and again at the reveal.
     val introPending = uiState.gameId.isNotEmpty() &&
         introDoneForGame != uiState.gameId &&
-        tutorialState?.isActive != true
+        tutorialState?.isActive != true &&
+        uiState.gameId != resumedGameId
     val introVisible = introPending && uiState.phase == GamePhase.IN_PROGRESS
     // Arbitration between the two game-start cue sites (rising-edge effect and the
     // intro's onDone): whichever plays first marks the match, the other stays
     // silent. Mid-game turn chimes are unaffected — only onDone consults it.
     var startCueDoneFor by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(uiState.gameId, tutorialState?.isActive) {
-        if (tutorialState?.isActive == true && uiState.gameId.isNotEmpty()) {
+        val consumedByTutorial = tutorialState?.isActive == true
+        val consumedByResume = resumedGameId != null && resumedGameId == uiState.gameId
+        if ((consumedByTutorial || consumedByResume) && uiState.gameId.isNotEmpty()) {
             introDoneForGame = uiState.gameId
         }
     }
@@ -792,12 +809,12 @@ private fun consolidateEvents(
                             } else break
                         }
                     }
-                    val cards = group.joinToString(", ") { it.card.displayName }
+                    val cards = group.joinToString(", ") { it.card.displayEmoji }
                     messages.add(StripMessage("✓", LightGreen, fmtGot(event.askerName, cards, event.targetName)))
                 } else {
                     messages.add(StripMessage(
                         "✗", CardRed,
-                        fmtDenied(event.askerName, event.targetName, event.card.displayName)
+                        fmtDenied(event.askerName, event.targetName, event.card.displayEmoji)
                     ))
                 }
             }
@@ -929,12 +946,12 @@ private fun LastEventStrip(events: List<GameEvent>) {
 
     val messages = consolidateEvents(
         events = displayEvents,
-        fmtGot = { a, c, t -> fmtGotCard.format(a, c, t) },
-        fmtDenied = { a, t, c -> fmtAskedNoStrip.format(a, t, c) },
-        fmtClaimedOk = { c, h -> fmtClaimedOk.format(c, h) },
-        fmtClaimedBad = { c, h -> fmtClaimedBad.format(c, h) },
+        fmtGot = { a, c, t -> fmtGotCard.formatArgs(a, c, t) },
+        fmtDenied = { a, t, c -> fmtAskedNoStrip.formatArgs(a, t, c) },
+        fmtClaimedOk = { c, h -> fmtClaimedOk.formatArgs(c, h) },
+        fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, h) },
         textGameOver = textGameOver,
-        fmtTimedOut = { p -> fmtTimedOut.format(p) }
+        fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) }
     )
     if (messages.isEmpty()) return
 
@@ -1239,12 +1256,12 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
 
     val messages = consolidateEvents(
         events = displayEvents,
-        fmtGot = { a, c, t -> fmtGotCard.format(a, c, t) },
-        fmtDenied = { a, t, c -> fmtAskedNoStrip.format(a, t, c) },
-        fmtClaimedOk = { c, h -> fmtClaimedOk.format(c, h) },
-        fmtClaimedBad = { c, h -> fmtClaimedBad.format(c, h) },
+        fmtGot = { a, c, t -> fmtGotCard.formatArgs(a, c, t) },
+        fmtDenied = { a, t, c -> fmtAskedNoStrip.formatArgs(a, t, c) },
+        fmtClaimedOk = { c, h -> fmtClaimedOk.formatArgs(c, h) },
+        fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, h) },
         textGameOver = textGameOver,
-        fmtTimedOut = { p -> fmtTimedOut.format(p) },
+        fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) },
         limit = 1
     )
     if (messages.isEmpty()) return

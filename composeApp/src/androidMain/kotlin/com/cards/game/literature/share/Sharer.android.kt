@@ -48,6 +48,15 @@ actual object Sharer {
 
     actual fun isWhatsAppAvailable(): Boolean = installedWhatsApp() != null
 
+    actual fun copyText(text: String): Boolean {
+        val ctx = appContext ?: return false
+        val clipboard =
+            ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                ?: return false
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("room code", text))
+        return true
+    }
+
     actual fun shareTextToWhatsApp(text: String): Boolean {
         val ctx = appContext ?: return false
         val pkg = installedWhatsApp() ?: return false

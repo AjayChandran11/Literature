@@ -2,6 +2,7 @@ package com.cards.game.literature.ui.common
 
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.window.core.layout.WindowSizeClass
+import com.cards.game.literature.isWebPlatform
 
 /**
  * Convenience accessors for the current window's adaptive info.
@@ -24,9 +25,13 @@ object WindowSize {
     private const val EXPANDED_WIDTH_BREAKPOINT = 840
     private const val MEDIUM_HEIGHT_BREAKPOINT = 480
 
+    // On web the app renders inside a 480dp centred column (WebPageColumn), but these
+    // classes measure the BROWSER WINDOW — a laptop window reads Expanded and activates
+    // side-by-side layouts inside a phone-width column. Pin web to phone-class width.
+
     /** Whether to use side-by-side layout (width >= 600dp — Medium or Expanded). */
     val WindowAdaptiveInfo.useSideBySide: Boolean
-        get() = windowSizeClass.isWidthAtLeastBreakpoint(MEDIUM_WIDTH_BREAKPOINT)
+        get() = !isWebPlatform() && windowSizeClass.isWidthAtLeastBreakpoint(MEDIUM_WIDTH_BREAKPOINT)
 
     /** Phone landscape: very little vertical space (height < 480dp). */
     val WindowAdaptiveInfo.isCompactHeight: Boolean
@@ -34,5 +39,5 @@ object WindowSize {
 
     /** Tablet-class width (≥ 840dp): show full-size components, generous padding. */
     val WindowAdaptiveInfo.isExpandedWidth: Boolean
-        get() = windowSizeClass.isWidthAtLeastBreakpoint(EXPANDED_WIDTH_BREAKPOINT)
+        get() = !isWebPlatform() && windowSizeClass.isWidthAtLeastBreakpoint(EXPANDED_WIDTH_BREAKPOINT)
 }

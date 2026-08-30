@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.savedstate.read
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.stats.PuzzleStore
@@ -30,6 +31,11 @@ import com.cards.game.literature.ui.onboarding.OnboardingScreen
 import com.cards.game.literature.ui.dailypuzzle.DailyPuzzleScreen
 import com.cards.game.literature.ui.result.ResultScreen
 import com.cards.game.literature.ui.stats.StatsScreen
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.qualifier.named
@@ -60,6 +66,7 @@ object Routes {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    PlatformNavigationEffects(navController)
     val startDestination = if (OnboardingPrefs.isCompleted()) Routes.HOME else Routes.ONBOARDING
 
     // Jump straight to a screen the app was launched into (e.g. the daily-puzzle reminder tap).
@@ -77,6 +84,52 @@ fun AppNavigation() {
                 DeepLinkHandler.consumeDestination()
             }
             null -> {}
+        }
+    }
+
+    // Web tab-refresh rejoin: the platform entry point found a live session snapshot.
+    // Reconnect with the saved identity and land back in the room; if the game is already
+    // running, WaitingRoomViewModel forwards to the board as soon as gameState arrives.
+    // Keyed on Unit, not pendingResume: consumeResume() nulls the flow, and a key change
+    // would cancel this effect mid-wait — leaving the curtain up forever.
+    val onlineRepository = koinInject<OnlineGameRepository>()
+    LaunchedEffect(Unit) {
+        val resume = DeepLinkHandler.pendingResume.filterNotNull().first()
+        DeepLinkHandler.consumeResume()
+        try {
+            onlineRepository.resumeSession(resume.roomCode, resume.playerId, resume.reconnectToken)
+            // Wait (under the curtain, on Home) for the session to say where it is, then land
+            // there in ONE hop — routing through the waiting room let it flash for the length
+            // of its forward transition on every mid-game resume. A mid-game reconnect delivers
+            // GameUpdate before anything else (GameRoom.handleReconnect), a lobby reconnect
+            // RoomUpdate; an error or a fatal means the seat is gone — stay on Home.
+            val route = withTimeoutOrNull(15_000) {
+                merge<String?>(
+                    onlineRepository.gameState.filterNotNull().map { Routes.ONLINE_GAME },
+                    onlineRepository.roomState.filterNotNull().map { Routes.waitingRoom(resume.roomCode) },
+                    onlineRepository.fatalError.filterNotNull().map { null },
+                    onlineRepository.errors.map { null },
+                ).first()
+            }
+            if (route != null) {
+                val pattern = if (route == Routes.ONLINE_GAME) Routes.ONLINE_GAME else Routes.WAITING_ROOM
+                navController.navigate(route) {
+                    launchSingleTop = true
+                    if (pattern == Routes.ONLINE_GAME) popUpTo(Routes.HOME)
+                }
+                // Lift only after the destination has fully entered: visibleEntries shrinks
+                // back to a single entry once the transition settles.
+                withTimeoutOrNull(2_000) {
+                    navController.visibleEntries.first { it.singleOrNull()?.destination?.route == pattern }
+                }
+            } else {
+                // Abandoned resume (timeout or rejection): kill the background auto-reconnect
+                // too, or it can silently re-seat the player while nothing observes the
+                // session from Home — teammates would see them "reconnected" but stalled.
+                onlineRepository.disconnect()
+            }
+        } finally {
+            DeepLinkHandler.finishResume()
         }
     }
 
@@ -159,9 +212,9 @@ fun AppNavigation() {
             // default slide (popExitTransition is untouched).
             exitTransition = { fadeOut(tween(350)) }
         ) { backStackEntry ->
-            val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
-            val playerCount = backStackEntry.arguments?.getString("playerCount")?.toIntOrNull() ?: 6
-            val difficulty = backStackEntry.arguments?.getString("difficulty")
+            val playerName = backStackEntry.arguments?.read { getStringOrNull("playerName") } ?: "Player"
+            val playerCount = backStackEntry.arguments?.read { getStringOrNull("playerCount") }?.toIntOrNull() ?: 6
+            val difficulty = backStackEntry.arguments?.read { getStringOrNull("difficulty") }
                 ?.let { runCatching { BotDifficulty.valueOf(it) }.getOrNull() }
                 ?: BotDifficulty.MEDIUM
             GameBoardScreen(
@@ -188,8 +241,8 @@ fun AppNavigation() {
                 }
             )
         ) { backStackEntry ->
-            val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
-            val initialRoomCode = backStackEntry.arguments?.getString("roomCode")
+            val playerName = backStackEntry.arguments?.read { getStringOrNull("playerName") } ?: "Player"
+            val initialRoomCode = backStackEntry.arguments?.read { getStringOrNull("roomCode") }
             LobbyScreen(
                 playerName = playerName,
                 initialRoomCode = initialRoomCode,
@@ -204,7 +257,7 @@ fun AppNavigation() {
             )
         }
         composable(Routes.WAITING_ROOM) { backStackEntry ->
-            val roomCode = backStackEntry.arguments?.getString("roomCode") ?: ""
+            val roomCode = backStackEntry.arguments?.read { getStringOrNull("roomCode") } ?: ""
             WaitingRoomScreen(
                 onGameStart = {
                     navController.navigate(Routes.ONLINE_GAME) {
@@ -243,9 +296,9 @@ fun AppNavigation() {
             // Arrives from under the stinger wash — fade in place, no slide.
             enterTransition = { fadeIn(tween(350)) }
         ) { backStackEntry ->
-            val playerName = backStackEntry.arguments?.getString("playerName") ?: "Player"
-            val playerCount = backStackEntry.arguments?.getString("playerCount")?.toIntOrNull() ?: 6
-            val difficulty = backStackEntry.arguments?.getString("difficulty")
+            val playerName = backStackEntry.arguments?.read { getStringOrNull("playerName") } ?: "Player"
+            val playerCount = backStackEntry.arguments?.read { getStringOrNull("playerCount") }?.toIntOrNull() ?: 6
+            val difficulty = backStackEntry.arguments?.read { getStringOrNull("difficulty") }
                 ?.let { runCatching { BotDifficulty.valueOf(it) }.getOrNull() }
                 ?: BotDifficulty.MEDIUM
             ResultScreen(

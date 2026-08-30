@@ -297,8 +297,11 @@ class GameEngine {
             val winnerTeamId = newTeams.maxByOrNull { it.score }?.let { winner ->
                 if (newTeams.count { it.score == winner.score } == 1) winner.id else null
             }
-            newEvents.add(GameEvent.GameEnded(winnerTeamId))
-            newState = newState.copy(events = newState.events + GameEvent.GameEnded(winnerTeamId))
+            // ONE instance for both lists — two constructions would carry different
+            // timestamps, breaking the client's spliced-vs-broadcast event dedupe.
+            val ended = GameEvent.GameEnded(winnerTeamId)
+            newEvents.add(ended)
+            newState = newState.copy(events = newState.events + ended)
         }
 
         // Check for early game end

@@ -15,12 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -112,7 +114,13 @@ fun rememberTutorialState(isFirstGame: Boolean): TutorialState {
 fun TutorialOverlay(state: TutorialState) {
     if (!state.isActive) return
 
+    // Targets report boundsInRoot(), but this overlay is NOT at the root origin on web —
+    // WebPageColumn centers the app in a 480dp column, shifting root coordinates by the
+    // margin. Subtract the overlay's own root origin so the spotlight lands on target
+    // everywhere (same correction MatchStinger uses).
+    var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
     val bounds = state.targetBounds[state.currentStep]
+        ?.translate(-overlayOrigin.x, -overlayOrigin.y)
     val density = LocalDensity.current
     val accentColor = MaterialTheme.colorScheme.secondary
     // Card + pointer follow the theme so dark mode isn't a jarring white slab.
@@ -136,6 +144,7 @@ fun TutorialOverlay(state: TutorialState) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .onGloballyPositioned { overlayOrigin = it.boundsInRoot().topLeft }
             .then(
                 if (consumesTaps) {
                     Modifier.clickable(
@@ -146,14 +155,11 @@ fun TutorialOverlay(state: TutorialState) {
                 } else Modifier
             )
     ) {
-        // Semi-transparent scrim with spotlight cutout
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-        ) {
-            drawRect(Color.Black.copy(alpha = 0.7f))
-
+        // Semi-transparent scrim with spotlight cutout. The hole is punched with an
+        // even-odd path, NOT BlendMode.DstOut in an Offscreen layer — pure geometry
+        // renders identically on Android and Skia/wasm, where the blend-mode approach
+        // lost the spotlight treatment entirely.
+        Canvas(modifier = Modifier.fillMaxSize()) {
             if (bounds != null && bounds.width > 0f && bounds.height > 0f) {
                 val pad = 10.dp.toPx()
                 val spotlightLeft = bounds.left - pad
@@ -162,14 +168,20 @@ fun TutorialOverlay(state: TutorialState) {
                 val spotlightHeight = bounds.height + pad * 2
                 val corner = CornerRadius(12.dp.toPx())
 
-                // Cut out spotlight
-                drawRoundRect(
-                    color = Color.Black,
-                    topLeft = androidx.compose.ui.geometry.Offset(spotlightLeft, spotlightTop),
-                    size = androidx.compose.ui.geometry.Size(spotlightWidth, spotlightHeight),
-                    cornerRadius = corner,
-                    blendMode = BlendMode.DstOut
-                )
+                val scrimWithHole = Path().apply {
+                    fillType = PathFillType.EvenOdd
+                    addRect(androidx.compose.ui.geometry.Rect(androidx.compose.ui.geometry.Offset.Zero, size))
+                    addRoundRect(
+                        RoundRect(
+                            androidx.compose.ui.geometry.Rect(
+                                androidx.compose.ui.geometry.Offset(spotlightLeft, spotlightTop),
+                                androidx.compose.ui.geometry.Size(spotlightWidth, spotlightHeight)
+                            ),
+                            corner
+                        )
+                    )
+                }
+                drawPath(scrimWithHole, Color.Black.copy(alpha = 0.7f))
 
                 // Pulsing accent border
                 drawRoundRect(
@@ -189,6 +201,8 @@ fun TutorialOverlay(state: TutorialState) {
                         cornerRadius = corner,
                     )
                 }
+            } else {
+                drawRect(Color.Black.copy(alpha = 0.7f))
             }
         }
 
