@@ -93,6 +93,11 @@ class OnlineGameRepository(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var shouldAutoReconnect = false
     private var lastSeenEventTimestamp: Long = 0L
+
+    // Events spliced into the log from a FINISHED view before their GameEventOccurred
+    // broadcasts arrived (the server sends views before events) — the copies are dropped
+    // on arrival by matching this queue's head. See the game-end splice in applyGameView.
+    private val pendingSplicedEvents = ArrayDeque<GameEvent>()
     private val needsEventReplay = MutableStateFlow(false)
 
     // Survives across connection failures so backoff genuinely grows; reset
@@ -262,6 +267,7 @@ class OnlineGameRepository(
         _reconnectCountdowns.value = emptyMap()
         _fatalError.value = null
         lastSeenEventTimestamp = 0L
+        pendingSplicedEvents.clear()
         needsEventReplay.value = false
         myPlayerId = ""
         roomCode = ""
@@ -456,6 +462,12 @@ class OnlineGameRepository(
                 applyGameView(message.view)
             }
             is ServerMessage.GameEventOccurred -> {
+                // Broadcast copy of an event already spliced from the FINISHED view —
+                // it's in the log and the strip in the right order; drop the duplicate.
+                if (pendingSplicedEvents.firstOrNull() == message.event) {
+                    pendingSplicedEvents.removeFirst()
+                    return
+                }
                 _eventLog = _eventLog + message.event
                 _gameEvents.emit(message.event)
                 lastSeenEventTimestamp = message.event.timestamp
@@ -535,6 +547,7 @@ class OnlineGameRepository(
                 // auto-navigates to the game when gameState is non-null, so a
                 // stale FINISHED state would bounce players straight back out.
                 _gameState.value = null
+                pendingSplicedEvents.clear()
                 _reconnectCountdowns.value = emptyMap()
                 lastSeenEventTimestamp = 0L
                 needsEventReplay.value = false
@@ -619,20 +632,23 @@ class OnlineGameRepository(
             }
         }
 
-        // The engine's early-end path (a team runs out of cards -> bonus award, the
-        // way most real games finish) appends GameEnded to the state's event list
-        // WITHOUT returning it as a discrete event, so the server never broadcasts
-        // it and the streamed log has no closing line. Splice it from the view's
-        // tail — it is always the final event there — which completes the result
-        // log, the board strip's "Game Over" line, and the game-over notification.
-        // Final-claim endings arrive live via GameEventOccurred; the guard skips them.
+        // Game-end splice. The server broadcasts each move's VIEW before its EVENTS, so
+        // the FINISHED view outruns the final DeckClaimed/TurnChanged/GameEnded frames —
+        // and the engine's early-end path (a team runs out of cards -> bonus award, the
+        // way most real games finish) never broadcasts its GameEnded at all. Splicing
+        // only GameEnded here put "Game Over" BEFORE the final claim in the log and the
+        // board strip. Instead, splice ALL not-yet-seen events from the view in engine
+        // order, and remember them so the duplicate broadcast copies arriving right
+        // behind this view are dropped (see GameEventOccurred).
         if (view.phase == GamePhase.FINISHED && _eventLog.none { it is GameEvent.GameEnded }) {
-            view.recentEvents.lastOrNull { it is GameEvent.GameEnded }?.let { ended ->
-                _eventLog = _eventLog + ended
-                _gameEvents.emit(ended)
-                if (ended.timestamp > lastSeenEventTimestamp) {
-                    lastSeenEventTimestamp = ended.timestamp
+            val missed = view.recentEvents.filter { it.timestamp > lastSeenEventTimestamp }
+            if (missed.isNotEmpty()) {
+                _eventLog = _eventLog + missed
+                for (event in missed) {
+                    _gameEvents.emit(event)
                 }
+                lastSeenEventTimestamp = missed.maxOf { it.timestamp }
+                pendingSplicedEvents.addAll(missed)
             }
         }
 
