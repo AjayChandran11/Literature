@@ -1,5 +1,8 @@
-# Build stage
-FROM gradle:8.14-jdk17 AS builder
+# Build stage. KEEP THIS IMAGE'S GRADLE IN SYNC WITH gradle-wrapper.properties:
+# the prebaked image is faster than downloading via the wrapper, but it drifts
+# silently — Gradle 8.14 here outlived the repo's move to 9.3.1/AGP 9 and broke
+# the deploy. Any wrapper upgrade must bump this tag too.
+FROM gradle:9.3.1-jdk17 AS builder
 WORKDIR /app
 
 # Dependency layer: copy only the build configuration first so Docker can cache
