@@ -1,6 +1,6 @@
 package com.cards.game.literature.ui.onboarding
 
-import androidx.activity.compose.BackHandler
+import com.cards.game.literature.ui.common.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke

@@ -7,6 +7,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.cards.game.literature.ui.common.webWheelScroll
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -87,8 +89,11 @@ fun CardHand(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.width(72.dp).padding(end = 8.dp)
                 )
+                val rowScroll = rememberLazyListState()
                 LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    state = rowScroll,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.webWheelScroll(rowScroll)
                 ) {
                     itemsIndexed(
                         items = cards,

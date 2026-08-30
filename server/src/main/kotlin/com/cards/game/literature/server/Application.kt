@@ -5,6 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -40,6 +41,13 @@ fun Application.configureServer() {
             isLenient = false
             ignoreUnknownKeys = true
         })
+    }
+    install(CORS) {
+        // Lets the browser client READ the GET /health warm-up response (browsers block
+        // cross-origin reads without this; the WebSocket route is unaffected either way).
+        // /health is public and side-effect-free, so any origin is fine.
+        anyHost()
+        allowMethod(HttpMethod.Get)
     }
 
     val roomManager = RoomManager()

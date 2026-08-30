@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.cards.game.literature.di.appVersionCode
 import com.cards.game.literature.di.appVersionName
 import com.cards.game.literature.notifications.PuzzleReminderScheduler
+import com.cards.game.literature.isWebPlatform
 import com.cards.game.literature.preferences.BotPacing
 import com.cards.game.literature.preferences.GamePrefs
 import kotlin.math.roundToInt
@@ -83,31 +84,34 @@ fun SettingsScreen(onBack: () -> Unit) {
                     GamePrefs.setSoundEnabled(it)
                 }
             )
-            SettingsToggleRow(
-                label = stringResource(Res.string.settings_haptic_feedback),
-                checked = hapticsEnabled,
-                onCheckedChange = {
-                    hapticsEnabled = it
-                    GamePrefs.setHapticsEnabled(it)
-                }
-            )
-            SettingsToggleRow(
-                label = stringResource(Res.string.settings_notifications),
-                checked = notificationsEnabled,
-                onCheckedChange = {
-                    notificationsEnabled = it
-                    GamePrefs.setNotificationsEnabled(it)
-                }
-            )
-            SettingsToggleRow(
-                label = stringResource(Res.string.settings_daily_reminder),
-                checked = puzzleReminderEnabled,
-                onCheckedChange = {
-                    puzzleReminderEnabled = it
-                    GamePrefs.setPuzzleReminderEnabled(it)
-                    if (it) PuzzleReminderScheduler.schedule() else PuzzleReminderScheduler.cancel()
-                }
-            )
+            // No haptics or notifications on web — hide toggles that would do nothing.
+            if (!isWebPlatform()) {
+                SettingsToggleRow(
+                    label = stringResource(Res.string.settings_haptic_feedback),
+                    checked = hapticsEnabled,
+                    onCheckedChange = {
+                        hapticsEnabled = it
+                        GamePrefs.setHapticsEnabled(it)
+                    }
+                )
+                SettingsToggleRow(
+                    label = stringResource(Res.string.settings_notifications),
+                    checked = notificationsEnabled,
+                    onCheckedChange = {
+                        notificationsEnabled = it
+                        GamePrefs.setNotificationsEnabled(it)
+                    }
+                )
+                SettingsToggleRow(
+                    label = stringResource(Res.string.settings_daily_reminder),
+                    checked = puzzleReminderEnabled,
+                    onCheckedChange = {
+                        puzzleReminderEnabled = it
+                        GamePrefs.setPuzzleReminderEnabled(it)
+                        if (it) PuzzleReminderScheduler.schedule() else PuzzleReminderScheduler.cancel()
+                    }
+                )
+            }
 
             BotSpeedSetting()
 

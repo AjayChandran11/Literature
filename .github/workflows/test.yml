@@ -80,6 +80,9 @@ jobs:
       - name: Compile Android client
         run: ./gradlew :composeApp:compileDebugKotlinAndroid
 
+      - name: Compile web client (wasm)
+        run: ./gradlew :composeApp:compileKotlinWasmJs
+
       - name: Upload test reports on failure
         if: failure()
         uses: actions/upload-artifact@v4

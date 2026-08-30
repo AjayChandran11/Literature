@@ -6,7 +6,8 @@
   <title>Join my Literature game</title>
   <!-- When the app is installed and the App Link is verified, Android opens the app
        directly and this page is never shown. Non-installers (and unverified cases)
-       land here: "Open in app" tries the custom scheme; the Play button is the funnel. -->
+       land here: "Play now" opens the web client with the room prefilled, "Open in
+       app" tries the custom scheme, and Google Play remains the install path. -->
   <style>
     :root {
       --bg: #14342b;
@@ -54,21 +55,26 @@
 </head>
 <body>
   <div class="card">
-    <div class="suits">&spades; &hearts; &diams; &clubs;</div>
+    <!-- U+FE0E pins text presentation: Android browsers otherwise render bare suit
+         glyphs as emoji (red ♥♦, near-invisible ♠♣) and ignore the gold styling. -->
+    <div class="suits">&spades;&#xFE0E; &hearts;&#xFE0E; &diams;&#xFE0E; &clubs;&#xFE0E;</div>
     <h1>You're invited!</h1>
     <p class="sub">Join a game of Literature, the classic card game.</p>
 
     <div class="roomlabel">Room code</div>
     <div class="room" id="room">------</div>
 
-    <a class="btn primary" id="play"
+    <a class="btn primary" id="web" href="https://literature-game.pages.dev/">
+      Play now in your browser
+    </a>
+    <a class="btn secondary" id="openApp" href="#">Open in app</a>
+    <a class="btn secondary" id="play"
        href="https://play.google.com/store/apps/details?id=com.cards.game.literature">
       Get it on Google Play
     </a>
-    <a class="btn secondary" id="openApp" href="#">Open in app</a>
 
-    <p class="hint">Already have the app? Tap “Open in app”. New here? Install from
-      Google Play, then re-open this link to jump into the room.</p>
+    <p class="hint">No install needed — “Play now” runs the game right in your browser.
+      Prefer the app? Install from Google Play, then re-open this link to jump into the room.</p>
   </div>
 
   <script>
@@ -80,6 +86,10 @@
 
       if (code) {
         document.getElementById("room").textContent = code;
+        // Straight into the room in the web client — the app parses ?room= at boot.
+        document.getElementById("web").setAttribute(
+          "href", "https://literature-game.pages.dev/?room=" + encodeURIComponent(code)
+        );
         // Custom-scheme fallback for "Open in app" (chat apps that strip https links,
         // or devices where the App Link isn't verified).
         document.getElementById("openApp").setAttribute(

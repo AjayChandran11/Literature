@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Literature — Card Game</title>
+    <style>
+        /* overscroll-behavior kills mobile pull-to-refresh — a one-swipe game killer. */
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #14342b; overscroll-behavior-y: none; }
+        #splash {
+            position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column;
+            gap: 14px; align-items: center; justify-content: center;
+            color: #f5f5f0; font-family: -apple-system, system-ui, sans-serif;
+            background: radial-gradient(circle at 50% 0%, #1d4439 0%, #0f261f 100%);
+        }
+        #splash .suits { font-size: 34px; letter-spacing: 10px; color: #f2c14e; }
+        #splash .spin {
+            width: 26px; height: 26px; border: 3px solid rgba(255,255,255,0.25);
+            border-top-color: #f2c14e; border-radius: 50%; animation: r 0.9s linear infinite;
+        }
+        @keyframes r { to { transform: rotate(360deg); } }
+    </style>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#14342b">
+    <!-- GA4 "Literature Web" stream; the app's Analytics facade no-ops until window.gtag exists. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-EQR8K69SN9"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-EQR8K69SN9');
+    </script>
+    <script type="application/javascript" src="composeApp.js"></script>
+</head>
+<body>
+<div id="splash">
+    <!-- U+FE0E pins text presentation: Android browsers otherwise render bare suits as
+         fixed-color emoji (red hearts, near-invisible dark spades) instead of the gold CSS. -->
+    <div class="suits">&spades;&#xFE0E; &hearts;&#xFE0E; &diams;&#xFE0E; &clubs;&#xFE0E;</div>
+    <div>Dealing the cards&hellip;</div>
+    <div class="spin"></div>
+</div>
+</body>
+</html>
