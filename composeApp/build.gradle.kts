@@ -12,8 +12,8 @@ plugins {
     alias(libs.plugins.firebaseCrashlytics)
 }
 
-val appVersionName = "1.1.12"
-val appVersionCode = 27
+val appVersionName = "1.1.13"
+val appVersionCode = 28
 
 // Single source of truth for the version on wasm: Android reads BuildConfig, but wasm has
 // no equivalent, so generate the AppInfo actual from the Gradle version at build time.
