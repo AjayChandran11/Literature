@@ -38,8 +38,13 @@ class MainActivity : ComponentActivity() {
         SoundPlayer.init(this)
         Sharer.init(this)
         AppReview.setActivity(this)
-        FirebaseApp.initializeApp(this)
-        FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = true
+        // Telemetry must never be why the app fails to launch: Firebase silently skips a component
+        // registrar it can't load, so getInstance() can throw "component is not present" (2 users
+        // on 1.1.12, reported via Play Vitals — Crashlytics can't report its own absence).
+        runCatching {
+            FirebaseApp.initializeApp(this)
+            FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = true
+        }
 
         // Handle a room invite or notification tap that launched the app (cold start).
         handleIntent(intent)

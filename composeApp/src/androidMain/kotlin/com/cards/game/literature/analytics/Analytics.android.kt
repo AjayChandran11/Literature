@@ -9,10 +9,13 @@ actual object Analytics {
 
     /**
      * Android-only. Call once from Application.onCreate — by then Firebase's init provider has
-     * already created the default FirebaseApp, so getInstance is safe here.
+     * normally created the default FirebaseApp. Guarded anyway: when a Firebase component fails to
+     * resolve (see the Crashlytics note in MainActivity) this runs even earlier, in
+     * Application.onCreate, where a throw kills the process before any Activity exists. A null
+     * delegate simply no-ops every call below.
      */
     fun init(context: Context) {
-        delegate = FirebaseAnalytics.getInstance(context.applicationContext)
+        delegate = runCatching { FirebaseAnalytics.getInstance(context.applicationContext) }.getOrNull()
     }
 
     actual fun log(event: AnalyticsEvent) {
