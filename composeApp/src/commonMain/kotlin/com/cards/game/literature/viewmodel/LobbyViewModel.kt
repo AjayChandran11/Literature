@@ -3,6 +3,8 @@ package com.cards.game.literature.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.repository.ConnectionState
 import com.cards.game.literature.repository.OnlineGameRepository
 import kotlinx.coroutines.CompletableDeferred
@@ -45,6 +47,8 @@ class LobbyViewModel(
     private val serverReadyDeferred = CompletableDeferred<Unit>()
 
     init {
+        Analytics.log(AnalyticsEvent.LobbyOpened)
+
         viewModelScope.launch {
             onlineRepository.warmUp()
             serverReadyDeferred.complete(Unit)
@@ -67,6 +71,7 @@ class LobbyViewModel(
     fun createRoom(playerName: String, playerCount: Int) {
         viewModelScope.launch {
             log.i { "Creating room: player=$playerName, count=$playerCount" }
+            Analytics.log(AnalyticsEvent.RoomCreated(playerCount))
             _uiState.update { it.copy(loadingOperation = LoadingOperation.CREATE, errorMessage = null) }
             serverReadyDeferred.await() // waits only if warmUp is still in progress
             onlineRepository.createRoom(playerName, playerCount)

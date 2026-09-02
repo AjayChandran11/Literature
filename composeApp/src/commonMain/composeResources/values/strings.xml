@@ -77,6 +77,7 @@
     <string name="waiting_room_invite_other">Other apps</string>
     <string name="cd_invite_other_apps">Invite using other apps</string>
     <string name="invite_share_text">Join my Literature game! 🃏\nRoom code: %1$s\n%2$s</string>
+    <string name="invite_app_share_text">Let's play Literature 🃏 — the team card game where you track down half-suits by asking your opponents for cards.\n\nInstall it and I'll send you a room code:\n%1$s</string>
     <string name="waiting_room_players_count">Players (%1$d/%2$d)</string>
     <string name="waiting_room_team_1">Team 1</string>
     <string name="waiting_room_team_2">Team 2</string>
@@ -388,6 +389,7 @@
     <string name="settings_version">Version</string>
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_send_feedback">Send Feedback</string>
+    <string name="settings_invite_friends">Invite friends</string>
     <string name="settings_licenses">Fonts: Playfair Display (SIL OFL 1.1)</string>
     <string name="feedback_email_subject">Literature feedback (v%1$s)</string>
     <string name="home_settings">Settings</string>

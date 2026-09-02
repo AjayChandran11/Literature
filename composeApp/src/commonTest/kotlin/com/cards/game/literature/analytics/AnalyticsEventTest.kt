@@ -20,8 +20,11 @@ class AnalyticsEventTest {
         AnalyticsEvent.ResultShared,
         AnalyticsEvent.DailyPuzzleOpened,
         AnalyticsEvent.DailyPuzzleSolved(kind = "wasted_ask", stars = 3, firstTry = true, streak = 7),
+        AnalyticsEvent.LobbyOpened,
+        AnalyticsEvent.RoomCreated(playerCount = 6),
         AnalyticsEvent.InviteShared(surface = "waiting_room"),
         AnalyticsEvent.InviteOpened,
+        AnalyticsEvent.InstallReferrerJoin,
         AnalyticsEvent.AchievementUnlocked(id = "ROOKIE_DETECTIVE"),
     )
 
@@ -31,8 +34,11 @@ class AnalyticsEventTest {
         assertEquals("game_finished", AnalyticsEvent.GameFinished("online", true, 3, null).name)
         assertEquals("daily_puzzle_opened", AnalyticsEvent.DailyPuzzleOpened.name)
         assertEquals("daily_puzzle_solved", AnalyticsEvent.DailyPuzzleSolved("claim", 3, true, 1).name)
+        assertEquals("lobby_opened", AnalyticsEvent.LobbyOpened.name)
+        assertEquals("room_created", AnalyticsEvent.RoomCreated(6).name)
         assertEquals("invite_shared", AnalyticsEvent.InviteShared("waiting_room").name)
         assertEquals("invite_opened", AnalyticsEvent.InviteOpened.name)
+        assertEquals("install_referrer_join", AnalyticsEvent.InstallReferrerJoin.name)
         assertEquals("achievement_unlocked", AnalyticsEvent.AchievementUnlocked("X").name)
         assertEquals("onboarding_finished", AnalyticsEvent.OnboardingFinished(true).name)
         assertEquals("tutorial_completed", AnalyticsEvent.TutorialCompleted.name)
@@ -55,6 +61,8 @@ class AnalyticsEventTest {
             mapOf("kind" to "locate", "stars" to 2, "first_try" to false, "streak" to 4),
             solved.params,
         )
+
+        assertEquals(mapOf("player_count" to 6), AnalyticsEvent.RoomCreated(6).params)
 
         assertEquals(
             mapOf("surface" to "waiting_room", "channel" to "system"),
