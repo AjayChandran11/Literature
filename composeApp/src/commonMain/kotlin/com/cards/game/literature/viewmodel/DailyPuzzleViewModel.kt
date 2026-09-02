@@ -11,6 +11,7 @@ import com.cards.game.literature.puzzle.HalfSuitClaim
 import com.cards.game.literature.puzzle.LocateCard
 import com.cards.game.literature.puzzle.WastedAsk
 import com.cards.game.literature.repository.DailyPuzzleRepository
+import com.cards.game.literature.review.AppReview
 import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.PuzzleProgress
 import com.cards.game.literature.stats.PuzzleStatus
@@ -52,6 +53,10 @@ data class DailyPuzzleUiState(
      *  puzzle shows the result settled with no replay. */
     val justSolved: Boolean = false
 )
+
+// A solve is the puzzle's high point, and daily solvers are the most engaged players we have —
+// but wait for a few so a day-one player isn't asked before they've formed an opinion.
+private const val PUZZLE_REVIEW_MIN_SOLVED = 3
 
 /**
  * Drives the Daily Claim Puzzle solve screen. Two taps: pick the claimable half-suit,
@@ -159,6 +164,7 @@ class DailyPuzzleViewModel(
                         streak = progress.displayedStreak(today),
                     )
                 )
+                if (progress.totalSolved >= PUZZLE_REVIEW_MIN_SOLVED) AppReview.requestReview()
                 StatsStore.recordPuzzleAchievements(progress)
             } else emptyList()
             _uiState.value = _uiState.value.copy(

@@ -77,6 +77,19 @@ sealed class AnalyticsEvent(
         },
     )
 
+    /** Player opened the online lobby — the step above [RoomCreated] in the room funnel. Also
+     *  fires on a deep-link arrival, so subtract [InviteOpened] to count players who chose
+     *  online themselves. */
+    data object LobbyOpened : AnalyticsEvent(name = "lobby_opened")
+
+    /** Player asked to create an online room. Fires on the attempt, not on admission — the drop
+     *  to [GameStarted] with mode "online" covers both creates that never landed (a cold server)
+     *  and rooms that landed but never filled. */
+    class RoomCreated(playerCount: Int) : AnalyticsEvent(
+        name = "room_created",
+        params = mapOf("player_count" to playerCount),
+    )
+
     /** Player shared a room-invite link — top of the Phase 2 invite funnel. [surface] e.g.
      *  "waiting_room"; [channel] is "whatsapp" (direct) or "system" (the OS share sheet), so we
      *  can measure the WhatsApp-first lift. */

@@ -26,12 +26,16 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
+import com.cards.game.literature.deeplink.InviteLink
 import com.cards.game.literature.di.appVersionCode
 import com.cards.game.literature.di.appVersionName
 import com.cards.game.literature.notifications.PuzzleReminderScheduler
 import com.cards.game.literature.isWebPlatform
 import com.cards.game.literature.preferences.BotPacing
 import com.cards.game.literature.preferences.GamePrefs
+import com.cards.game.literature.share.Sharer
 import kotlin.math.roundToInt
 import com.cards.game.literature.ui.theme.ThemeController
 import com.cards.game.literature.ui.theme.ThemeMode
@@ -151,6 +155,15 @@ fun SettingsScreen(onBack: () -> Unit) {
                     val subject = feedbackSubject
                         .replace(" ", "%20").replace("(", "%28").replace(")", "%29")
                     uriHandler.openUri("mailto:$FEEDBACK_EMAIL?subject=$subject")
+                }
+            )
+            // Store link, not a room invite — friends can install ahead of the session.
+            val inviteText = stringResource(Res.string.invite_app_share_text, InviteLink.PLAY_STORE)
+            SettingsLinkRow(
+                label = stringResource(Res.string.settings_invite_friends),
+                onClick = {
+                    Analytics.log(AnalyticsEvent.InviteShared(surface = "settings", channel = "system"))
+                    Sharer.shareText(inviteText)
                 }
             )
             Text(

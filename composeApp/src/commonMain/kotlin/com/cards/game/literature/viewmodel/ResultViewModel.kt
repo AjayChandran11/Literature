@@ -40,7 +40,7 @@ data class ResultUiState(
     val isFirstGame: Boolean = false
 )
 
-// Don't prompt for a review until the player has a few games behind them — a first-time winner
+// Don't prompt for a review until the player has a few games behind them — a first-timer
 // hasn't formed an opinion yet, and Play's quota is a scarce resource not to spend on them.
 private const val REVIEW_MIN_GAMES = 3
 
@@ -145,9 +145,10 @@ class ResultViewModel(
             )
             if (isFirstGame) TutorialPrefs.markFirstGameDebriefShown()
 
-            // A win is a natural high point to ask for a rating. Skip first-timers; Play's own
-            // quota decides whether the sheet actually shows and rate-limits how often.
-            if (myScore > oppScore && StatsStore.stats.value.gamesPlayed >= REVIEW_MIN_GAMES) {
+            // Finishing a game is the moment to ask, win or lose — returning for several games is
+            // the real signal of a happy player, and gating on the outcome only halves the reach.
+            // Play's own quota decides whether the sheet actually shows and rate-limits how often.
+            if (StatsStore.stats.value.gamesPlayed >= REVIEW_MIN_GAMES) {
                 AppReview.requestReview()
             }
         }
