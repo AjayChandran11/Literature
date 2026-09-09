@@ -1,6 +1,8 @@
 package com.cards.game.literature.preferences
 
-/** In-memory session state. Lives as long as the app process; cleared on kill/restart. */
+/** The player's name. Backed by [GamePrefs] so it survives a cold start, not just the process. */
 class SessionStore {
-    var playerName: String = ""
+    var playerName: String
+        get() = GamePrefs.getPlayerName()
+        set(value) = GamePrefs.setPlayerName(value)
 }
