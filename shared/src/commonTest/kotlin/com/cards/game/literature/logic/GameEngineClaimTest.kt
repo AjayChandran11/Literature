@@ -389,5 +389,7 @@ class GameEngineClaimTest {
 
         val ended = newState.events.filterIsInstance<GameEvent.GameEnded>().last()
         assertEquals("t1", ended.winnerTeamId)
+        // The early-end GameEnded must also be in the result's events, or it is never emitted.
+        assertTrue(result.events.any { it is GameEvent.GameEnded })
     }
 }

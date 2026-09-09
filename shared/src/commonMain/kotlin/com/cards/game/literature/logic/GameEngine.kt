@@ -175,7 +175,9 @@ class GameEngine {
         )
 
         // Check for early game end
-        newState = checkForEarlyGameEnd(newState)
+        val checked = checkForEarlyGameEnd(newState)
+        newEvents.addAll(appendedEvents(newState, checked))
+        newState = checked
 
         return GameResult(newState, newEvents)
     }
@@ -305,10 +307,20 @@ class GameEngine {
         }
 
         // Check for early game end
-        newState = checkForEarlyGameEnd(newState)
+        val checked = checkForEarlyGameEnd(newState)
+        newEvents.addAll(appendedEvents(newState, checked))
+        newState = checked
 
         return GameResult(newState, newEvents)
     }
+
+    /**
+     * Events [checkForEarlyGameEnd] appended on top of [before]. The early-end GameEnded must
+     * ride [GameResult.events] as well as the state, or it is never emitted/broadcast — the
+     * offline log had no Game Over row and the online client had to splice it from the view.
+     */
+    private fun appendedEvents(before: GameState, after: GameState): List<GameEvent> =
+        after.events.drop(before.events.size)
 
     /**
      * Resolves an Option C suspension: [selectedPlayerId] (chosen by the claimer,
