@@ -30,6 +30,8 @@ enum class PuzzleFeedback { NONE, NEED_CARD, WRONG_HALF_SUIT, WRONG_CARD, WRONG_
 data class DailyPuzzleUiState(
     val loading: Boolean = true,
     val puzzle: DailyPuzzle? = null,
+    /** Local epoch day the shown puzzle belongs to — attempts are booked against THIS day. */
+    val puzzleDay: Long = 0,
     val puzzleNumber: Int = 0,
     val streak: Int = 0,
     val status: PuzzleStatus = PuzzleStatus.NOT_STARTED,
@@ -70,8 +72,17 @@ class DailyPuzzleViewModel(
     private val _uiState = MutableStateFlow(DailyPuzzleUiState())
     val uiState: StateFlow<DailyPuzzleUiState> = _uiState.asStateFlow()
 
+    // Set synchronously on submit so a double tap can't record twice (and double-log the solve).
+    private var submitting = false
+
     init {
         Analytics.log(AnalyticsEvent.DailyPuzzleOpened)
+        load()
+    }
+
+    /** Loads the puzzle for the current local day. Also used to roll over past midnight. */
+    private fun load() {
+        _uiState.value = DailyPuzzleUiState()
         // Generate off the main thread — todaysPuzzle() deals a deck and replays a game, enough to
         // jank the screen-open frame. Initial uiState is loading=true (the screen shows a loader);
         // we post the finished puzzle here.
@@ -82,6 +93,7 @@ class DailyPuzzleViewModel(
             _uiState.value = DailyPuzzleUiState(
                 loading = false,
                 puzzle = puzzle,
+                puzzleDay = today,
                 puzzleNumber = repository.puzzleNumber(today),
                 streak = progress.displayedStreak(today),
                 status = progress.status,
@@ -122,7 +134,13 @@ class DailyPuzzleViewModel(
     fun submit() {
         val s = _uiState.value
         val puzzle = s.puzzle ?: return
-        if (terminal()) return
+        if (terminal() || submitting) return
+        // The screen stayed open across local midnight: this answer is for yesterday's puzzle, but
+        // an attempt would be booked against today's. Roll over to today's puzzle instead.
+        if (currentEpochDay() != s.puzzleDay) {
+            load()
+            return
+        }
 
         // Resolve correctness per kind. A null here means "no answer chosen yet" — the screen keeps
         // submit disabled until it's set, so this just no-ops defensively (except CLAIM's missing
@@ -151,32 +169,37 @@ class DailyPuzzleViewModel(
             }
         }
 
+        submitting = true
+        val day = s.puzzleDay
         viewModelScope.launch {
-            val today = currentEpochDay()
-            val progress = PuzzleStore.recordAttempt(correct, today)
-            // Unlock + celebrate puzzle achievements only on the solve that earns them.
-            val unlocked = if (progress.status == PuzzleStatus.SOLVED) {
-                Analytics.log(
-                    AnalyticsEvent.DailyPuzzleSolved(
-                        kind = puzzle.kind.name.lowercase(),
-                        stars = progress.stars,
-                        firstTry = progress.attemptsUsed == 1,
-                        streak = progress.displayedStreak(today),
+            try {
+                val progress = PuzzleStore.recordAttempt(correct, day)
+                // Unlock + celebrate puzzle achievements only on the solve that earns them.
+                val unlocked = if (progress.status == PuzzleStatus.SOLVED) {
+                    Analytics.log(
+                        AnalyticsEvent.DailyPuzzleSolved(
+                            kind = puzzle.kind.name.lowercase(),
+                            stars = progress.stars,
+                            firstTry = progress.attemptsUsed == 1,
+                            streak = progress.displayedStreak(day),
+                        )
                     )
+                    if (progress.totalSolved >= PUZZLE_REVIEW_MIN_SOLVED) AppReview.requestReview()
+                    StatsStore.recordPuzzleAchievements(progress)
+                } else emptyList()
+                _uiState.value = _uiState.value.copy(
+                    status = progress.status,
+                    attemptsUsed = progress.attemptsUsed,
+                    stars = progress.stars,
+                    streak = progress.displayedStreak(day),
+                    feedback = if (correct) PuzzleFeedback.NONE else wrongFeedback,
+                    revealed = progress.status.isTerminal(),
+                    newlyUnlocked = unlocked,
+                    justSolved = progress.status == PuzzleStatus.SOLVED
                 )
-                if (progress.totalSolved >= PUZZLE_REVIEW_MIN_SOLVED) AppReview.requestReview()
-                StatsStore.recordPuzzleAchievements(progress)
-            } else emptyList()
-            _uiState.value = _uiState.value.copy(
-                status = progress.status,
-                attemptsUsed = progress.attemptsUsed,
-                stars = progress.stars,
-                streak = progress.displayedStreak(today),
-                feedback = if (correct) PuzzleFeedback.NONE else wrongFeedback,
-                revealed = progress.status.isTerminal(),
-                newlyUnlocked = unlocked,
-                justSolved = progress.status == PuzzleStatus.SOLVED
-            )
+            } finally {
+                submitting = false
+            }
         }
     }
 
