@@ -44,7 +44,7 @@ fun LobbyScreen(
     // internally, so it's safe to fire immediately; the Join button shows its spinner.
     LaunchedEffect(Unit) {
         if (!initialRoomCode.isNullOrBlank() && playerName.isNotBlank()) {
-            viewModel.joinRoom(initialRoomCode, playerName)
+            viewModel.joinRoom(initialRoomCode, playerName, source = "invite")
         }
     }
 

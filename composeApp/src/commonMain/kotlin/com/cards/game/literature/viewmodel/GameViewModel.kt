@@ -236,7 +236,6 @@ class GameViewModel(
                 mode = "offline_bots",
                 teamSize = playerCount / 2,
                 hasBots = true,
-                turnTimerSecs = null,
             )
         )
         myAsks = 0

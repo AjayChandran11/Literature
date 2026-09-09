@@ -13,19 +13,21 @@ sealed class AnalyticsEvent(
     val name: String,
     val params: Map<String, Any> = emptyMap(),
 ) {
-    /** A match began. [mode] is one of "online", "offline_bots". */
+    /** A match began. [mode] is one of "online", "offline_bots". Online it is logged by EVERY
+     *  client on the server's GameStarted message (so it counts games, not host taps) and
+     *  [isHost] splits hosts from guests; offline it fires on the deal. */
     class GameStarted(
         mode: String,
         teamSize: Int,
         hasBots: Boolean,
-        turnTimerSecs: Int?,
+        isHost: Boolean? = null,
     ) : AnalyticsEvent(
         name = "game_started",
         params = buildMap {
             put("mode", mode)
             put("team_size", teamSize)
             put("has_bots", hasBots)
-            if (turnTimerSecs != null) put("turn_timer_secs", turnTimerSecs)
+            if (isHost != null) put("is_host", isHost)
         },
     )
 
@@ -90,6 +92,14 @@ sealed class AnalyticsEvent(
         params = mapOf("player_count" to playerCount),
     )
 
+    /** A guest was admitted to a room — the invite funnel's conversion step, which had no event
+     *  before (invite_opened fires on URL parse, long before anyone reaches a room). [source] is
+     *  "invite" (deep link / referrer auto-join) or "code" (typed by hand). */
+    class RoomJoined(source: String, playerCount: Int) : AnalyticsEvent(
+        name = "room_joined",
+        params = mapOf("source" to source, "player_count" to playerCount),
+    )
+
     /** Player shared a room-invite link — top of the Phase 2 invite funnel. [surface] e.g.
      *  "waiting_room"; [channel] is "whatsapp" (direct) or "system" (the OS share sheet), so we
      *  can measure the WhatsApp-first lift. */
@@ -98,8 +108,13 @@ sealed class AnalyticsEvent(
         params = mapOf("surface" to surface, "channel" to channel),
     )
 
-    /** App opened via a room-invite deep link — bottom of the Phase 2 invite funnel. */
-    data object InviteOpened : AnalyticsEvent(name = "invite_opened")
+    /** App opened via a room-invite link. [source] is how it arrived: "app_link" (verified https),
+     *  "custom_scheme" (literature://), "web" (?room= on the browser build) or "referrer" (Play
+     *  install referrer — also logs [InstallReferrerJoin], so filter one or the other). */
+    class InviteOpened(source: String) : AnalyticsEvent(
+        name = "invite_opened",
+        params = mapOf("source" to source),
+    )
 
     /** A fresh install that came through an invite link auto-surfaced its room on first
      *  launch, read from the Play Install Referrer (join.html → Play → install → open). */

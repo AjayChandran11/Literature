@@ -62,11 +62,17 @@ class LobbyViewModel(
         }
 
         viewModelScope.launch {
-            onlineRepository.roomState.filterNotNull().first()
+            val room = onlineRepository.roomState.filterNotNull().first()
+            if (_uiState.value.loadingOperation == LoadingOperation.JOIN) {
+                Analytics.log(AnalyticsEvent.RoomJoined(pendingJoinSource, room.targetPlayerCount))
+            }
             _uiState.update { it.copy(loadingOperation = null) }
             _navigateToWaitingRoom.emit(onlineRepository.roomCode)
         }
     }
+
+    // How the pending join was initiated, reported on admission (see AnalyticsEvent.RoomJoined).
+    private var pendingJoinSource = "code"
 
     fun createRoom(playerName: String, playerCount: Int) {
         viewModelScope.launch {
@@ -79,7 +85,9 @@ class LobbyViewModel(
         }
     }
 
-    fun joinRoom(roomCode: String, playerName: String) {
+    /** [source] is "code" (typed) or "invite" (deep link / referrer auto-join), for analytics. */
+    fun joinRoom(roomCode: String, playerName: String, source: String = "code") {
+        pendingJoinSource = source
         viewModelScope.launch {
             log.i { "Joining room: code=$roomCode, player=$playerName" }
             _uiState.update { it.copy(loadingOperation = LoadingOperation.JOIN, errorMessage = null) }

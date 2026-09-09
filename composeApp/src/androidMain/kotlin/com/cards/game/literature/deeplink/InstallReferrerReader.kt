@@ -44,7 +44,7 @@ object InstallReferrerReader {
                             if (!hasPendingInvite) {
                                 DeepLinkHandler.extractRoomCodeFromReferrer(referrer)?.let { code ->
                                     Analytics.log(AnalyticsEvent.InstallReferrerJoin)
-                                    DeepLinkHandler.submit(code)
+                                    DeepLinkHandler.submit(code, source = "referrer")
                                 }
                             }
                             prefs.edit().putBoolean(KEY_CONSUMED, true).apply()
