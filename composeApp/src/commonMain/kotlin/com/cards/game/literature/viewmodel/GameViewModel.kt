@@ -15,6 +15,8 @@ import com.cards.game.literature.stats.MatchRecord
 import com.cards.game.literature.stats.Outcome
 import com.cards.game.literature.stats.StatsStore
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class PlayerInfo(
@@ -65,6 +67,9 @@ data class GameUiState(
     val myTeamId: String = "team_1",
     val passSelection: PassSelectionUiState? = null
 )
+
+// Safety-net delay for stats recording when no GameEnded event follows a FINISHED state.
+private const val FALLBACK_RECORD_DELAY_MS = 2_000L
 
 class GameViewModel(
     private val repository: GameRepository,
@@ -131,7 +136,10 @@ class GameViewModel(
                 }
                 updateUiState(state)
                 if (state.phase == GamePhase.FINISHED) {
-                    maybeRecordGame(state)
+                    // Both repositories publish the FINISHED state BEFORE the events that produced
+                    // it, so recording here would snapshot the counters without the game-ending
+                    // claim. GameEnded (below) is the normal trigger; this is only a safety net.
+                    scheduleFallbackRecord()
                 }
             }
         }
@@ -139,6 +147,11 @@ class GameViewModel(
             repository.gameEvents.collect { event ->
                 _gameLog.update { it + event }
                 trackMyActions(event)
+                if (event is GameEvent.GameEnded) {
+                    repository.gameState.value
+                        ?.takeIf { it.phase == GamePhase.FINISHED }
+                        ?.let { maybeRecordGame(it) }
+                }
             }
         }
         // Surface server-side rejections that arrive out-of-band rather than as exceptions from
@@ -161,6 +174,19 @@ class GameViewModel(
                 if (event.correct) myClaimsCorrect++
             }
             else -> {}
+        }
+    }
+
+    private var fallbackRecordJob: Job? = null
+
+    /** Records the game a moment later if no GameEnded event has done it first. */
+    private fun scheduleFallbackRecord() {
+        if (fallbackRecordJob?.isActive == true) return
+        fallbackRecordJob = viewModelScope.launch {
+            delay(FALLBACK_RECORD_DELAY_MS)
+            repository.gameState.value
+                ?.takeIf { it.phase == GamePhase.FINISHED }
+                ?.let { maybeRecordGame(it) }
         }
     }
 
