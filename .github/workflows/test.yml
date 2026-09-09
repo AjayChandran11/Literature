@@ -92,3 +92,79 @@ jobs:
             shared/build/reports/tests/
             server/build/reports/tests/
           retention-days: 7
+
+  # The shipped APK is R8-minified; debug compiles cannot see shrinker regressions. 1.1.12 and
+  # 1.1.13 shipped with Crashlytics silently dead because AGP 9's R8 stripped a reflectively
+  # instantiated constructor — a class of bug only a release build reveals.
+  release-build:
+    name: Minified release build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle (with caching)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Create placeholder google-services.json
+        run: |
+          if [ ! -f composeApp/google-services.json ]; then
+            cat > composeApp/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "literature-ci-placeholder",
+              "storage_bucket": "literature-ci-placeholder.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.cards.game.literature"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
+
+      # Unsigned is fine — this checks the shrinker, not the signature. The Crashlytics mapping
+      # upload is skipped: the placeholder project has no credentials.
+      - name: Assemble minified release APK
+        run: ./gradlew :composeApp:assembleRelease -x uploadCrashlyticsMappingFileRelease
+
+      # Firebase discovers its components by instantiating each *Registrar reflectively through
+      # its no-arg constructor. If R8 strips it, Crashlytics vanishes without a build error.
+      - name: Check Firebase registrars kept their constructors
+        run: |
+          mapping=composeApp/build/outputs/mapping/release/mapping.txt
+          test -f "$mapping"
+          for cls in com.google.firebase.crashlytics.CrashlyticsRegistrar \
+                     com.google.firebase.analytics.connector.internal.AnalyticsConnectorRegistrar \
+                     com.google.firebase.FirebaseCommonRegistrar; do
+            if ! awk -v c="$cls -> " 'index($0, c) == 1 {f=1; next} /^[^ #]/ {f=0} f && /<init>\(\)/ {found=1} END {exit !found}' "$mapping"; then
+              echo "::error::R8 stripped the no-arg constructor of $cls — Firebase will skip that component at runtime"
+              exit 1
+            fi
+          done
+          echo "All checked Firebase registrars keep <init>()"
