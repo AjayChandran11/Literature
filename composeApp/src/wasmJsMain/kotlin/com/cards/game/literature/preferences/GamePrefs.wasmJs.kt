@@ -65,4 +65,10 @@ actual object GamePrefs {
     actual fun setBotDelaySeconds(seconds: Float) {
         localStorage.setItem("bot_delay_secs", seconds.toString())
     }
+
+    actual fun getPlayerName(): String = localStorage.getItem("player_name") ?: ""
+
+    actual fun setPlayerName(name: String) {
+        localStorage.setItem("player_name", name)
+    }
 }

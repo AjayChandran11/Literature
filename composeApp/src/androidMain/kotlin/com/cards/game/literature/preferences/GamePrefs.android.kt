@@ -56,4 +56,9 @@ actual object GamePrefs {
     actual fun setDynamicColorsEnabled(enabled: Boolean) {
         prefs()?.edit()?.putBoolean("dynamic_colors", enabled)?.apply()
     }
+
+    actual fun getPlayerName(): String = prefs()?.getString("player_name", "") ?: ""
+    actual fun setPlayerName(name: String) {
+        prefs()?.edit()?.putString("player_name", name)?.apply()
+    }
 }

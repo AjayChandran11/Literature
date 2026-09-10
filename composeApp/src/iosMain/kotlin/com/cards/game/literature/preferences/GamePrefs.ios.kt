@@ -70,4 +70,11 @@ actual object GamePrefs {
     actual fun setBotDelaySeconds(seconds: Float) {
         NSUserDefaults.standardUserDefaults.setFloat(seconds, forKey = "bot_delay_secs")
     }
+
+    actual fun getPlayerName(): String =
+        NSUserDefaults.standardUserDefaults.stringForKey("player_name") ?: ""
+
+    actual fun setPlayerName(name: String) {
+        NSUserDefaults.standardUserDefaults.setObject(name, forKey = "player_name")
+    }
 }

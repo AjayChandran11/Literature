@@ -1,6 +1,7 @@
 package com.cards.game.literature
 
 import androidx.compose.ui.ExperimentalComposeUiApi
+import kotlin.js.ExperimentalWasmJsInterop
 import androidx.compose.ui.window.ComposeViewport
 import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.di.appModule
@@ -11,7 +12,7 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import org.koin.compose.KoinApplication
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalWasmJsInterop::class)
 fun main() {
     AppLifecycleObserver.init()
     NetworkMonitor.startMonitoring()
@@ -26,7 +27,10 @@ fun main() {
         )
     } else {
         // Invite links carry ?room=CODE — the common parser already understands this shape.
-        DeepLinkHandler.submit(window.location.href)
+        DeepLinkHandler.submit(window.location.href, source = "web")
+        // Consume it from the URL: a refresh would otherwise re-log invite_opened and resurface
+        // an invite the player already acted on (and the code would keep riding GA4's page_location).
+        if (urlRoom != null) window.history.replaceState(null, "", window.location.pathname)
     }
     ComposeViewport(document.body!!) {
         // Splash stays until the emoji fallback font is registered (see WebFonts.kt).

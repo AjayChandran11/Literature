@@ -63,7 +63,6 @@ object StatsStore {
      */
     suspend fun recordGame(gameId: String, record: MatchRecord): GameRecordResult? = mutex.withLock {
         if (StatsPrefs.getLastRecordedGameId() == gameId) return null
-        StatsPrefs.setLastRecordedGameId(gameId)
 
         Analytics.log(
             AnalyticsEvent.GameFinished(
@@ -93,6 +92,9 @@ object StatsStore {
         if (newlyUnlocked.isNotEmpty()) {
             StatsPrefs.setAchievementsJson(json.encodeToString(updatedAchievements))
         }
+        // Mark recorded only after the stats are on disk, so a kill in between retries the
+        // record instead of losing the game.
+        StatsPrefs.setLastRecordedGameId(gameId)
         newlyUnlocked.forEach { Analytics.log(AnalyticsEvent.AchievementUnlocked(it.name)) }
         // Scoped to gameId and set unconditionally (even when empty) so a stale celebration
         // can't leak onto a later game's result screen, and a result-screen recreation

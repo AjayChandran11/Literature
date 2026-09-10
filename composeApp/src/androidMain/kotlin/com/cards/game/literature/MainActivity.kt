@@ -46,8 +46,10 @@ class MainActivity : ComponentActivity() {
             FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = true
         }
 
-        // Handle a room invite or notification tap that launched the app (cold start).
-        handleIntent(intent)
+        // Handle a room invite or notification tap that launched the app (cold start). Not on an
+        // Activity recreation: the original intent is re-delivered, and re-submitting the invite
+        // would re-log invite_opened and resurface a consumed room card.
+        if (savedInstanceState == null) handleIntent(intent)
 
         // First launch after an invite-driven Play install: read the install referrer once
         // and surface the room invite. Skipped when an explicit deep link this launch already
@@ -73,15 +75,18 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
+        // A relaunch from Recents re-delivers the task's root intent (invite link or reminder
+        // tap included); only a genuine new arrival should act on either.
+        val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
 
         // Room invite via App Link / custom scheme.
-        if (intent.action == Intent.ACTION_VIEW) {
-            DeepLinkHandler.submit(intent.dataString)
+        if (!fromHistory && intent.action == Intent.ACTION_VIEW) {
+            val data = intent.dataString
+            val source = if (data?.startsWith("literature:") == true) "custom_scheme" else "app_link"
+            DeepLinkHandler.submit(data, source)
         }
 
-        // Daily-puzzle reminder tap. Skip when relaunched from Recents (the extra lingers on
-        // the task's root intent) so we only jump to the puzzle on the actual notification tap.
-        val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        // Daily-puzzle reminder tap.
         if (!fromHistory && intent.getStringExtra(Notifier.EXTRA_NAVIGATE_TO) == Notifier.NAV_DAILY_PUZZLE) {
             DeepLinkHandler.submitDestination(DeepLinkHandler.LaunchDestination.DAILY_PUZZLE)
             intent.removeExtra(Notifier.EXTRA_NAVIGATE_TO)
