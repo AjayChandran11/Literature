@@ -13,7 +13,7 @@ class AnalyticsEventTest {
 
     /** One representative instance of every event, so the rule checks cover the whole catalogue. */
     private val sampleEvents: List<AnalyticsEvent> = listOf(
-        AnalyticsEvent.GameStarted(mode = "online", teamSize = 3, hasBots = true, turnTimerSecs = null),
+        AnalyticsEvent.GameStarted(mode = "online", teamSize = 3, hasBots = true, isHost = false),
         AnalyticsEvent.GameFinished(mode = "offline_bots", won = false, teamSize = 2, durationSecs = 420L),
         AnalyticsEvent.OnboardingFinished(completed = true),
         AnalyticsEvent.TutorialCompleted,
@@ -22,22 +22,24 @@ class AnalyticsEventTest {
         AnalyticsEvent.DailyPuzzleSolved(kind = "wasted_ask", stars = 3, firstTry = true, streak = 7),
         AnalyticsEvent.LobbyOpened,
         AnalyticsEvent.RoomCreated(playerCount = 6),
+        AnalyticsEvent.RoomJoined(source = "invite", playerCount = 6),
         AnalyticsEvent.InviteShared(surface = "waiting_room"),
-        AnalyticsEvent.InviteOpened,
+        AnalyticsEvent.InviteOpened(source = "app_link"),
         AnalyticsEvent.InstallReferrerJoin,
         AnalyticsEvent.AchievementUnlocked(id = "ROOKIE_DETECTIVE"),
     )
 
     @Test
     fun eventNamesAreStable() {
-        assertEquals("game_started", AnalyticsEvent.GameStarted("online", 3, true, null).name)
+        assertEquals("game_started", AnalyticsEvent.GameStarted("online", 3, true).name)
         assertEquals("game_finished", AnalyticsEvent.GameFinished("online", true, 3, null).name)
         assertEquals("daily_puzzle_opened", AnalyticsEvent.DailyPuzzleOpened.name)
         assertEquals("daily_puzzle_solved", AnalyticsEvent.DailyPuzzleSolved("claim", 3, true, 1).name)
         assertEquals("lobby_opened", AnalyticsEvent.LobbyOpened.name)
         assertEquals("room_created", AnalyticsEvent.RoomCreated(6).name)
+        assertEquals("room_joined", AnalyticsEvent.RoomJoined("code", 4).name)
         assertEquals("invite_shared", AnalyticsEvent.InviteShared("waiting_room").name)
-        assertEquals("invite_opened", AnalyticsEvent.InviteOpened.name)
+        assertEquals("invite_opened", AnalyticsEvent.InviteOpened("web").name)
         assertEquals("install_referrer_join", AnalyticsEvent.InstallReferrerJoin.name)
         assertEquals("achievement_unlocked", AnalyticsEvent.AchievementUnlocked("X").name)
         assertEquals("onboarding_finished", AnalyticsEvent.OnboardingFinished(true).name)
@@ -47,8 +49,10 @@ class AnalyticsEventTest {
 
     @Test
     fun paramsCarryTheExpectedKeysAndValues() {
-        val started = AnalyticsEvent.GameStarted(mode = "online", teamSize = 3, hasBots = true, turnTimerSecs = null)
-        assertEquals(mapOf("mode" to "online", "team_size" to 3, "has_bots" to true), started.params)
+        val started = AnalyticsEvent.GameStarted(mode = "online", teamSize = 3, hasBots = true, isHost = true)
+        assertEquals(mapOf("mode" to "online", "team_size" to 3, "has_bots" to true, "is_host" to true), started.params)
+        val startedOffline = AnalyticsEvent.GameStarted(mode = "offline_bots", teamSize = 2, hasBots = true)
+        assertEquals(mapOf("mode" to "offline_bots", "team_size" to 2, "has_bots" to true), startedOffline.params)
 
         val finished = AnalyticsEvent.GameFinished(mode = "online", won = true, teamSize = 3, durationSecs = 120L)
         assertEquals(
@@ -63,6 +67,8 @@ class AnalyticsEventTest {
         )
 
         assertEquals(mapOf("player_count" to 6), AnalyticsEvent.RoomCreated(6).params)
+        assertEquals(mapOf("source" to "invite", "player_count" to 6), AnalyticsEvent.RoomJoined("invite", 6).params)
+        assertEquals(mapOf("source" to "referrer"), AnalyticsEvent.InviteOpened("referrer").params)
 
         assertEquals(
             mapOf("surface" to "waiting_room", "channel" to "system"),
@@ -79,11 +85,11 @@ class AnalyticsEventTest {
 
     @Test
     fun optionalParamsAreOmittedWhenNull() {
-        // turn_timer_secs / duration_secs must not appear as keys when their source value is null.
-        assertTrue("turn_timer_secs" !in AnalyticsEvent.GameStarted("online", 3, false, null).params)
+        // is_host / duration_secs must not appear as keys when their source value is null.
+        assertTrue("is_host" !in AnalyticsEvent.GameStarted("online", 3, false, null).params)
         assertTrue("duration_secs" !in AnalyticsEvent.GameFinished("online", true, 3, null).params)
         // ...and present when supplied.
-        assertTrue("turn_timer_secs" in AnalyticsEvent.GameStarted("online", 3, false, 30).params)
+        assertTrue("is_host" in AnalyticsEvent.GameStarted("online", 3, false, isHost = false).params)
     }
 
     @Test

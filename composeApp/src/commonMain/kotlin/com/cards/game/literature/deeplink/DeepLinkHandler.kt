@@ -47,11 +47,12 @@ object DeepLinkHandler {
     /**
      * Records an incoming invite. Accepts either a raw 6-char code or a full deep-link
      * URI string (https App Link or `literature://` scheme); extracts and validates the
-     * code, ignoring anything malformed.
+     * code, ignoring anything malformed. [source] names the entry point for analytics
+     * (see [AnalyticsEvent.InviteOpened]).
      */
-    fun submit(raw: String?) {
+    fun submit(raw: String?, source: String) {
         val code = extractRoomCode(raw) ?: return
-        Analytics.log(AnalyticsEvent.InviteOpened)
+        Analytics.log(AnalyticsEvent.InviteOpened(source))
         _pendingRoomCode.value = code
     }
 

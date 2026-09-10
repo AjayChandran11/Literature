@@ -25,4 +25,8 @@ expect object GamePrefs {
     /** Offline bot thinking time in seconds; [BotPacing.DEFAULT_SECONDS] when unset. */
     fun getBotDelaySeconds(): Float
     fun setBotDelaySeconds(seconds: Float)
+
+    /** The name typed on Home, remembered across launches; empty when never set. */
+    fun getPlayerName(): String
+    fun setPlayerName(name: String)
 }

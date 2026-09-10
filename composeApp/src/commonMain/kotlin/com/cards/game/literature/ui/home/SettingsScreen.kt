@@ -36,6 +36,7 @@ import com.cards.game.literature.isWebPlatform
 import com.cards.game.literature.preferences.BotPacing
 import com.cards.game.literature.preferences.GamePrefs
 import com.cards.game.literature.share.Sharer
+import io.ktor.http.encodeURLParameter
 import kotlin.math.roundToInt
 import com.cards.game.literature.ui.theme.ThemeController
 import com.cards.game.literature.ui.theme.ThemeMode
@@ -144,17 +145,21 @@ fun SettingsScreen(onBack: () -> Unit) {
                 value = "$appVersionName ($appVersionCode)"
             )
             val feedbackSubject = stringResource(Res.string.feedback_email_subject, appVersionName)
+            // openUri throws when no app can handle the URI (no browser, no mail client — work
+            // profiles and some Go images). Fall back to the share sheet rather than crash.
             SettingsLinkRow(
                 label = stringResource(Res.string.settings_privacy_policy),
-                onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }
+                onClick = {
+                    runCatching { uriHandler.openUri(PRIVACY_POLICY_URL) }
+                        .onFailure { runCatching { Sharer.shareText(PRIVACY_POLICY_URL) } }
+                }
             )
             SettingsLinkRow(
                 label = stringResource(Res.string.settings_send_feedback),
                 onClick = {
-                    // Minimal percent-encoding for the subject so spaces/parens survive the mailto.
-                    val subject = feedbackSubject
-                        .replace(" ", "%20").replace("(", "%28").replace(")", "%29")
-                    uriHandler.openUri("mailto:$FEEDBACK_EMAIL?subject=$subject")
+                    val subject = feedbackSubject.encodeURLParameter()
+                    runCatching { uriHandler.openUri("mailto:$FEEDBACK_EMAIL?subject=$subject") }
+                        .onFailure { runCatching { Sharer.shareText("$feedbackSubject\n$FEEDBACK_EMAIL") } }
                 }
             )
             // Store link, not a room invite — friends can install ahead of the session.

@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import io.ktor.http.encodeURLPathPart
 import androidx.savedstate.read
 import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.deeplink.DeepLinkHandler
@@ -55,11 +56,16 @@ object Routes {
     const val DAILY_PUZZLE = "daily_puzzle"
     const val SETTINGS = "settings"
 
-    fun game(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) = "game/$playerName/$playerCount/${difficulty.name}"
-    fun result(playerName: String, playerCount: Int, difficulty: BotDifficulty) = "result/$playerName/$playerCount/${difficulty.name}"
-    fun lobby(playerName: String) = "lobby/$playerName"
+    // The player name is free text and rides in the route path, which Navigation parses as a URI:
+    // an unencoded "/", "?" or "#" breaks the match and navigate() throws. Encode here (Navigation
+    // decodes path arguments on read), so every builder stays the single place names enter routes.
+    fun game(playerName: String, playerCount: Int, difficulty: BotDifficulty = BotDifficulty.MEDIUM) =
+        "game/${playerName.encodeURLPathPart()}/$playerCount/${difficulty.name}"
+    fun result(playerName: String, playerCount: Int, difficulty: BotDifficulty) =
+        "result/${playerName.encodeURLPathPart()}/$playerCount/${difficulty.name}"
+    fun lobby(playerName: String) = "lobby/${playerName.encodeURLPathPart()}"
     // Deep-link invite: lands in the lobby with the room code prefilled to auto-join.
-    fun lobby(playerName: String, roomCode: String) = "lobby/$playerName?room=$roomCode"
+    fun lobby(playerName: String, roomCode: String) = "lobby/${playerName.encodeURLPathPart()}?room=$roomCode"
     fun waitingRoom(roomCode: String) = "waiting_room/$roomCode"
 }
 

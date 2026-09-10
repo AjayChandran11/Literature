@@ -8,6 +8,7 @@ import com.cards.game.literature.logic.GameEngine
 import com.cards.game.literature.model.*
 import com.cards.game.literature.preferences.BotPacing
 import com.cards.game.literature.preferences.GamePrefs
+import com.cards.game.literature.rethrowIfPlatformFatal
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
@@ -136,30 +137,59 @@ class LocalGameRepository(
             } else {
                 BotPacing.PRODUCTION_DELAY
             }
-            val action = botPlayer.decideMove(state, current.id, thinkingDelayMillis = thinkingDelay)
-            log.d { "Bot ${current.name} action: ${action::class.simpleName}" }
-            when (action) {
-                is BotAction.Ask -> {
-                    mutex.withLock {
-                        val freshState = _gameState.value ?: return
-                        if (freshState.phase != GamePhase.IN_PROGRESS) return
-                        if (freshState.currentPlayer.id != current.id) return
-                        val result = gameEngine.processAsk(freshState, current.id, action.targetId, action.card)
-                        _gameState.value = result.newState
-                        result.events.forEach { _gameEvents.emit(it) }
+            // A bot that can't produce or apply a legal move must never take the process down or
+            // freeze the table: nothing re-triggers this loop but a human action, and the human
+            // can't act on a bot's turn. The server runs the same loop behind a guard; this copy
+            // had none, and the strategy has thrown in production before (1.1.11).
+            val moved = try {
+                val action = botPlayer.decideMove(state, current.id, thinkingDelayMillis = thinkingDelay)
+                log.d { "Bot ${current.name} action: ${action::class.simpleName}" }
+                when (action) {
+                    is BotAction.Ask -> {
+                        mutex.withLock {
+                            val freshState = _gameState.value ?: return
+                            if (freshState.phase != GamePhase.IN_PROGRESS) return
+                            if (freshState.currentPlayer.id != current.id) return
+                            val result = gameEngine.processAsk(freshState, current.id, action.targetId, action.card)
+                            _gameState.value = result.newState
+                            result.events.forEach { _gameEvents.emit(it) }
+                        }
+                    }
+                    is BotAction.Claim -> {
+                        mutex.withLock {
+                            val freshState = _gameState.value ?: return
+                            if (freshState.phase != GamePhase.IN_PROGRESS) return
+                            if (freshState.currentPlayer.id != current.id) return
+                            val result = gameEngine.processClaim(freshState, action.declaration)
+                            _gameState.value = result.newState
+                            result.events.forEach { _gameEvents.emit(it) }
+                        }
                     }
                 }
-                is BotAction.Claim -> {
-                    mutex.withLock {
-                        val freshState = _gameState.value ?: return
-                        if (freshState.phase != GamePhase.IN_PROGRESS) return
-                        if (freshState.currentPlayer.id != current.id) return
-                        val result = gameEngine.processClaim(freshState, action.declaration)
-                        _gameState.value = result.newState
-                        result.events.forEach { _gameEvents.emit(it) }
-                    }
-                }
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                rethrowIfPlatformFatal(e)
+                log.e(e) { "Bot ${current.name} failed to move; passing the turn" }
+                false
             }
+            if (!moved) passBotTurn(current.id)
+        }
+    }
+
+    /** Last resort after a failed bot move: hand the turn to the next active player. */
+    private suspend fun passBotTurn(botId: String) {
+        mutex.withLock {
+            val state = _gameState.value ?: return
+            if (state.phase != GamePhase.IN_PROGRESS) return
+            if (state.currentPlayer.id != botId) return
+            val nextIdx = gameEngine.findNextActivePlayer(state.players, state.currentPlayerIndex)
+            if (nextIdx == state.currentPlayerIndex) return
+            val next = state.players[nextIdx]
+            val event = GameEvent.TurnChanged(next.id, next.name)
+            _gameState.value = state.copy(currentPlayerIndex = nextIdx, events = state.events + event)
+            _gameEvents.emit(event)
         }
     }
 

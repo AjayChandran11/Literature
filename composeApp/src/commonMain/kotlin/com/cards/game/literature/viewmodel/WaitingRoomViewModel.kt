@@ -64,7 +64,17 @@ class WaitingRoomViewModel(
         }
 
         viewModelScope.launch {
-            onlineRepository.gameState.filterNotNull().first()
+            val started = onlineRepository.gameState.filterNotNull().first()
+            // Logged here, on the server's word, by host and guests alike — so it counts games
+            // that actually started rather than host taps (which could retry and double-log).
+            Analytics.log(
+                AnalyticsEvent.GameStarted(
+                    mode = "online",
+                    teamSize = started.players.size / 2,
+                    hasBots = started.players.any { it.isBot },
+                    isHost = _uiState.value.isHost,
+                )
+            )
             _navigateToGame.emit(Unit)
         }
 
@@ -84,14 +94,6 @@ class WaitingRoomViewModel(
     fun startGame(fillWithBots: Boolean = true, difficulty: BotDifficulty = BotDifficulty.MEDIUM) {
         viewModelScope.launch {
             log.i { "Starting game, fillWithBots=$fillWithBots, difficulty=$difficulty" }
-            Analytics.log(
-                AnalyticsEvent.GameStarted(
-                    mode = "online",
-                    teamSize = _uiState.value.targetPlayerCount / 2,
-                    hasBots = fillWithBots,
-                    turnTimerSecs = null,
-                )
-            )
             _uiState.update { it.copy(isStarting = true) }
             onlineRepository.startGame(fillWithBots, difficulty.name)
             // Reset after timeout so the button doesn't stay stuck if server doesn't respond

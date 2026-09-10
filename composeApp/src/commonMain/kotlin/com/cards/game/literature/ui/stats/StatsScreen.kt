@@ -206,11 +206,12 @@ private fun AchievementBadge(
         Text(if (isUnlocked) ui.emoji else "🔒", fontSize = 24.sp)
         Spacer(Modifier.height(4.dp))
         Text(
-            // Break two-word titles one-word-per-line ("First Victory" ->
-            // "First"/"Victory") so they fill both reserved lines instead of
-            // wrapping unpredictably by width. Badge-local on purpose — the
+            // Break titles after the first word ("First Victory" -> "First"/"Victory")
+            // so they fill both reserved lines instead of wrapping unpredictably by
+            // width. Only the first space: a three-word title ("Week of Wits") would
+            // otherwise need a third line and get clipped. Badge-local on purpose — the
             // same strings appear unbroken in the dialog and result card.
-            title.replace(' ', '\n'),
+            title.replaceFirst(' ', '\n'),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
             fontWeight = if (isUnlocked) FontWeight.Bold else FontWeight.Normal,

@@ -245,7 +245,7 @@ fun AskBottomSheet(
                         )
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                         ) {
                             activeOpponents.forEach { opp ->
                                 FilterChip(
@@ -368,7 +368,7 @@ fun AskBottomSheet(
                     Text(stringResource(Res.string.ask_label), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                     ) {
                         activeOpponents.forEach { opp ->
                             FilterChip(
