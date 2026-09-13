@@ -100,6 +100,12 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Room not found")
                                 continue
                             }
+                            // The invite link keeps working after the host starts; a late friend
+                            // used to be seated on a live board with no hand and no turn.
+                            if (room.phase != com.cards.game.literature.protocol.RoomPhase.WAITING) {
+                                sendError("Game already started")
+                                continue
+                            }
                             if (room.getHumanPlayerCount() >= room.targetPlayerCount) {
                                 sendError("Room is full")
                                 continue
