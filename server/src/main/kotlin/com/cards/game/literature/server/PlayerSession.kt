@@ -16,7 +16,10 @@ data class PlayerSession(
     /** Protocol version the client reported at connect (1 = legacy, no report). */
     var protocolVersion: Int = 1,
     /** Secret issued in RoomCreated; required to Reconnect (protocol v2+). */
-    val reconnectToken: String = ""
+    val reconnectToken: String = "",
+    /** Set when this seat was kept through a Rematch while disconnected: the one-shot
+     *  RematchStarted was missed, so handleReconnect re-sends it whatever the room phase. */
+    var missedRematch: Boolean = false
 ) {
     suspend fun send(message: ServerMessage) {
         val ws = session ?: return

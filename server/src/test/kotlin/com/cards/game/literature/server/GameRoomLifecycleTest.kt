@@ -174,6 +174,42 @@ class GameRoomLifecycleTest {
         room.cleanup()
     }
 
+    @Test
+    fun disconnectedSeatStartsAsABotAndIsQueuedForReclaimOnReturn() = runBlocking {
+        val room = GameRoom("TEST05", 4)
+        room.addPlayer("Host", isHost = true)
+        val guest = room.addPlayer("Guest")
+        room.getPlayerSession(guest)!!.isConnected = false   // kept through a rematch grace window
+
+        assertTrue(room.startGame(fillWithBots = true))
+        assertEquals(true, room.isBotSeatForTest(guest), "an absent owner's seat is played by a bot")
+
+        room.handleReconnect(guest)
+        assertTrue(guest in room.pendingReclaimIdsForTest, "the owner gets the seat back at their next turn")
+        room.cleanup()
+    }
+
+    @Test
+    fun seatKeptThroughRematchGetsRematchStartedOnReconnectEvenMidGame() = runBlocking {
+        val room = runningRoom(t2HasSpare = false)
+        room.processAsk("player_0", "player_1", listOf(spadesLow[2]))   // game ends
+        room.handleDisconnect("player_2")                                // drops on the result screen
+        assertTrue(room.resetForRematch())                               // kept: still in its window
+        assertTrue(room.startGame(fillWithBots = true))                  // host starts without them
+
+        val socket = RecordingSocket()
+        room.getPlayerSession("player_2")!!.session = socket
+        room.getPlayerSession("player_2")!!.protocolVersion = 3
+        room.handleReconnect("player_2")
+
+        val types = socket.sentTypes()
+        val rematchAt = types.indexOfFirst { it.endsWith("RematchStarted") }
+        val viewAt = types.indexOfFirst { it.endsWith("GameUpdate") }
+        assertTrue(rematchAt >= 0, "missed RematchStarted must be re-sent, got $types")
+        assertTrue(viewAt > rematchAt, "the game view must follow the rematch signal, got $types")
+        room.cleanup()
+    }
+
     // --- F-05: reconnecting into a finished room delivers the game view ---
 
     @Test
