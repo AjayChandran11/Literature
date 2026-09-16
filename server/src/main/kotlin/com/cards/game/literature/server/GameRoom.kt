@@ -268,10 +268,14 @@ class GameRoom(
         log.info("[{}] Game started with {} players ({} human, {} bots)",
             roomCode, setupPlayers.size, seatedHumans, setupPlayers.size - seatedHumans)
         // Their waiting-room removal no longer applies; the seat is a bot until they return.
-        humanPlayers.filter { !it.isConnected }.forEach { disconnectJobs.remove(it.playerId)?.cancel() }
+        val absent = humanPlayers.filter { !it.isConnected }
+        absent.forEach { disconnectJobs.remove(it.playerId)?.cancel() }
 
         // Send game started to all connected players
         broadcastGameViews()
+        // Say so in the game log: otherwise a human name plays at bot pace from move one and
+        // nobody at the table knows why. Same event a mid-game replacement broadcasts.
+        broadcastEvents(absent.map { GameEvent.PlayerReplacedByBot(it.playerId, it.playerName) })
 
         // Start turn management
         checkNextTurn()

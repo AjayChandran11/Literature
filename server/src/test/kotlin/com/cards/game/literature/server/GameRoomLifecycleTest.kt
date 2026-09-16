@@ -181,8 +181,14 @@ class GameRoomLifecycleTest {
         val guest = room.addPlayer("Guest")
         room.getPlayerSession(guest)!!.isConnected = false   // kept through a rematch grace window
 
+        val hostSocket = RecordingSocket()
+        room.getPlayerSession("player_0")!!.session = hostSocket
+
         assertTrue(room.startGame(fillWithBots = true))
         assertEquals(true, room.isBotSeatForTest(guest), "an absent owner's seat is played by a bot")
+        assertTrue(hostSocket.sentTypes().any { it.endsWith("GameEventOccurred") } &&
+            hostSocket.sentText().contains("PlayerReplacedByBot"),
+            "the table is told the absent seat is a bot")
 
         room.handleReconnect(guest)
         assertTrue(guest in room.pendingReclaimIdsForTest, "the owner gets the seat back at their next turn")
@@ -294,11 +300,17 @@ class GameRoomLifecycleTest {
         @Deprecated("Use cancel() instead.", level = DeprecationLevel.ERROR)
         override fun terminate() {}
 
+        private val seen = mutableListOf<String>()
+
+        /** Every text frame received so far (drained frames are remembered). */
+        fun sentText(): String = seen.joinToString("\n")
+
         fun sentTypes(): List<String> = buildList {
             while (true) {
                 val frame = out.tryReceive().getOrNull() ?: break
                 if (frame is Frame.Text) {
                     val text = frame.readText()
+                    seen += text
                     Regex("\"type\"\\s*:\\s*\"([^\"]+)\"").find(text)?.groupValues?.get(1)?.let { add(it) }
                 }
             }
