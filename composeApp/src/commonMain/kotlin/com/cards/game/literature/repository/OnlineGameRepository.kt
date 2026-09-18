@@ -89,6 +89,9 @@ class OnlineGameRepository(
 
     private var webSocketSession: WebSocketSession? = null
     private var connectionJob: Job? = null
+    // Bumped by every connectAndSend(); a job whose generation is stale has been superseded and
+    // must not touch shared connection state on its way out (see the finally in connectAndSend).
+    private var connectionGeneration = 0L
     private var autoReconnectJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var shouldAutoReconnect = false
@@ -141,6 +144,7 @@ class OnlineGameRepository(
                     // being gone) is NOT silently re-established on the next connectivity change.
                     if (shouldAutoReconnect
                         && _connectionState.value != ConnectionState.CONNECTED
+                        && _connectionState.value != ConnectionState.CONNECTING
                         && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()
                     ) {
                         autoReconnectJob?.cancel()
@@ -285,6 +289,8 @@ class OnlineGameRepository(
     }
 
     fun triggerReconnect() {
+        // A handshake is already in flight — let it finish rather than restart it.
+        if (_connectionState.value == ConnectionState.CONNECTING) return
         if (roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
             needsEventReplay.value = true
             scope.launch {
@@ -307,6 +313,7 @@ class OnlineGameRepository(
         _connectionState.value = ConnectionState.CONNECTING
         log.i { "Connecting to $serverUrl" }
 
+        val generation = ++connectionGeneration
         connectionJob = scope.launch {
             try {
                 client.webSocket(urlString = "$serverUrl/game?v=${Protocol.VERSION}") {
@@ -353,12 +360,18 @@ class OnlineGameRepository(
                     _errors.emit("Connection error: ${e.message}")
                 }
             } finally {
-                webSocketSession = null
-                if (shouldAutoReconnect && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
-                    _connectionState.value = ConnectionState.RECONNECTING
-                    scheduleReconnect()
-                } else {
-                    _connectionState.value = ConnectionState.DISCONNECTED
+                // Only the CURRENT connection owns this bookkeeping. disconnect() cancels the old
+                // job asynchronously, so its finally used to run after the newer connectAndSend()
+                // had already set shouldAutoReconnect back to true: it nulled the live session and
+                // scheduled a reconnect that killed its successor — a ~1 Hz connect/kill loop.
+                if (generation == connectionGeneration) {
+                    webSocketSession = null
+                    if (shouldAutoReconnect && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
+                        _connectionState.value = ConnectionState.RECONNECTING
+                        scheduleReconnect()
+                    } else {
+                        _connectionState.value = ConnectionState.DISCONNECTED
+                    }
                 }
             }
         }
