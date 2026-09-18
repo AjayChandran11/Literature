@@ -172,6 +172,7 @@
     <string name="connection_reconnecting">Reconnecting…</string>
     <string name="connection_reconnected">Reconnected</string>
     <string name="connection_disconnected">Disconnected</string>
+    <string name="connection_retry">Retry</string>
 
     <!-- Result Screen -->
     <string name="result_draw">It's a Draw!</string>

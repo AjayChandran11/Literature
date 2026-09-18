@@ -4,6 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,7 +30,9 @@ enum class BannerState { DISCONNECTED, RECONNECTING, RECONNECTED }
 @Composable
 fun ConnectionBanner(
     connectionState: StateFlow<ConnectionState>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Shown as a Retry action once the automatic attempts have given up (DISCONNECTED). */
+    onRetry: (() -> Unit)? = null
 ) {
     val currentState by connectionState.collectAsState()
     var bannerState by remember { mutableStateOf<BannerState?>(null) }
@@ -100,11 +105,28 @@ fun ConnectionBanner(
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
                     )
-                    else -> Text(
-                        stringResource(Res.string.connection_disconnected),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onError
-                    )
+                    else -> {
+                        Text(
+                            stringResource(Res.string.connection_disconnected),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onError
+                        )
+                        if (onRetry != null) {
+                            // A plain tappable label, not a TextButton: Material's 48 dp minimum
+                            // touch target would grow the whole banner past its usual one-line height.
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                stringResource(Res.string.connection_retry),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                textDecoration = TextDecoration.Underline,
+                                color = MaterialTheme.colorScheme.onError,
+                                modifier = Modifier
+                                    .clickable(role = Role.Button, onClick = onRetry)
+                                    .padding(horizontal = 4.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

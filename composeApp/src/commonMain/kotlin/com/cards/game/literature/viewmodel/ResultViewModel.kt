@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.cards.game.literature.repository.ConnectionState
 
 data class ResultUiState(
     val myTeamScore: Int = 0,
@@ -60,6 +61,13 @@ class ResultViewModel(
 
     /** Room code for rematch navigation (online only). */
     val roomCode: String get() = onlineRepository?.roomCode ?: ""
+
+    /** Online only: lets the result screen show the connection banner and offer Retry. */
+    val connectionState: StateFlow<ConnectionState>? = onlineRepository?.connectionState
+
+    fun retryConnection() {
+        onlineRepository?.triggerReconnect()
+    }
 
     // Set when the host's rematch resets the room, BEFORE the result screen navigates to
     // the waiting room. onCleared() reads it to keep the connection alive on a rematch
