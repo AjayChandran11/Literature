@@ -65,6 +65,10 @@ class GameRoom(
     // the default. A var (not const) so tests can shrink it; production uses the
     // companion default.
     internal var passSelectionTimeoutMs: Long = PASS_SELECTION_TIMEOUT_MS
+    // Same for the per-turn clock — tests shrink it to prove the timer survives rejected moves.
+    internal var turnTimeoutMs: Long = TURN_TIMEOUT_MS
+    // And for the reconnect grace window (result-screen host handover test).
+    internal var reconnectWindowMs: Long = RECONNECT_WINDOW_MS
 
     companion object {
         private const val TURN_TIMEOUT_MS = 60_000L
@@ -123,6 +127,19 @@ class GameRoom(
 
     /** Test visibility: the in-flight Option C pass selection, if any. */
     internal val pendingPassForTest: PendingPass? get() = gameState?.pendingPass
+
+    /** Test visibility: seats queued to be handed back from a bot at their next turn. */
+    internal val pendingReclaimIdsForTest: Set<String> get() = pendingReclaims.keys.toSet()
+
+    /** Test hook: arm the current player's turn clock as checkNextTurn() would. */
+    internal fun startTurnTimerForTest() = startTurnTimer()
+
+    /** Test visibility: whether [playerId]'s seat is currently played by a bot. */
+    internal fun isBotSeatForTest(playerId: String): Boolean? = gameState?.getPlayer(playerId)?.isBot
+
+    /** A room accepts a JoinRoom only while waiting and not full. Joining a running game used to
+     *  be accepted and seated the newcomer on a board with no hand and no turn. */
+    fun isJoinable(): Boolean = phase == RoomPhase.WAITING && getHumanPlayerCount() < targetPlayerCount
 
     /** Test hook: install a running game with [state] so claim/turn/Option C
      *  orchestration can be exercised without relying on a random deal. Players
@@ -195,7 +212,10 @@ class GameRoom(
         val humanPlayers = players.values.toList()
         val setupPlayers = mutableListOf<PlayerSetupInfo>()
 
-        // Use stored team assignments chosen in the waiting room
+        // Use stored team assignments chosen in the waiting room. A seat whose owner is
+        // disconnected right now (kept through a Rematch grace window, or mid-drop) starts as
+        // a bot under their name so nobody waits on them; handleReconnect queues the seat to
+        // be handed back at their next turn, exactly like a mid-game bot replacement.
         humanPlayers.forEachIndexed { index, session ->
             val teamId = playerTeams[session.playerId] ?: if (index % 2 == 0) "team_1" else "team_2"
             setupPlayers.add(
@@ -203,7 +223,7 @@ class GameRoom(
                     id = session.playerId,
                     name = session.playerName,
                     teamId = teamId,
-                    isBot = false
+                    isBot = !session.isConnected
                 )
             )
         }
@@ -230,18 +250,34 @@ class GameRoom(
             return false // Not enough players
         }
 
+        // Literature needs two equal teams. The waiting room already blocks an uneven start on
+        // the client; this keeps a stale or custom client from starting 3v1 (or 4v0, which the
+        // engine ends on the first move because an empty team counts as "all out of cards").
+        val t1 = setupPlayers.count { it.teamId == "team_1" }
+        val t2 = setupPlayers.count { it.teamId == "team_2" }
+        if (t1 != t2) {
+            log.info("[{}] Refusing to start with unequal teams ({} v {})", roomCode, t1, t2)
+            return false
+        }
+
         val gameId = "game_${roomCode}_${System.currentTimeMillis()}"
         gameState = engine.createMultiplayerGame(gameId, setupPlayers)
         phase = RoomPhase.IN_PROGRESS
 
         botScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         botTurnActive.set(false) // fresh scope → no loop can be running yet
+        val seatedHumans = humanPlayers.count { it.isConnected }
         log.info("[{}] Game started with {} players ({} human, {} bots)",
-            roomCode, setupPlayers.size,
-            humanPlayers.size, setupPlayers.size - humanPlayers.size)
+            roomCode, setupPlayers.size, seatedHumans, setupPlayers.size - seatedHumans)
+        // Their waiting-room removal no longer applies; the seat is a bot until they return.
+        val absent = humanPlayers.filter { !it.isConnected }
+        absent.forEach { disconnectJobs.remove(it.playerId)?.cancel() }
 
         // Send game started to all connected players
         broadcastGameViews()
+        // Say so in the game log: otherwise a human name plays at bot pace from move one and
+        // nobody at the table knows why. Same event a mid-game replacement broadcasts.
+        broadcastEvents(absent.map { GameEvent.PlayerReplacedByBot(it.playerId, it.playerName) })
 
         // Start turn management
         checkNextTurn()
@@ -250,77 +286,112 @@ class GameRoom(
     }
 
     suspend fun processAsk(playerId: String, targetId: String, cards: List<Card>) {
-        mutex.withLock {
-            turnTimeoutJob?.cancel()
-            var state = gameState ?: return
-            if (state.phase != GamePhase.IN_PROGRESS) return
-            if (state.pendingPass != null) return // no moves while a pass is being chosen
-            if (state.currentPlayer.id != playerId) return
+        var progressed = false
+        try {
+            mutex.withLock {
+                var state = gameState ?: return
+                if (state.phase != GamePhase.IN_PROGRESS) return
+                if (state.pendingPass != null) return // no moves while a pass is being chosen
+                if (state.currentPlayer.id != playerId) {
+                    // A late tap racing the server's own skip, or a stale client. Tell the
+                    // sender — and leave the ACTIVE player's clock alone.
+                    players[playerId]?.send(ServerMessage.Error("It's not your turn"))
+                    return
+                }
+                // Only now is this the current player's own move, so their clock stops.
+                // Cancelling before the guards killed the timer for every off-turn or
+                // rejected message, and nothing re-armed it: the table sat frozen.
+                turnTimeoutJob?.cancel()
+                progressed = true
 
-            val batchId = System.currentTimeMillis().toString()
-            for (card in cards) {
-                if (state.phase != GamePhase.IN_PROGRESS) break
-                if (state.currentPlayer.id != playerId) break
+                val batchId = System.currentTimeMillis().toString()
+                for (card in cards) {
+                    if (state.phase != GamePhase.IN_PROGRESS) break
+                    if (state.currentPlayer.id != playerId) break
 
-                val result = engine.processAsk(state, playerId, targetId, card, batchId)
-                state = result.newState
-                gameState = state
+                    val result = engine.processAsk(state, playerId, targetId, card, batchId)
+                    state = result.newState
+                    gameState = state
 
-                broadcastGameViews()
-                broadcastEvents(result.events)
+                    broadcastGameViews()
+                    broadcastEvents(result.events)
+                }
+                // A successful ask can end the game by emptying the other team.
+                markFinishedIfNeeded(state)
+
+                // If the turn moved to a different player (failed ask), the asker
+                // becomes the "previous player" for timeout fallback
+                if (state.currentPlayer.id != playerId) {
+                    lastAskerId = playerId
+                }
             }
-
-            // If the turn moved to a different player (failed ask), the asker
-            // becomes the "previous player" for timeout fallback
-            if (state.currentPlayer.id != playerId) {
-                lastAskerId = playerId
-            }
+        } finally {
+            // Re-arm the turn (or start the bot loop) even when the engine rejected a card
+            // and threw — otherwise the cancelled clock never comes back.
+            if (progressed) checkNextTurn()
         }
-        checkNextTurn()
     }
 
     suspend fun processClaim(playerId: String, declaration: ClaimDeclaration) {
         var suspendedForSelection = false
-        mutex.withLock {
-            turnTimeoutJob?.cancel()
-            val state = gameState ?: return
-            if (state.phase != GamePhase.IN_PROGRESS) return
-            if (state.currentPlayer.id != playerId) return
-            if (state.pendingPass != null) return // a selection is already in flight
+        var progressed = false
+        try {
+            mutex.withLock {
+                val state = gameState ?: return
+                if (state.phase != GamePhase.IN_PROGRESS) return
+                if (state.pendingPass != null) return // a selection is already in flight
+                if (state.currentPlayer.id != playerId) {
+                    players[playerId]?.send(ServerMessage.Error("It's not your turn"))
+                    return
+                }
+                turnTimeoutJob?.cancel() // see processAsk: only after the guards
+                progressed = true
 
-            // Option C: offer the pick only to a claimer whose client can render
-            // it and reply with SelectPassTarget (protocol v3+). Bots claim via
-            // executeBotTurns (flag off) and legacy clients fall through to the
-            // deterministic auto-pass, both unchanged.
-            val claimerSupportsOptionC = (players[playerId]?.protocolVersion ?: 1) >= 3
-            val result = engine.processClaim(state, declaration, pauseForPassSelection = claimerSupportsOptionC)
-            gameState = result.newState
+                // Option C: offer the pick only to a claimer whose client can render
+                // it and reply with SelectPassTarget (protocol v3+). Bots claim via
+                // executeBotTurns (flag off) and legacy clients fall through to the
+                // deterministic auto-pass, both unchanged.
+                val claimerSupportsOptionC = (players[playerId]?.protocolVersion ?: 1) >= 3
+                val result = engine.processClaim(state, declaration, pauseForPassSelection = claimerSupportsOptionC)
+                gameState = result.newState
+                markFinishedIfNeeded(result.newState)
 
-            if (result.newState.phase == GamePhase.FINISHED) {
-                phase = RoomPhase.FINISHED
-                finishedAt = System.currentTimeMillis()
-                val t1 = result.newState.teams.firstOrNull()
-                val t2 = result.newState.teams.getOrNull(1)
-                log.info("[{}] Game finished — {} {} : {} {}",
-                    roomCode,
-                    t1?.name ?: "Team1", t1?.score ?: 0,
-                    t2?.score ?: 0, t2?.name ?: "Team2")
+                // After a claim, there's no meaningful "previous asker" context
+                lastAskerId = null
+
+                if (result.newState.pendingPass != null) {
+                    suspendedForSelection = true
+                    startPassSelectionTimer() // sets the deadline read by broadcastGameViews
+                }
+
+                broadcastGameViews()
+                broadcastEvents(result.events)
             }
-
-            // After a claim, there's no meaningful "previous asker" context
-            lastAskerId = null
-
-            if (result.newState.pendingPass != null) {
-                suspendedForSelection = true
-                startPassSelectionTimer() // sets the deadline read by broadcastGameViews
-            }
-
-            broadcastGameViews()
-            broadcastEvents(result.events)
+        } finally {
+            // When suspended, the pass-selection timer drives progress — the turn
+            // isn't handed out until the claimer picks (or the timer fires).
+            if (progressed && !suspendedForSelection) checkNextTurn()
         }
-        // When suspended, the pass-selection timer drives progress — the turn
-        // isn't handed out until the claimer picks (or the timer fires).
-        if (!suspendedForSelection) checkNextTurn()
+    }
+
+    /**
+     * Flips the room to FINISHED the moment the engine ends the game — from ANY move path.
+     * The ask path never did this, so a game that ended by emptying the other team left the
+     * room IN_PROGRESS: Rematch was refused ("Cannot rematch right now"), result-screen leavers
+     * got 2-minute bot replacements, and the finish was never logged.
+     */
+    private fun markFinishedIfNeeded(state: GameState) {
+        if (state.phase != GamePhase.FINISHED || phase == RoomPhase.FINISHED) return
+        phase = RoomPhase.FINISHED
+        finishedAt = System.currentTimeMillis()
+        turnTimeoutJob?.cancel()
+        lastAskerId = null
+        val t1 = state.teams.firstOrNull()
+        val t2 = state.teams.getOrNull(1)
+        log.info("[{}] Game finished — {} {} : {} {}",
+            roomCode,
+            t1?.name ?: "Team1", t1?.score ?: 0,
+            t2?.score ?: 0, t2?.name ?: "Team2")
     }
 
     /** Entry for ClientMessage.SelectPassTarget: only the claimer may choose,
@@ -361,6 +432,7 @@ class GameRoom(
 
             val result = engine.applyPassSelection(state, target)
             gameState = result.newState
+            markFinishedIfNeeded(result.newState)
             broadcastGameViews()
             broadcastEvents(result.events)
         }
@@ -384,6 +456,10 @@ class GameRoom(
         playerSession.isConnected = false
         playerSession.session = null
         playerSession.lastSeen = System.currentTimeMillis()
+        // A seat queued to be handed back from its bot must not be reclaimed for a player who
+        // has dropped again: the reclaim would flip it to a disconnected human with no
+        // replacement job left, burning the full turn clock every round for the rest of the game.
+        pendingReclaims.remove(playerId)
 
         if (phase == RoomPhase.IN_PROGRESS) {
             // Broadcast disconnect event
@@ -391,27 +467,11 @@ class GameRoom(
                 GameEvent.PlayerDisconnected(playerId, playerSession.playerName)
             ))
 
-            // Set deadline and start disconnect timeout
-            val deadline = System.currentTimeMillis() + RECONNECT_WINDOW_MS
-            playerSession.disconnectDeadline = deadline
-
+            // Set deadline and start the disconnect timeout. Don't skip the turn
+            // immediately — the running turn timer keeps going; if the player is back
+            // before it fires they can still play, otherwise skipTurn handles it.
+            armInProgressReplacement(playerSession)
             broadcastGameViews()
-
-            // Don't skip the turn immediately — let the existing turn timer
-            // continue running. If the player reconnects before timeout, they
-            // can still play. If the timer fires, skipTurn handles it.
-
-            // Start 2-min disconnect timeout
-            val job = botScope?.launch {
-                delay(RECONNECT_WINDOW_MS)
-                val session = players[playerId]
-                if (session != null && !session.isConnected) {
-                    replaceWithBot(playerId)
-                }
-            }
-            if (job != null) {
-                disconnectJobs[playerId] = job
-            }
 
             // If the table was waiting on this player to pick a pass target,
             // resolve it now with the default so nobody is stuck behind a gone
@@ -437,7 +497,39 @@ class GameRoom(
                 delay(WAITING_RECONNECT_WINDOW_MS)
                 finalizeWaitingDisconnect(playerId)
             }
+        } else if (phase == RoomPhase.FINISHED) {
+            // Result screen: hold the seat for the reconnect window (no bot needed). Without a
+            // deadline the player counted as gone at once — a host Rematch dropped anyone who
+            // had switched to WhatsApp for a minute, and the abandoned-room sweep deleted the
+            // room within 60 s of everyone glancing away. resetForRematch honours the deadline.
+            playerSession.disconnectDeadline = System.currentTimeMillis() + reconnectWindowMs
+            // A host who doesn't come back would otherwise block Rematch for everyone forever
+            // ("Only the host can start a rematch"); hand host on once the window has passed.
+            if (playerId == hostPlayerId) {
+                disconnectJobs[playerId] = CoroutineScope(Dispatchers.Default).launch {
+                    delay(reconnectWindowMs)
+                    val s = players[playerId]
+                    if (s != null && !s.isConnected && phase == RoomPhase.FINISHED) transferHostIfNeeded(playerId)
+                }
+            }
         }
+    }
+
+    /**
+     * Gives a disconnected seat in a running game its reconnect window and schedules the bot
+     * replacement that fires if the owner is still away when it closes. Replaces any earlier
+     * pending job for that seat (e.g. a waiting-room removal that no longer applies).
+     */
+    private fun armInProgressReplacement(session: PlayerSession) {
+        val playerId = session.playerId
+        session.disconnectDeadline = System.currentTimeMillis() + reconnectWindowMs
+        disconnectJobs.remove(playerId)?.cancel()
+        val job = botScope?.launch {
+            delay(reconnectWindowMs)
+            val current = players[playerId]
+            if (current != null && !current.isConnected) replaceWithBot(playerId)
+        }
+        if (job != null) disconnectJobs[playerId] = job
     }
 
     /**
@@ -490,13 +582,25 @@ class GameRoom(
             gameState = null
             finishedAt = 0L
 
-            // Free the seats of players who are gone
-            players.values.filter { !it.isConnected }
-                .map { it.playerId }
-                .forEach { removePlayer(it) }
+            // Free the seats of players who are gone for good. Someone who dropped on the result
+            // screen within the reconnect window keeps their seat: handleReconnect re-sends
+            // RematchStarted to them, and their remaining grace carries on as a waiting-room
+            // deadline so an eventual no-show is still removed (finalizeWaitingDisconnect).
+            val now = System.currentTimeMillis()
+            val (kept, gone) = players.values.filter { !it.isConnected }
+                .partition { s -> s.disconnectDeadline?.let { now < it } == true }
+            gone.map { it.playerId }.forEach { removePlayer(it) }
 
             phase = RoomPhase.WAITING
-            createdAt = System.currentTimeMillis()
+            createdAt = now
+            kept.forEach { s ->
+                s.missedRematch = true
+                val remaining = (s.disconnectDeadline ?: now) - now
+                disconnectJobs[s.playerId] = CoroutineScope(Dispatchers.Default).launch {
+                    delay(remaining)
+                    finalizeWaitingDisconnect(s.playerId)
+                }
+            }
         }
         log.info("[{}] Rematch — room reset to waiting with {} player(s)", roomCode, players.size)
 
@@ -526,6 +630,7 @@ class GameRoom(
 
         // Cancel any pending reconnect timeout
         disconnectJobs.remove(playerId)?.cancel()
+        pendingReclaims.remove(playerId)
 
         if (phase == RoomPhase.IN_PROGRESS) {
             // Resolve any pass the leaver was choosing BEFORE replacing them:
@@ -537,11 +642,31 @@ class GameRoom(
             // Immediate bot replacement, no grace period
             replaceWithBot(playerId)
         }
+        transferHostIfNeeded(playerId)
+    }
+
+    /**
+     * Hands host to a connected human when the host quits or is bot-replaced mid-game.
+     * Otherwise `hostPlayerId` keeps pointing at the departed player and nobody can Rematch
+     * afterwards ("Only the host can start a rematch") — the group has to recreate the room.
+     */
+    private suspend fun transferHostIfNeeded(departingId: String) {
+        if (departingId != hostPlayerId) return
+        val newHost = players.values.firstOrNull { it.isConnected && it.playerId != departingId } ?: return
+        hostPlayerId = newHost.playerId
+        log.info("[{}] Host transferred from {} to '{}' ({})", roomCode, departingId, newHost.playerName, newHost.playerId)
+        players.values.filter { it.isConnected }.forEach { s ->
+            s.send(ServerMessage.HostTransferred(newHost.playerId, newHost.playerName))
+        }
+        broadcastRoomUpdate()
     }
 
     private suspend fun replaceWithBot(playerId: String) {
         mutex.withLock {
             val state = gameState ?: return
+            // The grace window is over either way — clear the deadline even when the seat is
+            // already a bot (a reconnect-then-drop), or it lingers and misleads isAbandoned().
+            players[playerId]?.disconnectDeadline = null
             val player = state.getPlayer(playerId) ?: return
             if (player.isBot) return // Already a bot
             log.info("[{}] Replacing '{}' ({}) with bot", roomCode, player.name, playerId)
@@ -552,15 +677,13 @@ class GameRoom(
             }
             gameState = state.copy(players = updatedPlayers)
 
-            // Clear disconnect deadline
-            players[playerId]?.disconnectDeadline = null
-
             // Broadcast replacement event
             broadcastEvents(listOf(
                 GameEvent.PlayerReplacedByBot(playerId, player.name)
             ))
             broadcastGameViews()
         }
+        transferHostIfNeeded(playerId)
         // Trigger bot turn if it's now this (now-bot) player's turn
         checkNextTurn()
     }
@@ -576,9 +699,19 @@ class GameRoom(
         disconnectJobs.remove(playerId)?.cancel()
         session.disconnectDeadline = null
 
-        // Check if player was already replaced by bot
+        // A seat kept through a Rematch missed the one-shot RematchStarted, and its client is
+        // still on the result screen — which only moves on for that signal. Re-send it FIRST,
+        // whatever the phase (the WAITING branch below sends it anyway): the client goes to the
+        // waiting room, and if the next game has already begun, straight on to the board.
+        val resendRematch = session.missedRematch && session.protocolVersion >= 2
+        session.missedRematch = false
+
+        // Check if player was already replaced by bot. A FINISHED room sends the view as well:
+        // a player whose socket died during the last moves otherwise reconnected to only a
+        // RoomUpdate and sat on a frozen in-progress board under a green "Reconnected" banner.
         val state = gameState
-        if (state != null && phase == RoomPhase.IN_PROGRESS) {
+        if (state != null && (phase == RoomPhase.IN_PROGRESS || phase == RoomPhase.FINISHED)) {
+            if (resendRematch) session.send(ServerMessage.RematchStarted(toRoomState()))
             val gamePlayer = state.getPlayer(playerId)
             if (gamePlayer != null && gamePlayer.isBot) {
                 // Player was replaced by bot — queue for reclaim at next turn boundary
@@ -645,9 +778,12 @@ class GameRoom(
             // Determine who gets the turn:
             // 1. The player who last asked this player (gave them the turn)
             // 2. Otherwise, a random active opponent
+            // Only an OPPONENT can have given this player the turn; a stale lastAskerId from an
+            // earlier exchange could otherwise hand the turn to the timed-out player's teammate.
             val nextPlayerId = lastAskerId?.let { askerId ->
                 val asker = state.getPlayer(askerId)
-                if (asker != null && asker.isActive) askerId else null
+                val isOpponent = state.getOpponents(playerId).any { it.id == askerId }
+                if (asker != null && asker.isActive && isOpponent) askerId else null
             } ?: run {
                 // Pick a random active opponent
                 val opponents = state.getOpponents(playerId).filter { it.isActive }
@@ -686,7 +822,7 @@ class GameRoom(
         if (state.currentPlayer.isBot) return
 
         turnTimeoutJob = botScope?.launch {
-            delay(TURN_TIMEOUT_MS)
+            delay(turnTimeoutMs)
             skipTurn(currentId)
         }
     }
@@ -697,13 +833,17 @@ class GameRoom(
         if (state.pendingPass != null) return // suspended for an Option C selection
         val current = state.currentPlayer
 
-        // Check if there's a pending reclaim for the current player
+        // Check if there's a pending reclaim for the current player — but only hand the seat
+        // back to someone who is actually here; a stale reclaim is dropped and the bot plays on.
         if (current.isBot && pendingReclaims.containsKey(current.id)) {
-            botScope?.launch {
-                reclaimFromBot(current.id)
-                startTurnTimer()
+            if (players[current.id]?.isConnected == true) {
+                botScope?.launch {
+                    reclaimFromBot(current.id)
+                    startTurnTimer()
+                }
+                return
             }
-            return
+            pendingReclaims.remove(current.id)
         }
 
         if (current.isBot) {
@@ -784,11 +924,14 @@ class GameRoom(
                 return
             }
 
-            // Check for pending reclaim
+            // Check for pending reclaim (see checkNextTurn: only for a connected player)
             if (pendingReclaims.containsKey(current.id)) {
-                reclaimFromBot(current.id)
-                startTurnTimer()
-                return
+                if (players[current.id]?.isConnected == true) {
+                    reclaimFromBot(current.id)
+                    startTurnTimer()
+                    return
+                }
+                pendingReclaims.remove(current.id)
             }
 
             // Backstop: a bot holding cards always has a legal move and the
@@ -806,7 +949,20 @@ class GameRoom(
                 continue
             }
 
-            val action = decideBotMove(state, current.id)
+            // The decision runs outside the lock and can throw for reasons other than an
+            // illegal move (the pre-1.1.11 stalemate bug was a NoSuchElementException). Any
+            // escape here would kill this coroutine and freeze the table on the bot's turn,
+            // so every failure counts toward the skip-turn backstop instead.
+            val action = try {
+                decideBotMove(state, current.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                log.error("[{}] Bot '{}' ({}) failed to decide a move: {}",
+                    roomCode, current.name, current.id, e.toString())
+                consecutiveFailures++
+                continue
+            }
             val applied = mutex.withLock {
                 val freshState = gameState ?: return
                 if (freshState.phase != GamePhase.IN_PROGRESS) return
@@ -821,19 +977,25 @@ class GameRoom(
                         is BotAction.Claim ->
                             engine.processClaim(freshState, action.declaration)
                     }
-                } catch (e: IllegalArgumentException) {
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
                     // Belt-and-braces against the crash this method used to throw:
                     // a decision that raced the state is discarded, never escaping
                     // to kill the coroutine and freeze the game on the bot's turn.
                     log.warn("[{}] Discarded illegal bot move by '{}' ({}): {}",
-                        roomCode, current.name, current.id, e.message)
+                        roomCode, current.name, current.id, e.toString())
                     return@withLock false
                 }
 
                 gameState = result.newState
-                if (result.newState.phase == GamePhase.FINISHED) {
-                    phase = RoomPhase.FINISHED
-                    finishedAt = System.currentTimeMillis()
+                markFinishedIfNeeded(result.newState)
+                // Keep the timeout fallback honest for bot moves too: a failed bot ask hands
+                // the turn to the target, so the bot is who gave it to them.
+                when (action) {
+                    is BotAction.Ask ->
+                        if (result.newState.currentPlayer.id != current.id) lastAskerId = current.id
+                    is BotAction.Claim -> lastAskerId = null
                 }
 
                 broadcastGameViews()

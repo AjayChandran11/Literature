@@ -150,7 +150,10 @@ fun OnlineGameScreen(
             onGameEnd = onGameEnd,
             headerOverlay = {
                 if (!isQuitting) {
-                    ConnectionBanner(connectionState = onlineRepository.connectionState)
+                    ConnectionBanner(
+                        connectionState = onlineRepository.connectionState,
+                        onRetry = onlineRepository::triggerReconnect
+                    )
 
                     // Reconnect countdown banners for disconnected players
                     ReconnectCountdownBanners(reconnectCountdowns)

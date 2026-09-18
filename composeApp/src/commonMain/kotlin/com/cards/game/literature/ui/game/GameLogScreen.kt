@@ -53,6 +53,8 @@ import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import com.cards.game.literature.ui.common.displayEmoji
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Refresh
 
 /**
  * Full-screen game log — a proper page (top bar + back), not a bottom sheet. The moves render as a
@@ -65,7 +67,8 @@ fun GameLogScreen(events: List<GameEvent>, onClose: () -> Unit) {
     val shown = remember(events) {
         events.filter {
             it is GameEvent.CardAsked || it is GameEvent.DeckClaimed ||
-                it is GameEvent.GameEnded || it is GameEvent.TurnTimedOut
+                it is GameEvent.GameEnded || it is GameEvent.TurnTimedOut ||
+                it is GameEvent.PlayerReplacedByBot || it is GameEvent.PlayerReconnected
         }
     }
     // Same Scaffold + TopAppBar as the Settings / Stats screens, so the header is consistent across
@@ -111,8 +114,28 @@ private fun GameLogRow(event: GameEvent) {
         is GameEvent.CardAsked -> AskRow(event)
         is GameEvent.DeckClaimed -> ClaimRow(event)
         is GameEvent.TurnTimedOut -> TimeoutRow(event)
+        is GameEvent.PlayerReplacedByBot -> NoteRow(
+            Icons.Filled.SmartToy, stringResource(Res.string.game_log_replaced_by_bot, event.playerName)
+        )
+        is GameEvent.PlayerReconnected -> NoteRow(
+            Icons.Filled.Refresh, stringResource(Res.string.game_log_player_back, event.playerName)
+        )
         is GameEvent.GameEnded -> EndRow()
         else -> {}
+    }
+}
+
+/** A quiet, timeout-style row for seat changes (bot took over, player back). */
+@Composable
+private fun NoteRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        StatusBadge(icon, MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

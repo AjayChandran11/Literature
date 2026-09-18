@@ -89,6 +89,9 @@ class OnlineGameRepository(
 
     private var webSocketSession: WebSocketSession? = null
     private var connectionJob: Job? = null
+    // Bumped by every connectAndSend(); a job whose generation is stale has been superseded and
+    // must not touch shared connection state on its way out (see the finally in connectAndSend).
+    private var connectionGeneration = 0L
     private var autoReconnectJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var shouldAutoReconnect = false
@@ -109,6 +112,8 @@ class OnlineGameRepository(
         const val MAX_RECONNECT_ATTEMPTS = 10
         const val INITIAL_RECONNECT_DELAY_MS = 1_000L
         const val MAX_RECONNECT_DELAY_MS = 16_000L
+        // How long a deliberate leave waits for the graceful close handshake before forcing it.
+        const val GRACEFUL_CLOSE_MS = 1_500L
     }
 
     var myPlayerId: String = ""
@@ -141,6 +146,7 @@ class OnlineGameRepository(
                     // being gone) is NOT silently re-established on the next connectivity change.
                     if (shouldAutoReconnect
                         && _connectionState.value != ConnectionState.CONNECTED
+                        && _connectionState.value != ConnectionState.CONNECTING
                         && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()
                     ) {
                         autoReconnectJob?.cancel()
@@ -239,14 +245,12 @@ class OnlineGameRepository(
     }
 
     suspend fun leaveRoom() {
-        sendMessage(ClientMessage.LeaveRoom)
-        disconnect()
+        sendAndClose(ClientMessage.LeaveRoom)
         reset()
     }
 
     suspend fun leaveGame() {
-        sendMessage(ClientMessage.LeaveGame)
-        disconnect()
+        sendAndClose(ClientMessage.LeaveGame)
         reset()
     }
 
@@ -258,6 +262,34 @@ class OnlineGameRepository(
      */
     fun leaveRoomAndReset() {
         scope.launch { leaveRoom() }
+    }
+
+    /**
+     * Deliberate leave: send the final message, then close the socket GRACEFULLY and let the
+     * connection wind down on its own. send() only queues the frame in the engine (OkHttp keeps
+     * its own writer queue), and disconnect() cancels the job — which tears the TCP socket down
+     * at once and discards whatever is still queued. The server then saw a bare drop instead of
+     * the leave: a 2-minute grace on the result screen with the host stuck on the departed
+     * player, and Leave Game degrading to a 2-minute bot replacement. A Close frame goes through
+     * the same queue, so the message is on the wire before the close.
+     */
+    private suspend fun sendAndClose(message: ClientMessage) {
+        shouldAutoReconnect = false // the finally must not schedule a reconnect for a leaver
+        autoReconnectJob?.cancel()
+        autoReconnectJob = null
+        val session = webSocketSession
+        if (session != null) {
+            try {
+                session.send(Frame.Text(json.encodeToString(message)))
+                session.close(CloseReason(CloseReason.Codes.NORMAL, "left"))
+                withTimeoutOrNull(GRACEFUL_CLOSE_MS) { connectionJob?.join() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) { // Throwable, not Exception — see warmUp
+                rethrowIfPlatformFatal(e)
+            }
+        }
+        disconnect() // idempotent cleanup of whatever is left
     }
 
     private fun reset() {
@@ -285,6 +317,8 @@ class OnlineGameRepository(
     }
 
     fun triggerReconnect() {
+        // A handshake is already in flight — let it finish rather than restart it.
+        if (_connectionState.value == ConnectionState.CONNECTING) return
         if (roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
             needsEventReplay.value = true
             scope.launch {
@@ -307,6 +341,7 @@ class OnlineGameRepository(
         _connectionState.value = ConnectionState.CONNECTING
         log.i { "Connecting to $serverUrl" }
 
+        val generation = ++connectionGeneration
         connectionJob = scope.launch {
             try {
                 client.webSocket(urlString = "$serverUrl/game?v=${Protocol.VERSION}") {
@@ -353,12 +388,18 @@ class OnlineGameRepository(
                     _errors.emit("Connection error: ${e.message}")
                 }
             } finally {
-                webSocketSession = null
-                if (shouldAutoReconnect && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
-                    _connectionState.value = ConnectionState.RECONNECTING
-                    scheduleReconnect()
-                } else {
-                    _connectionState.value = ConnectionState.DISCONNECTED
+                // Only the CURRENT connection owns this bookkeeping. disconnect() cancels the old
+                // job asynchronously, so its finally used to run after the newer connectAndSend()
+                // had already set shouldAutoReconnect back to true: it nulled the live session and
+                // scheduled a reconnect that killed its successor — a ~1 Hz connect/kill loop.
+                if (generation == connectionGeneration) {
+                    webSocketSession = null
+                    if (shouldAutoReconnect && roomCode.isNotEmpty() && myPlayerId.isNotEmpty()) {
+                        _connectionState.value = ConnectionState.RECONNECTING
+                        scheduleReconnect()
+                    } else {
+                        _connectionState.value = ConnectionState.DISCONNECTED
+                    }
                 }
             }
         }
@@ -514,11 +555,15 @@ class OnlineGameRepository(
                 // open, so without this the player is stranded on a frozen board under a green
                 // "Reconnected" banner. Make it terminal so the UI can leave. An empty roomCode is a
                 // failed lobby join, which the lobby surfaces as an ordinary error instead.
-                if (roomCode.isNotEmpty() && message.message.contains("Room not found", ignoreCase = true)) {
+                // Gate on myPlayerId, not roomCode: joinRoom() fills roomCode BEFORE admission, so a
+                // wrong or expired invite code used to take this fatal branch, emit nothing the
+                // lobby listens to, and leave it spinning to the 20 s timeout.
+                if (myPlayerId.isNotEmpty() && message.message.contains("Room not found", ignoreCase = true)) {
                     _fatalError.value = FatalSessionError.ROOM_GONE
                     OnlineSessionBackup.clear()
                     disconnect()
                 } else {
+                    if (myPlayerId.isEmpty()) roomCode = "" // failed lobby join: don't keep the bad code
                     // A rejected reconnect ("Player not found" = seat gone, "Session invalid" =
                     // bad token) means the snapshot can never resume — clear it, or every web
                     // page load retries the doomed resume and swallows any fresh ?room= invite.

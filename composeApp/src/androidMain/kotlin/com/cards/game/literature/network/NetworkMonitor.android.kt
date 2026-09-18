@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,13 +35,19 @@ actual object NetworkMonitor {
         val cm = connectivityManager ?: return
         if (networkCallback != null) return
 
+        // DEFAULT-network callback, not a request for every internet-capable network: with the
+        // latter, a Wi-Fi → cellular handover reported cellular first and then `onLost(wifi)`
+        // with no further onAvailable, so this flow stuck at false — every reconnect was skipped
+        // and the lobby buttons greyed out, on a phone with working data.
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 _isNetworkAvailable.value = true
             }
 
             override fun onLost(network: Network) {
-                _isNetworkAvailable.value = false
+                // Fires only when nothing replaces the default network; re-derive anyway so a
+                // handover race can never strand us offline.
+                _isNetworkAvailable.value = currentlyOnline(cm)
             }
 
             override fun onCapabilitiesChanged(
@@ -55,11 +60,12 @@ actual object NetworkMonitor {
         }
 
         networkCallback = callback
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-        cm.registerNetworkCallback(request, callback)
+        cm.registerDefaultNetworkCallback(callback)
     }
+
+    private fun currentlyOnline(cm: ConnectivityManager): Boolean =
+        cm.activeNetwork?.let { cm.getNetworkCapabilities(it) }
+            ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
 
     actual fun stopMonitoring() {
         val cm = connectivityManager ?: return
