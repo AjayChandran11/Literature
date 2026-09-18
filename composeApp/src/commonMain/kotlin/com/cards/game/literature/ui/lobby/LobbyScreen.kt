@@ -21,6 +21,7 @@ import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import com.cards.game.literature.repository.FatalSessionError
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +59,19 @@ fun LobbyScreen(
         uiState.errorMessage?.let {
             snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short)
             viewModel.clearError()
+        }
+    }
+
+    val roomGoneMsg = stringResource(Res.string.error_room_gone)
+    val updateRequiredMsg = stringResource(Res.string.error_update_required)
+    LaunchedEffect(uiState.fatalError) {
+        uiState.fatalError?.let { fatal ->
+            val message = when (fatal) {
+                FatalSessionError.ROOM_GONE -> roomGoneMsg
+                FatalSessionError.UPDATE_REQUIRED -> updateRequiredMsg
+            }
+            snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Long)
+            viewModel.clearFatalError()
         }
     }
 

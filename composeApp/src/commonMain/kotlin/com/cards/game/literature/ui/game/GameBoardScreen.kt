@@ -385,6 +385,7 @@ fun GameBoardContent(
         }
     }
 
+
     val windowInfo = currentWindowAdaptiveInfo()
     val showSideBySide = windowInfo.useSideBySide
     val compactHeight = windowInfo.isCompactHeight
@@ -786,6 +787,8 @@ private fun consolidateEvents(
     fmtClaimedBad: (claimerName: String, halfSuit: String) -> String,
     textGameOver: String,
     fmtTimedOut: (playerName: String) -> String,
+    fmtReplaced: (playerName: String) -> String,
+    fmtBack: (playerName: String) -> String,
     limit: Int = 5
 ): List<StripMessage> {
     val messages = mutableListOf<StripMessage>()
@@ -836,6 +839,15 @@ private fun consolidateEvents(
             }
             is GameEvent.TurnTimedOut -> {
                 messages.add(StripMessage("⏱", CardRed, fmtTimedOut(event.playerName)))
+            }
+            // Seat changes are game events too, and the strip (plus the full log) is their ONLY
+            // in-game surface by design — no snackbar. Without these the sole trace of a bot
+            // taking over was the avatar glyph quietly changing, on a tab you're not on.
+            is GameEvent.PlayerReplacedByBot -> {
+                messages.add(StripMessage("🤖", GoldAccent, fmtReplaced(event.playerName)))
+            }
+            is GameEvent.PlayerReconnected -> {
+                messages.add(StripMessage("↩", LightGreen, fmtBack(event.playerName)))
             }
             else -> {}
         }
@@ -943,6 +955,8 @@ private fun LastEventStrip(events: List<GameEvent>) {
     val fmtClaimedBad = stringResource(Res.string.game_log_claimed_incorrectly)
     val textGameOver = stringResource(Res.string.game_log_game_over)
     val fmtTimedOut = stringResource(Res.string.game_log_timed_out)
+    val fmtReplaced = stringResource(Res.string.game_log_replaced_by_bot)
+    val fmtBack = stringResource(Res.string.game_log_player_back)
 
     val messages = consolidateEvents(
         events = displayEvents,
@@ -951,7 +965,9 @@ private fun LastEventStrip(events: List<GameEvent>) {
         fmtClaimedOk = { c, h -> fmtClaimedOk.formatArgs(c, h) },
         fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, h) },
         textGameOver = textGameOver,
-        fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) }
+        fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) },
+        fmtReplaced = { p -> fmtReplaced.formatArgs(p) },
+        fmtBack = { p -> fmtBack.formatArgs(p) }
     )
     if (messages.isEmpty()) return
 
@@ -1253,6 +1269,8 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
     val fmtClaimedBad = stringResource(Res.string.game_log_claimed_incorrectly)
     val textGameOver = stringResource(Res.string.game_log_game_over)
     val fmtTimedOut = stringResource(Res.string.game_log_timed_out)
+    val fmtReplaced = stringResource(Res.string.game_log_replaced_by_bot)
+    val fmtBack = stringResource(Res.string.game_log_player_back)
 
     val messages = consolidateEvents(
         events = displayEvents,
@@ -1262,6 +1280,8 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
         fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, h) },
         textGameOver = textGameOver,
         fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) },
+        fmtReplaced = { p -> fmtReplaced.formatArgs(p) },
+        fmtBack = { p -> fmtBack.formatArgs(p) },
         limit = 1
     )
     if (messages.isEmpty()) return

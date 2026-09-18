@@ -56,6 +56,8 @@ import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import com.cards.game.literature.repository.FatalSessionError
+import com.cards.game.literature.ui.common.ReconnectOnResume
 
 @Composable
 fun WaitingRoomScreen(
@@ -111,6 +113,34 @@ fun WaitingRoomScreen(
         HowToPlaySheet(onDismiss = { showHowToPlay = false })
     }
 
+    // The room no longer exists (server restart / spin-down while everyone waited) or this
+    // build is too old. Without this the screen sat under a permanent red banner with a stale
+    // player list and no way out but Leave.
+    val fatalError by viewModel.fatalError.collectAsState()
+    val fatal = fatalError
+    if (fatal != null && !isLeaving) {
+        val message = when (fatal) {
+            FatalSessionError.ROOM_GONE -> stringResource(Res.string.error_room_gone)
+            FatalSessionError.UPDATE_REQUIRED -> stringResource(Res.string.error_update_required)
+        }
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text(stringResource(Res.string.dialog_session_ended_title), fontWeight = FontWeight.Bold) },
+            text = { Text(message) },
+            confirmButton = {
+                Button(onClick = {
+                    isLeaving = true
+                    viewModel.leaveRoomAndReset()
+                    onLeave()
+                }) {
+                    Text(stringResource(Res.string.button_ok))
+                }
+            }
+        )
+    }
+
+    ReconnectOnResume(viewModel.connectionState, viewModel::retryConnection)
+
     val snackbarHostState = remember { SnackbarHostState() }
 
     val disconnectedFmt = stringResource(Res.string.snackbar_player_disconnected)
@@ -163,7 +193,8 @@ fun WaitingRoomScreen(
         if (!isLeaving) {
             ConnectionBanner(
                 connectionState = viewModel.connectionState,
-                modifier = Modifier.align(Alignment.TopCenter)
+                modifier = Modifier.align(Alignment.TopCenter),
+                onRetry = viewModel::retryConnection
             )
         }
 

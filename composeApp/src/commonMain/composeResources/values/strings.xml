@@ -134,6 +134,8 @@
     <string name="game_log_claimed_incorrectly">%1$s claimed %2$s incorrectly!</string>
     <string name="game_log_game_over">Game Over!</string>
     <string name="game_log_timed_out">%1$s ran out of time</string>
+    <string name="game_log_replaced_by_bot">%1$s is away — a bot is playing for them</string>
+    <string name="game_log_player_back">%1$s is back</string>
 
     <!-- Deck Tracker -->
     <string name="deck_tracker_ours">Ours</string>
@@ -172,6 +174,7 @@
     <string name="connection_reconnecting">Reconnecting…</string>
     <string name="connection_reconnected">Reconnected</string>
     <string name="connection_disconnected">Disconnected</string>
+    <string name="connection_retry">Retry</string>
 
     <!-- Result Screen -->
     <string name="result_draw">It's a Draw!</string>

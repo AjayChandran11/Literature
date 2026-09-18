@@ -48,6 +48,24 @@ class RoomManagerTest {
     }
 
     @Test
+    fun ageBasedSweepSparesRoomsWithConnectedPlayers() {
+        val manager = RoomManager()
+        try {
+            val (room, hostId) = manager.createRoom("Alice", 4)
+            val farFuture = System.currentTimeMillis() + 31 * 60_000 // well past the 30-min waiting-room age
+
+            manager.sweepStaleRooms(farFuture)
+            assertEquals(room, manager.getRoom(room.roomCode), "an old room with a connected player must stay")
+
+            room.getPlayerSession(hostId)!!.isConnected = false
+            manager.sweepStaleRooms(farFuture)
+            assertNull(manager.getRoom(room.roomCode), "once everyone is gone the age rule applies")
+        } finally {
+            manager.shutdown()
+        }
+    }
+
+    @Test
     fun roomCodesAreUnique() {
         val manager = RoomManager()
         try {

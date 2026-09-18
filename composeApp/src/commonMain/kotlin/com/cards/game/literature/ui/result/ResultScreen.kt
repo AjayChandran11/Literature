@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -134,6 +135,8 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.random.Random
 import com.cards.game.literature.ui.common.emoji
+import com.cards.game.literature.ui.common.ConnectionBanner
+import com.cards.game.literature.ui.common.ReconnectOnResume
 
 // ─── Confetti particle model ───────────────────────────────────────────────
 
@@ -400,14 +403,28 @@ fun ResultScreen(
         }
     }
 
-    ResultScreenContent(
-        uiState = uiState,
-        showLog = showLog,
-        onToggleLog = { showLog = !showLog },
-        onPlayAgain = onPlayAgain,
-        onGoHome = onGoHome,
-        onRematch = viewModel::requestRematch
-    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        ResultScreenContent(
+            uiState = uiState,
+            showLog = showLog,
+            onToggleLog = { showLog = !showLog },
+            onPlayAgain = onPlayAgain,
+            onGoHome = onGoHome,
+            onRematch = viewModel::requestRematch
+        )
+        // Online: the result screen used to be the one online screen with no connection state
+        // at all — a drop here was invisible until Rematch failed.
+        viewModel.connectionState?.let { connection ->
+            ConnectionBanner(
+                connectionState = connection,
+                // The content pads for the status bar inside its own scroll box; this overlay
+                // sits outside it and must clear the status bar on its own.
+                modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding(),
+                onRetry = viewModel::retryConnection
+            )
+            ReconnectOnResume(connection, viewModel::retryConnection)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

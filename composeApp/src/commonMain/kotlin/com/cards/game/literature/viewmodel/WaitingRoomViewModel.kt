@@ -14,6 +14,7 @@ import com.cards.game.literature.repository.PlayerConnectionEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.cards.game.literature.repository.FatalSessionError
 
 data class WaitingRoomUiState(
     val roomCode: String = "",
@@ -45,6 +46,13 @@ class WaitingRoomViewModel(
     val uiState: StateFlow<WaitingRoomUiState> = _uiState.asStateFlow()
 
     val connectionState: StateFlow<ConnectionState> = onlineRepository.connectionState
+
+    /** Terminal session error (room gone after a server restart / spin-down, build too old). */
+    val fatalError: StateFlow<FatalSessionError?> = onlineRepository.fatalError
+
+    fun retryConnection() = onlineRepository.triggerReconnect()
+
+    fun leaveRoomAndReset() = onlineRepository.leaveRoomAndReset()
 
     private val _navigateToGame = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navigateToGame: Flow<Unit> = _navigateToGame.asSharedFlow()

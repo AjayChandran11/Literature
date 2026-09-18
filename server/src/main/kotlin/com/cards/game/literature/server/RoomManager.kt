@@ -44,11 +44,20 @@ class RoomManager {
         return code
     }
 
-    private fun cleanupStaleRooms() {
-        val now = System.currentTimeMillis()
+    private fun cleanupStaleRooms() = sweepStaleRooms(System.currentTimeMillis())
+
+    /**
+     * Removes rooms nobody will come back to. The two age rules (a finished room five minutes
+     * after the finish, a waiting room half an hour after creation) only apply once everyone
+     * has disconnected: they used to fire under connected players — a group chatting on the
+     * result screen for five minutes then tapping Rematch played on in a room that no longer
+     * existed, so every invite and every reconnect got "Room not found".
+     */
+    internal fun sweepStaleRooms(now: Long) {
         val staleRooms = rooms.filter { (_, room) ->
-            (room.phase == RoomPhase.FINISHED && now - room.finishedAt > 5 * 60_000) ||
-                (room.phase == RoomPhase.WAITING && now - room.createdAt > 30 * 60_000) ||
+            val nobodyHere = room.allDisconnected()
+            (nobodyHere && room.phase == RoomPhase.FINISHED && now - room.finishedAt > 5 * 60_000) ||
+                (nobodyHere && room.phase == RoomPhase.WAITING && now - room.createdAt > 30 * 60_000) ||
                 // isAbandoned (not allDisconnected) — respects pending reconnect
                 // deadlines so a group WiFi blip doesn't delete an active game
                 room.isAbandoned(now)

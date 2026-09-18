@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.cards.game.literature.repository.ConnectionState
 
 data class ResultUiState(
     val myTeamScore: Int = 0,
@@ -60,6 +61,13 @@ class ResultViewModel(
 
     /** Room code for rematch navigation (online only). */
     val roomCode: String get() = onlineRepository?.roomCode ?: ""
+
+    /** Online only: lets the result screen show the connection banner and offer Retry. */
+    val connectionState: StateFlow<ConnectionState>? = onlineRepository?.connectionState
+
+    fun retryConnection() {
+        onlineRepository?.triggerReconnect()
+    }
 
     // Set when the host's rematch resets the room, BEFORE the result screen navigates to
     // the waiting room. onCleared() reads it to keep the connection alive on a rematch
@@ -150,6 +158,16 @@ class ResultViewModel(
             // Play's own quota decides whether the sheet actually shows and rate-limits how often.
             if (StatsStore.stats.value.gamesPlayed >= REVIEW_MIN_GAMES) {
                 AppReview.requestReview()
+            }
+        }
+
+        // Host can change while everyone sits on the result screen (the host left, or was
+        // bot-replaced and the server promoted someone). A one-time snapshot left the new host
+        // with a "Play Again" that quietly leaves the room, and nobody able to Rematch.
+        viewModelScope.launch {
+            onlineRepository?.roomState?.collect { room ->
+                val canRematch = room?.hostPlayerId == myPlayerId
+                _uiState.update { if (it.canRematch != canRematch) it.copy(canRematch = canRematch) else it }
             }
         }
 
