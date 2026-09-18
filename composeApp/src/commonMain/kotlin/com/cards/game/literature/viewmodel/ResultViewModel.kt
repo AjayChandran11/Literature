@@ -161,6 +161,16 @@ class ResultViewModel(
             }
         }
 
+        // Host can change while everyone sits on the result screen (the host left, or was
+        // bot-replaced and the server promoted someone). A one-time snapshot left the new host
+        // with a "Play Again" that quietly leaves the room, and nobody able to Rematch.
+        viewModelScope.launch {
+            onlineRepository?.roomState?.collect { room ->
+                val canRematch = room?.hostPlayerId == myPlayerId
+                _uiState.update { if (it.canRematch != canRematch) it.copy(canRematch = canRematch) else it }
+            }
+        }
+
         // Collect (rather than read once) — game recording may still be in flight when this
         // ViewModel is created. Accept only the celebration for THIS game (gameId match), so a
         // stale unlock can't leak onto a later game and a screen recreation re-reads it.
