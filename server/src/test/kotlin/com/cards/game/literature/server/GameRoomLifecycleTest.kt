@@ -191,7 +191,13 @@ class GameRoomLifecycleTest {
             "the table is told the absent seat is a bot")
 
         room.handleReconnect(guest)
-        assertTrue(guest in room.pendingReclaimIdsForTest, "the owner gets the seat back at their next turn")
+        // The bot loop runs on its own thread: depending on scheduling it may already have
+        // performed the reclaim (seat back to human) or not yet (seat queued). Both are the
+        // owner getting the seat back; asserting only "queued" was a CI-only race.
+        assertTrue(
+            guest in room.pendingReclaimIdsForTest || room.isBotSeatForTest(guest) == false,
+            "the owner gets the seat back (queued for their next turn, or already reclaimed)"
+        )
         room.cleanup()
     }
 
