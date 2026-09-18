@@ -112,6 +112,8 @@ class OnlineGameRepository(
         const val MAX_RECONNECT_ATTEMPTS = 10
         const val INITIAL_RECONNECT_DELAY_MS = 1_000L
         const val MAX_RECONNECT_DELAY_MS = 16_000L
+        // How long a deliberate leave waits for the graceful close handshake before forcing it.
+        const val GRACEFUL_CLOSE_MS = 1_500L
     }
 
     var myPlayerId: String = ""
@@ -243,14 +245,12 @@ class OnlineGameRepository(
     }
 
     suspend fun leaveRoom() {
-        sendMessage(ClientMessage.LeaveRoom)
-        disconnect()
+        sendAndClose(ClientMessage.LeaveRoom)
         reset()
     }
 
     suspend fun leaveGame() {
-        sendMessage(ClientMessage.LeaveGame)
-        disconnect()
+        sendAndClose(ClientMessage.LeaveGame)
         reset()
     }
 
@@ -262,6 +262,34 @@ class OnlineGameRepository(
      */
     fun leaveRoomAndReset() {
         scope.launch { leaveRoom() }
+    }
+
+    /**
+     * Deliberate leave: send the final message, then close the socket GRACEFULLY and let the
+     * connection wind down on its own. send() only queues the frame in the engine (OkHttp keeps
+     * its own writer queue), and disconnect() cancels the job — which tears the TCP socket down
+     * at once and discards whatever is still queued. The server then saw a bare drop instead of
+     * the leave: a 2-minute grace on the result screen with the host stuck on the departed
+     * player, and Leave Game degrading to a 2-minute bot replacement. A Close frame goes through
+     * the same queue, so the message is on the wire before the close.
+     */
+    private suspend fun sendAndClose(message: ClientMessage) {
+        shouldAutoReconnect = false // the finally must not schedule a reconnect for a leaver
+        autoReconnectJob?.cancel()
+        autoReconnectJob = null
+        val session = webSocketSession
+        if (session != null) {
+            try {
+                session.send(Frame.Text(json.encodeToString(message)))
+                session.close(CloseReason(CloseReason.Codes.NORMAL, "left"))
+                withTimeoutOrNull(GRACEFUL_CLOSE_MS) { connectionJob?.join() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) { // Throwable, not Exception — see warmUp
+                rethrowIfPlatformFatal(e)
+            }
+        }
+        disconnect() // idempotent cleanup of whatever is left
     }
 
     private fun reset() {
