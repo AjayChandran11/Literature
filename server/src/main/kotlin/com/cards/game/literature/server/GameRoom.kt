@@ -67,6 +67,8 @@ class GameRoom(
     internal var passSelectionTimeoutMs: Long = PASS_SELECTION_TIMEOUT_MS
     // Same for the per-turn clock — tests shrink it to prove the timer survives rejected moves.
     internal var turnTimeoutMs: Long = TURN_TIMEOUT_MS
+    // And for the reconnect grace window (result-screen host handover test).
+    internal var reconnectWindowMs: Long = RECONNECT_WINDOW_MS
 
     companion object {
         private const val TURN_TIMEOUT_MS = 60_000L
@@ -500,7 +502,16 @@ class GameRoom(
             // deadline the player counted as gone at once — a host Rematch dropped anyone who
             // had switched to WhatsApp for a minute, and the abandoned-room sweep deleted the
             // room within 60 s of everyone glancing away. resetForRematch honours the deadline.
-            playerSession.disconnectDeadline = System.currentTimeMillis() + RECONNECT_WINDOW_MS
+            playerSession.disconnectDeadline = System.currentTimeMillis() + reconnectWindowMs
+            // A host who doesn't come back would otherwise block Rematch for everyone forever
+            // ("Only the host can start a rematch"); hand host on once the window has passed.
+            if (playerId == hostPlayerId) {
+                disconnectJobs[playerId] = CoroutineScope(Dispatchers.Default).launch {
+                    delay(reconnectWindowMs)
+                    val s = players[playerId]
+                    if (s != null && !s.isConnected && phase == RoomPhase.FINISHED) transferHostIfNeeded(playerId)
+                }
+            }
         }
     }
 
@@ -511,10 +522,10 @@ class GameRoom(
      */
     private fun armInProgressReplacement(session: PlayerSession) {
         val playerId = session.playerId
-        session.disconnectDeadline = System.currentTimeMillis() + RECONNECT_WINDOW_MS
+        session.disconnectDeadline = System.currentTimeMillis() + reconnectWindowMs
         disconnectJobs.remove(playerId)?.cancel()
         val job = botScope?.launch {
-            delay(RECONNECT_WINDOW_MS)
+            delay(reconnectWindowMs)
             val current = players[playerId]
             if (current != null && !current.isConnected) replaceWithBot(playerId)
         }

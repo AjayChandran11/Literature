@@ -216,6 +216,21 @@ class GameRoomLifecycleTest {
         room.cleanup()
     }
 
+    @Test
+    fun hostDroppingOnResultScreenHandsHostOnAfterTheWindow() = runBlocking {
+        val room = runningRoom(t2HasSpare = false)
+        room.processAsk("player_0", "player_1", listOf(spadesLow[2]))   // game ends; player_0 is host
+        room.reconnectWindowMs = 150
+
+        room.handleDisconnect("player_0")                                // host's socket dies on the result screen
+        assertTrue(room.isHost("player_0"), "host is kept during the grace window")
+
+        withTimeout(2_000) { while (room.isHost("player_0")) delay(20) }
+        val newHost = room.toRoomState().hostPlayerId
+        assertTrue(room.getPlayerSession(newHost)!!.isConnected, "host moves to a connected player")
+        room.cleanup()
+    }
+
     // --- F-05: reconnecting into a finished room delivers the game view ---
 
     @Test
