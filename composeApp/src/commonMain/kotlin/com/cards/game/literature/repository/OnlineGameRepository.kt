@@ -527,11 +527,15 @@ class OnlineGameRepository(
                 // open, so without this the player is stranded on a frozen board under a green
                 // "Reconnected" banner. Make it terminal so the UI can leave. An empty roomCode is a
                 // failed lobby join, which the lobby surfaces as an ordinary error instead.
-                if (roomCode.isNotEmpty() && message.message.contains("Room not found", ignoreCase = true)) {
+                // Gate on myPlayerId, not roomCode: joinRoom() fills roomCode BEFORE admission, so a
+                // wrong or expired invite code used to take this fatal branch, emit nothing the
+                // lobby listens to, and leave it spinning to the 20 s timeout.
+                if (myPlayerId.isNotEmpty() && message.message.contains("Room not found", ignoreCase = true)) {
                     _fatalError.value = FatalSessionError.ROOM_GONE
                     OnlineSessionBackup.clear()
                     disconnect()
                 } else {
+                    if (myPlayerId.isEmpty()) roomCode = "" // failed lobby join: don't keep the bad code
                     // A rejected reconnect ("Player not found" = seat gone, "Session invalid" =
                     // bad token) means the snapshot can never resume — clear it, or every web
                     // page load retries the doomed resume and swallows any fresh ?room= invite.

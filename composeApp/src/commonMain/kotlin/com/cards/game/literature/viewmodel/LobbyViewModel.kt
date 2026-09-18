@@ -11,6 +11,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import com.cards.game.literature.repository.FatalSessionError
 
 enum class LoadingOperation { CREATE, JOIN }
 
@@ -22,6 +23,8 @@ private const val ADMISSION_TIMEOUT_MS = 20_000L
 data class LobbyUiState(
     val loadingOperation: LoadingOperation? = null,
     val errorMessage: String? = null,
+    /** A terminal session error hit during create/join (e.g. this build is too old). */
+    val fatalError: FatalSessionError? = null,
     val isServerReady: Boolean = false
 ) {
     val isLoading get() = loadingOperation != null
@@ -58,6 +61,15 @@ class LobbyViewModel(
         viewModelScope.launch {
             onlineRepository.errors.collect { error ->
                 _uiState.update { it.copy(errorMessage = error, loadingOperation = null) }
+            }
+        }
+
+        // The version gate (close 1003) lands on the FIRST connect, i.e. here in the lobby — the
+        // only screen that never watched fatalError, so the spinner ran to the timeout and the
+        // player got a connectivity message instead of "please update".
+        viewModelScope.launch {
+            onlineRepository.fatalError.collect { fatal ->
+                if (fatal != null) _uiState.update { it.copy(loadingOperation = null, fatalError = fatal) }
             }
         }
 
@@ -121,6 +133,10 @@ class LobbyViewModel(
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    fun clearFatalError() {
+        _uiState.update { it.copy(fatalError = null) }
     }
 
     override fun onCleared() {
