@@ -6,6 +6,8 @@ import com.cards.game.literature.protocol.ServerMessage
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
@@ -299,9 +301,14 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
             val playerId = currentPlayerId
             log.info("WebSocket closed for player {}", playerId ?: "unknown")
             if (room != null && playerId != null) {
-                room.handleDisconnect(playerId, this@webSocket)
-                if (room.phase == com.cards.game.literature.protocol.RoomPhase.WAITING) {
-                    room.broadcastRoomUpdate()
+                // NonCancellable: this is cleanup for a connection that may itself have been
+                // cancelled, and every suspending call in here would otherwise throw at once —
+                // leaving the room without the disconnect bookkeeping it needs.
+                withContext(NonCancellable) {
+                    room.handleDisconnect(playerId, this@webSocket)
+                    if (room.phase == com.cards.game.literature.protocol.RoomPhase.WAITING) {
+                        room.broadcastRoomUpdate()
+                    }
                 }
             }
         }

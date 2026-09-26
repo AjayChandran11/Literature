@@ -526,15 +526,17 @@ class GameRoom(
         pendingReclaims.remove(playerId)
 
         if (phase == RoomPhase.IN_PROGRESS) {
-            // Broadcast disconnect event
+            // Deadline and bot-replacement timer FIRST, before anything that can suspend.
+            // This runs from the connection's finally, and a connection that was cancelled
+            // (rather than closed cleanly) dies at its next suspension point — so a broadcast
+            // placed above this line meant the timer was simply never armed, and the seat was
+            // left as a human nobody would ever replace. Don't skip the turn immediately
+            // though: the running turn timer keeps going, and skipTurn handles the timeout.
+            armInProgressReplacement(playerSession)
+
             broadcastEvents(listOf(
                 GameEvent.PlayerDisconnected(playerId, playerSession.playerName)
             ))
-
-            // Set deadline and start the disconnect timeout. Don't skip the turn
-            // immediately — the running turn timer keeps going; if the player is back
-            // before it fires they can still play, otherwise skipTurn handles it.
-            armInProgressReplacement(playerSession)
             broadcastGameViews()
 
             // If the table was waiting on this player to pick a pass target,
@@ -552,15 +554,18 @@ class GameRoom(
             // The host is NOT transferred yet — only if the window elapses without a
             // reconnect (finalizeWaitingDisconnect). A reconnect cancels this via
             // handleReconnect(), which clears the deadline and the pending job.
+            // Deadline and release timer FIRST — see the note in the IN_PROGRESS branch: a
+            // broadcast ahead of this line is a suspension point, and on a cancelled connection
+            // the seat would then be held for ever.
             playerSession.disconnectDeadline = System.currentTimeMillis() + waitingWindowMs
-            broadcastRoomUpdate()
-
             // botScope is null until the game starts, so fall back to a transient scope.
             val scope = botScope ?: CoroutineScope(Dispatchers.Default)
             disconnectJobs[playerId] = scope.launch {
                 delay(waitingWindowMs)
                 finalizeWaitingDisconnect(playerId)
             }
+
+            broadcastRoomUpdate()
         } else if (phase == RoomPhase.FINISHED) {
             // Result screen: hold the seat for the reconnect window (no bot needed). Without a
             // deadline the player counted as gone at once — a host Rematch dropped anyone who

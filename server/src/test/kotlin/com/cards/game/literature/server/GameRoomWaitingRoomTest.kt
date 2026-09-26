@@ -1,6 +1,16 @@
 package com.cards.game.literature.server
 
 import com.cards.game.literature.protocol.RoomPhase
+import io.ktor.websocket.Frame
+import io.ktor.websocket.WebSocketExtension
+import io.ktor.websocket.WebSocketSession
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -138,6 +148,43 @@ class GameRoomWaitingRoomTest {
         assertNull(room.getPlayerSession("player_0"))
         assertTrue(room.isHost("player_1"), "the room is never left without a host")
         room.cleanup()
+    }
+
+    @Test
+    fun aDisconnectFromACancelledConnectionStillReleasesTheSeat() = runBlocking {
+        val room = waitingRoom(4, listOf("GA", "Vinu"))
+        room.waitingWindowMs = 150
+        // A socket that never accepts a frame: broadcasting to it suspends. Disconnect cleanup
+        // runs from the connection's own finally, so on a cancelled connection every suspending
+        // call there throws at once — and the release timer, if it were armed after a broadcast,
+        // would never be armed at all. Seen for real: a seat held five minutes past its window.
+        room.getPlayerSession("player_0")!!.session = StallingSocket()
+
+        val connection = launch {
+            try {
+                delay(Long.MAX_VALUE)
+            } finally {
+                room.handleDisconnect("player_1")
+            }
+        }
+        delay(50)
+        connection.cancelAndJoin()
+
+        withTimeout(2_000) { while (room.getPlayerSession("player_1") != null) delay(20) }
+        room.cleanup()
+    }
+
+    /** A WebSocketSession whose outgoing frames are never collected, so every send suspends. */
+    private class StallingSocket : WebSocketSession {
+        override val coroutineContext: CoroutineContext = Dispatchers.Default
+        override val incoming: ReceiveChannel<Frame> = Channel()
+        override val outgoing: SendChannel<Frame> = Channel(Channel.RENDEZVOUS)
+        override val extensions: List<WebSocketExtension<*>> = emptyList()
+        override var maxFrameSize: Long = Long.MAX_VALUE
+        override var masking: Boolean = false
+        override suspend fun flush() {}
+        @Deprecated("Use cancel() instead.", level = DeprecationLevel.ERROR)
+        override fun terminate() {}
     }
 
     @Test
