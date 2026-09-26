@@ -6,6 +6,8 @@ import com.cards.game.literature.protocol.ServerMessage
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
@@ -106,12 +108,18 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Game already started")
                                 continue
                             }
-                            if (room.getHumanPlayerCount() >= room.targetPlayerCount) {
+                            // Hand back the seat this player already had, if it is still held:
+                            // same name, currently away. Keeps their team and stops a room from
+                            // filling up with the same people under new ids.
+                            val heldSeat = room.findSeatToReclaim(joinName)
+                            if (heldSeat == null && room.getHumanPlayerCount() >= room.targetPlayerCount
+                                && !room.evictLongestAbsentSeat()
+                            ) {
                                 sendError("Room is full")
                                 continue
                             }
 
-                            val playerId = room.addPlayer(joinName)
+                            val playerId = heldSeat?.also { room.reclaimSeat(it) } ?: room.addPlayer(joinName)
                             currentRoom = room
                             currentPlayerId = playerId
 
@@ -293,9 +301,14 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
             val playerId = currentPlayerId
             log.info("WebSocket closed for player {}", playerId ?: "unknown")
             if (room != null && playerId != null) {
-                room.handleDisconnect(playerId, this@webSocket)
-                if (room.phase == com.cards.game.literature.protocol.RoomPhase.WAITING) {
-                    room.broadcastRoomUpdate()
+                // NonCancellable: this is cleanup for a connection that may itself have been
+                // cancelled, and every suspending call in here would otherwise throw at once —
+                // leaving the room without the disconnect bookkeeping it needs.
+                withContext(NonCancellable) {
+                    room.handleDisconnect(playerId, this@webSocket)
+                    if (room.phase == com.cards.game.literature.protocol.RoomPhase.WAITING) {
+                        room.broadcastRoomUpdate()
+                    }
                 }
             }
         }

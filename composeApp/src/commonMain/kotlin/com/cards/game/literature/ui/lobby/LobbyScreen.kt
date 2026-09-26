@@ -63,11 +63,13 @@ fun LobbyScreen(
     }
 
     val roomGoneMsg = stringResource(Res.string.error_room_gone)
+    val seatLostMsg = stringResource(Res.string.error_seat_lost)
     val updateRequiredMsg = stringResource(Res.string.error_update_required)
     LaunchedEffect(uiState.fatalError) {
         uiState.fatalError?.let { fatal ->
             val message = when (fatal) {
                 FatalSessionError.ROOM_GONE -> roomGoneMsg
+                FatalSessionError.SEAT_LOST -> seatLostMsg
                 FatalSessionError.UPDATE_REQUIRED -> updateRequiredMsg
             }
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Long)

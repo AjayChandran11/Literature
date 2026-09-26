@@ -99,6 +99,7 @@
     <string name="dialog_leave_online_game_message">Are you sure you want to leave? A bot will take over immediately.</string>
     <string name="button_leave_game">Leave</string>
     <string name="dialog_session_ended_title">Game Ended</string>
+    <string name="error_seat_lost">You are no longer in this room — you were away too long. Join again with the room code.</string>
     <string name="error_room_gone">This game is no longer available — the room may have closed or the server restarted.</string>
     <string name="error_update_required">Please update to the latest version to keep playing online.</string>
     <string name="reconnect_waiting">Waiting for %1$s to reconnect… (%2$ds)</string>
