@@ -69,17 +69,28 @@ class GameRoom(
     internal var turnTimeoutMs: Long = TURN_TIMEOUT_MS
     // And for the reconnect grace window (result-screen host handover test).
     internal var reconnectWindowMs: Long = RECONNECT_WINDOW_MS
+    // Waiting-room grace window; shrunk by tests that exercise seat removal.
+    internal var waitingWindowMs: Long = WAITING_RECONNECT_WINDOW_MS
+    // How long a seat must have been absent before it can be given up.
+    internal var evictableAfterMs: Long = EVICTABLE_AFTER_MS
 
     companion object {
         private const val TURN_TIMEOUT_MS = 60_000L
         private const val PASS_SELECTION_TIMEOUT_MS = 30_000L
         private const val RECONNECT_WINDOW_MS = 2 * 60_000L
-        // Grace window for a WAITING-room disconnect (e.g. the host briefly leaving
-        // the app to share an invite). The seat is held — not removed — for this long
-        // so a reconnect re-attaches to the same room. Mirrors RECONNECT_WINDOW_MS.
-        private const val WAITING_RECONNECT_WINDOW_MS = 2 * 60_000L
+        // Grace window for a WAITING-room disconnect. Assembling a group means leaving the
+        // app to paste the code into WhatsApp and waiting for replies, and Android kills a
+        // backgrounded socket in seconds — at the old 2 minutes, seats were being removed out
+        // from under people who were still very much coming (a real 6-player room issued SEVEN
+        // seats in 13 minutes and never started). Held seats no longer block anyone either:
+        // a full room evicts the longest-absent seat for someone who is here (see evictLongestAbsentSeat).
+        private const val WAITING_RECONNECT_WINDOW_MS = 5 * 60_000L
         private const val REACTION_RATE_LIMIT_MS = 2_000L
         private const val ABANDON_GRACE_MS = 60_000L
+        // A seat is only given up to an arriving player once its owner has been away this long.
+        // Without it, two players on a flaky network in a full room could take turns evicting
+        // each other; a momentary drop now keeps your seat outright.
+        private const val EVICTABLE_AFTER_MS = 60_000L
         // How many consecutive rejected bot moves to tolerate before giving up the
         // turn. A bot with cards always has a legal move, so this should never be
         // hit; it's a backstop so a wedged decision can never spin forever.
@@ -137,9 +148,62 @@ class GameRoom(
     /** Test visibility: whether [playerId]'s seat is currently played by a bot. */
     internal fun isBotSeatForTest(playerId: String): Boolean? = gameState?.getPlayer(playerId)?.isBot
 
-    /** A room accepts a JoinRoom only while waiting and not full. Joining a running game used to
-     *  be accepted and seated the newcomer on a board with no hand and no turn. */
-    fun isJoinable(): Boolean = phase == RoomPhase.WAITING && getHumanPlayerCount() < targetPlayerCount
+    /** A room accepts a JoinRoom only while waiting, and only if a seat is free or can be
+     *  freed. Joining a running game used to be accepted and seated the newcomer on a board
+     *  with no hand and no turn. */
+    fun isJoinable(): Boolean = phase == RoomPhase.WAITING &&
+        (getHumanPlayerCount() < targetPlayerCount || evictableSeats().isNotEmpty())
+
+    /** Disconnected seats in this waiting room, longest-absent first. */
+    private fun absentSeats(): List<PlayerSession> =
+        players.values.filter { !it.isConnected }.sortedBy { it.lastSeen }
+
+    /** Absent seats that may be given up for an arriving player (see EVICTABLE_AFTER_MS). */
+    private fun evictableSeats(now: Long = System.currentTimeMillis()): List<PlayerSession> =
+        absentSeats().filter { now - it.lastSeen >= evictableAfterMs }
+
+    /**
+     * The seat this returning player should get back, if it is still here: a disconnected seat
+     * under the same name, most recently seen first. Rejoining used to always mint a NEW seat,
+     * so a player who stepped away came back as a stranger on a possibly different team while
+     * their old seat sat there looking occupied.
+     *
+     * Only ever consulted in the WAITING phase (JoinRoom is refused after that), where a seat
+     * holds no cards — so handing it back to whoever knows the room code and the name gives
+     * away nothing that joining as a new player wouldn't.
+     */
+    fun findSeatToReclaim(name: String): String? {
+        if (phase != RoomPhase.WAITING) return null
+        val wanted = name.trim()
+        return absentSeats()
+            .filter { it.playerName.trim().equals(wanted, ignoreCase = true) }
+            .maxByOrNull { it.lastSeen }
+            ?.playerId
+    }
+
+    /** Hands a held seat back to its owner: cancels its pending removal and keeps its team. */
+    fun reclaimSeat(playerId: String) {
+        val session = players[playerId] ?: return
+        disconnectJobs.remove(playerId)?.cancel()
+        session.disconnectDeadline = null
+        session.isConnected = true
+        session.lastSeen = System.currentTimeMillis()
+        log.info("[{}] '{}' ({}) reclaimed their seat", roomCode, session.playerName, playerId)
+    }
+
+    /**
+     * Frees a seat for someone who is actually here by dropping the longest-absent player.
+     * Only used when the room is otherwise full: holding seats for five minutes must never
+     * leave a friend who is trying to join staring at "Room is full".
+     */
+    fun evictLongestAbsentSeat(): Boolean {
+        val victim = evictableSeats().firstOrNull() ?: return false
+        disconnectJobs.remove(victim.playerId)?.cancel()
+        removePlayer(victim.playerId)
+        log.info("[{}] Freed '{}' ({})'s held seat for an arriving player",
+            roomCode, victim.playerName, victim.playerId)
+        return true
+    }
 
     /** Test hook: install a running game with [state] so claim/turn/Option C
      *  orchestration can be exercised without relying on a random deal. Players
@@ -462,15 +526,17 @@ class GameRoom(
         pendingReclaims.remove(playerId)
 
         if (phase == RoomPhase.IN_PROGRESS) {
-            // Broadcast disconnect event
+            // Deadline and bot-replacement timer FIRST, before anything that can suspend.
+            // This runs from the connection's finally, and a connection that was cancelled
+            // (rather than closed cleanly) dies at its next suspension point — so a broadcast
+            // placed above this line meant the timer was simply never armed, and the seat was
+            // left as a human nobody would ever replace. Don't skip the turn immediately
+            // though: the running turn timer keeps going, and skipTurn handles the timeout.
+            armInProgressReplacement(playerSession)
+
             broadcastEvents(listOf(
                 GameEvent.PlayerDisconnected(playerId, playerSession.playerName)
             ))
-
-            // Set deadline and start the disconnect timeout. Don't skip the turn
-            // immediately — the running turn timer keeps going; if the player is back
-            // before it fires they can still play, otherwise skipTurn handles it.
-            armInProgressReplacement(playerSession)
             broadcastGameViews()
 
             // If the table was waiting on this player to pick a pass target,
@@ -488,15 +554,18 @@ class GameRoom(
             // The host is NOT transferred yet — only if the window elapses without a
             // reconnect (finalizeWaitingDisconnect). A reconnect cancels this via
             // handleReconnect(), which clears the deadline and the pending job.
-            playerSession.disconnectDeadline = System.currentTimeMillis() + WAITING_RECONNECT_WINDOW_MS
-            broadcastRoomUpdate()
-
+            // Deadline and release timer FIRST — see the note in the IN_PROGRESS branch: a
+            // broadcast ahead of this line is a suspension point, and on a cancelled connection
+            // the seat would then be held for ever.
+            playerSession.disconnectDeadline = System.currentTimeMillis() + waitingWindowMs
             // botScope is null until the game starts, so fall back to a transient scope.
             val scope = botScope ?: CoroutineScope(Dispatchers.Default)
             disconnectJobs[playerId] = scope.launch {
-                delay(WAITING_RECONNECT_WINDOW_MS)
+                delay(waitingWindowMs)
                 finalizeWaitingDisconnect(playerId)
             }
+
+            broadcastRoomUpdate()
         } else if (phase == RoomPhase.FINISHED) {
             // Result screen: hold the seat for the reconnect window (no bot needed). Without a
             // deadline the player counted as gone at once — a host Rematch dropped anyone who
@@ -545,6 +614,8 @@ class GameRoom(
         disconnectJobs.remove(playerId)
 
         val wasHost = playerId == hostPlayerId
+        log.info("[{}] '{}' ({}) did not come back within the grace window — seat released",
+            roomCode, session.playerName, playerId)
         removePlayer(playerId)                 // also reassigns host if others remain
         if (players.isEmpty()) return          // empty room → swept by isAbandoned/cleanup
 

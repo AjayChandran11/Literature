@@ -5,6 +5,7 @@ import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.model.*
 import com.cards.game.literature.rethrowIfPlatformFatal
 import com.cards.game.literature.network.NetworkMonitor
+import com.cards.game.literature.preferences.GamePrefs
 import com.cards.game.literature.preferences.OnlineSessionBackup
 import com.cards.game.literature.protocol.*
 import io.ktor.client.*
@@ -92,6 +93,10 @@ class OnlineGameRepository(
     // Bumped by every connectAndSend(); a job whose generation is stale has been superseded and
     // must not touch shared connection state on its way out (see the finally in connectAndSend).
     private var connectionGeneration = 0L
+    // The name we joined under, so a lost seat can be re-claimed without asking again.
+    private var myPlayerName = ""
+    // One automatic re-join per session, so a doomed one can never loop.
+    private var rejoinAttempted = false
     private var autoReconnectJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var shouldAutoReconnect = false
@@ -183,12 +188,14 @@ class OnlineGameRepository(
     }
 
     suspend fun createRoom(playerName: String, playerCount: Int) {
+        myPlayerName = playerName
         log.i { "Creating room: player=$playerName, count=$playerCount" }
         _fatalError.value = null
         connectAndSend(ClientMessage.CreateRoom(playerName, playerCount))
     }
 
     suspend fun joinRoom(code: String, playerName: String) {
+        myPlayerName = playerName
         roomCode = code.uppercase()
         log.i { "Joining room: code=$roomCode, player=$playerName" }
         _fatalError.value = null
@@ -302,6 +309,8 @@ class OnlineGameRepository(
         pendingSplicedEvents.clear()
         needsEventReplay.value = false
         myPlayerId = ""
+        myPlayerName = ""
+        rejoinAttempted = false
         roomCode = ""
         reconnectToken = ""
         reconnectAttempts = 0
@@ -459,6 +468,64 @@ class OnlineGameRepository(
         }
     }
 
+    /**
+     * Server errors that END this online session, or that we can quietly repair, as opposed to
+     * ones a screen should simply show. Returns true once the error has been dealt with.
+     */
+    private suspend fun handleSessionError(text: String): Boolean {
+        val seated = myPlayerId.isNotEmpty()
+
+        // The room is gone — typically the server restarted and dropped its in-memory rooms. The
+        // socket stays open, so without this the player is stranded on a frozen board under a
+        // green "Reconnected" banner. Gate on the SEAT, not the room code: joinRoom() fills
+        // roomCode before admission, so a wrong invite code is an ordinary lobby error.
+        if (seated && text.contains("Room not found", ignoreCase = true)) {
+            _fatalError.value = FatalSessionError.ROOM_GONE
+            OnlineSessionBackup.clear()
+            disconnect()
+            return true
+        }
+
+        // Our seat is gone ("Player not found in room" — we were away past the waiting-room
+        // window) or our token no longer matches ("Session invalid"). Either way the stored
+        // session can never resume, so drop it.
+        val seatGone = text.contains("Player not found", ignoreCase = true) ||
+            text.contains("Session invalid", ignoreCase = true)
+        if (seatGone) {
+            OnlineSessionBackup.clear()
+            // We still know the room and the name we used, and the room itself is still there,
+            // so try ONE ordinary re-join: the server hands back a same-name seat that is still
+            // held, and otherwise seats us as a new player. Only before a game starts — a
+            // running game seats nobody new. Beats sitting on a stale waiting room under a
+            // green banner, which is what players actually saw.
+            // runCatching: the persisted name lives in browser storage on web, and reading it
+            // throws outright when the visitor has site data blocked.
+            val name = myPlayerName.ifEmpty { runCatching { GamePrefs.getPlayerName() }.getOrDefault("") }
+            if (!rejoinAttempted && _gameState.value == null && roomCode.isNotEmpty() && name.isNotEmpty()) {
+                rejoinAttempted = true
+                myPlayerId = ""
+                val code = roomCode
+                log.i { "Seat lost in $code — re-joining as '$name'" }
+                scope.launch { connectAndSend(ClientMessage.JoinRoom(code, name)) }
+                return true
+            }
+            _fatalError.value = FatalSessionError.SEAT_LOST
+            disconnect()
+            return true
+        }
+
+        // The re-join above didn't land either (the room filled up, or the game started while we
+        // were away): no seat and no way back, so say so instead of flashing a toast.
+        if (rejoinAttempted && !seated) {
+            _fatalError.value = FatalSessionError.SEAT_LOST
+            disconnect()
+            return true
+        }
+
+        if (!seated) roomCode = "" // failed lobby join: don't keep the bad code
+        return false
+    }
+
     private suspend fun handleServerMessage(text: String) {
         val message = try {
             json.decodeFromString<ServerMessage>(text)
@@ -479,6 +546,7 @@ class OnlineGameRepository(
                 roomCode = message.roomCode
                 myPlayerId = message.playerId
                 reconnectToken = message.reconnectToken
+                rejoinAttempted = false // admitted: a future seat loss may try once more
                 OnlineSessionBackup.save(roomCode, myPlayerId, reconnectToken)
                 log.i { "Room created: code=$roomCode, playerId=$myPlayerId" }
                 if (message.protocolVersion > Protocol.VERSION) {
@@ -550,30 +618,7 @@ class OnlineGameRepository(
             }
             is ServerMessage.Error -> {
                 log.w { "Server error: ${message.message}" }
-                // "Room not found" while we hold a session (roomCode set) means the room is gone —
-                // typically the server restarted and dropped all in-memory rooms. The socket stays
-                // open, so without this the player is stranded on a frozen board under a green
-                // "Reconnected" banner. Make it terminal so the UI can leave. An empty roomCode is a
-                // failed lobby join, which the lobby surfaces as an ordinary error instead.
-                // Gate on myPlayerId, not roomCode: joinRoom() fills roomCode BEFORE admission, so a
-                // wrong or expired invite code used to take this fatal branch, emit nothing the
-                // lobby listens to, and leave it spinning to the 20 s timeout.
-                if (myPlayerId.isNotEmpty() && message.message.contains("Room not found", ignoreCase = true)) {
-                    _fatalError.value = FatalSessionError.ROOM_GONE
-                    OnlineSessionBackup.clear()
-                    disconnect()
-                } else {
-                    if (myPlayerId.isEmpty()) roomCode = "" // failed lobby join: don't keep the bad code
-                    // A rejected reconnect ("Player not found" = seat gone, "Session invalid" =
-                    // bad token) means the snapshot can never resume — clear it, or every web
-                    // page load retries the doomed resume and swallows any fresh ?room= invite.
-                    if (message.message.contains("Player not found", ignoreCase = true) ||
-                        message.message.contains("Session invalid", ignoreCase = true)
-                    ) {
-                        OnlineSessionBackup.clear()
-                    }
-                    _errors.emit(message.message)
-                }
+                if (!handleSessionError(message.message)) _errors.emit(message.message)
             }
             is ServerMessage.RoomClosed -> {
                 log.i { "Room $roomCode closed" }
@@ -732,6 +777,8 @@ class OnlineGameRepository(
 enum class FatalSessionError {
     /** The room is gone (e.g. the server restarted and lost its in-memory rooms). */
     ROOM_GONE,
+    /** Our seat in the room is gone and re-joining didn't get one back. */
+    SEAT_LOST,
     /** This client is too old for the server (protocol below MIN_SUPPORTED). */
     UPDATE_REQUIRED
 }

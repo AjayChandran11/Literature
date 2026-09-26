@@ -121,6 +121,7 @@ fun WaitingRoomScreen(
     if (fatal != null && !isLeaving) {
         val message = when (fatal) {
             FatalSessionError.ROOM_GONE -> stringResource(Res.string.error_room_gone)
+            FatalSessionError.SEAT_LOST -> stringResource(Res.string.error_seat_lost)
             FatalSessionError.UPDATE_REQUIRED -> stringResource(Res.string.error_update_required)
         }
         AlertDialog(
