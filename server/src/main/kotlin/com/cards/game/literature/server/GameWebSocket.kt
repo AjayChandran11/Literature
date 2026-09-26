@@ -106,12 +106,18 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Game already started")
                                 continue
                             }
-                            if (room.getHumanPlayerCount() >= room.targetPlayerCount) {
+                            // Hand back the seat this player already had, if it is still held:
+                            // same name, currently away. Keeps their team and stops a room from
+                            // filling up with the same people under new ids.
+                            val heldSeat = room.findSeatToReclaim(joinName)
+                            if (heldSeat == null && room.getHumanPlayerCount() >= room.targetPlayerCount
+                                && !room.evictLongestAbsentSeat()
+                            ) {
                                 sendError("Room is full")
                                 continue
                             }
 
-                            val playerId = room.addPlayer(joinName)
+                            val playerId = heldSeat?.also { room.reclaimSeat(it) } ?: room.addPlayer(joinName)
                             currentRoom = room
                             currentPlayerId = playerId
 
