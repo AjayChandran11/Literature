@@ -65,7 +65,10 @@ data class GameUiState(
     val isBotThinking: Boolean = false,
     val myPlayerId: String = "player_0",
     val myTeamId: String = "team_1",
-    val passSelection: PassSelectionUiState? = null
+    val passSelection: PassSelectionUiState? = null,
+    /** Epoch-ms deadline for the current turn, straight from the server; null when no clock
+     *  is running (offline, a bot's turn, a pending pass, a finished game). */
+    val turnDeadlineMs: Long? = null
 )
 
 // Safety-net delay for stats recording when no GameEnded event follows a FINISHED state.
@@ -364,7 +367,8 @@ class GameViewModel(
             isBotThinking = state.currentPlayer.isBot && state.phase == GamePhase.IN_PROGRESS,
             myPlayerId = myPlayerId,
             myTeamId = myTeam?.id ?: "team_1",
-            passSelection = passSelection
+            passSelection = passSelection,
+            turnDeadlineMs = state.turnDeadlineMs
         )
     }
 

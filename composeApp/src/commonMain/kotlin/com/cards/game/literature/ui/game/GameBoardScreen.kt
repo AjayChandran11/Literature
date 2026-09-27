@@ -1047,35 +1047,54 @@ private fun PersistentHeader(
 /** Merged score + turn info in a single ~36dp row for landscape. */
 /**
  * Online turn countdown, isolated into its own leaf so ticking it each second recomposes ONLY this
- * text — not the whole header row (score, turn label). Owns the 60s state; [timerKey] (a turn/score
- * composite) resets it. Renders nothing when offline or above 15s.
+ * text — not the whole header row (score, turn label). Counts down to the server's [deadlineMs],
+ * which arrives with every view: the server restarts its turn clock after EVERY move, including a
+ * successful ask that keeps the turn, so a countdown the client drove itself drifted and could sit
+ * at a red "0s" while the player still had most of a minute. Renders nothing when there is no
+ * clock (offline, a bot's turn, a pending pass) or above 15s.
  */
 @Composable
 private fun TurnTimerText(
-    timerKey: String,
+    deadlineMs: Long?,
     timerPaused: Boolean,
-    isOnline: Boolean,
     style: TextStyle,
     normalColor: Color,
     spacer: Dp,
 ) {
-    var secondsRemaining by remember { mutableStateOf(60) }
-    LaunchedEffect(timerKey, timerPaused, isOnline) {
-        if (!isOnline) return@LaunchedEffect
-        secondsRemaining = 60
-        while (secondsRemaining > 0 && !timerPaused) {
-            delay(1000L)
-            secondsRemaining--
+    var secondsRemaining by remember { mutableStateOf(0) }
+    LaunchedEffect(deadlineMs, timerPaused) {
+        if (deadlineMs == null) { secondsRemaining = 0; return@LaunchedEffect }
+        while (!timerPaused) {
+            val left = ((deadlineMs - currentTimeMillis() + 999) / 1000).coerceAtLeast(0)
+            secondsRemaining = left.toInt()
+            if (left <= 0L) break
+            delay(250L) // re-read the clock rather than assume a tick took exactly a second
         }
     }
-    if (isOnline && secondsRemaining <= 15) {
+    if (deadlineMs != null && secondsRemaining in 1..15) {
         Spacer(modifier = Modifier.width(spacer))
-        Text(
-            stringResource(Res.string.game_timer_seconds, secondsRemaining),
-            style = style,
-            fontWeight = FontWeight.Bold,
-            color = if (secondsRemaining <= 10) CardRed else normalColor
-        )
+        val label = stringResource(Res.string.game_timer_seconds, secondsRemaining)
+        if (secondsRemaining <= 10) {
+            // A pill, not just a red word. Colour alone carried the urgency, which says nothing
+            // to a red-green colour-blind player, and plain red on the dark header sat near
+            // 2.5:1. The error container pair is contrast-checked by the theme.
+            //
+            // Painted on the text's own line box, with horizontal padding only: any vertical
+            // padding here makes this the tallest thing in the banner and the whole banner
+            // grows by it the moment the clock passes ten seconds. The line box already
+            // carries the font's ascent and descent, so the fill has its own breathing room.
+            Text(
+                label,
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 6.dp),
+                style = style,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        } else {
+            Text(label, style = style, fontWeight = FontWeight.Bold, color = normalColor)
+        }
     }
 }
 
@@ -1085,7 +1104,6 @@ private fun CompactHeaderRow(
     onHelpClick: () -> Unit = {},
     timerPaused: Boolean = false
 ) {
-    val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
 
     Row(
         modifier = Modifier
@@ -1154,9 +1172,8 @@ private fun CompactHeaderRow(
                         )
                     }
                     TurnTimerText(
-                        timerKey = timerKey,
+                        deadlineMs = uiState.turnDeadlineMs,
                         timerPaused = timerPaused,
-                        isOnline = uiState.isOnline,
                         style = MaterialTheme.typography.bodySmall,
                         normalColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         spacer = 6.dp,
@@ -1396,10 +1413,6 @@ private fun TurnIndicatorBanner(
     onHelpClick: () -> Unit = {},
     timerPaused: Boolean = false
 ) {
-    // Composite key that changes on every action (turn change, ask, claim) — resets the countdown
-    // inside TurnTimerText below.
-    val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
-
     AnimatedVisibility(visible = uiState.phase == GamePhase.IN_PROGRESS) {
         // The gold "it's you" tint eases in rather than snapping.
         val bannerColor by animateColorAsState(
@@ -1441,9 +1454,8 @@ private fun TurnIndicatorBanner(
                         color = MaterialTheme.colorScheme.secondary
                     )
                     TurnTimerText(
-                        timerKey = timerKey,
+                        deadlineMs = uiState.turnDeadlineMs,
                         timerPaused = timerPaused,
-                        isOnline = uiState.isOnline,
                         style = MaterialTheme.typography.titleMedium,
                         normalColor = MaterialTheme.colorScheme.secondary,
                         spacer = 8.dp,
@@ -1478,9 +1490,8 @@ private fun TurnIndicatorBanner(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     TurnTimerText(
-                        timerKey = timerKey,
+                        deadlineMs = uiState.turnDeadlineMs,
                         timerPaused = timerPaused,
-                        isOnline = uiState.isOnline,
                         style = MaterialTheme.typography.titleMedium,
                         normalColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         spacer = 8.dp,

@@ -35,7 +35,25 @@ class GameRoom(
     private var botScope: CoroutineScope? = null
     private var playerIdCounter = 0
 
+    /**
+     * Guards seat allocation. Every socket runs on its own event-loop thread and the join path
+     * took no lock at all, so two people tapping Join in the same moment — the normal case when
+     * a room code lands in a group chat — both read the same [playerIdCounter], both built the
+     * same id, and the second write silently replaced the first in [players]. The loser kept an
+     * id whose session belonged to someone else: wrong name, wrong reconnect token, and a
+     * human count too low for the room to ever fill. The capacity check had the same shape one
+     * level up, which let a 6-player room seat a 7th.
+     *
+     * Everything in the critical section is non-suspending, so a plain monitor is the right
+     * tool here; the room's [mutex] guards game state and is held across suspension points.
+     */
+    private val seatLock = Any()
+
     private var turnTimeoutJob: Job? = null
+    // Epoch-ms deadline for the current player's turn, stamped at every move and sent out with
+    // the views. The clock restarts on every move — including a successful ask that keeps the
+    // turn — so a client can't derive it, and one that tried drifted into showing a stuck "0s".
+    private var turnDeadlineMs: Long? = null
     // Option C: while a correct claim is suspended for the claimer to pick who
     // plays next, this timer auto-resolves to the default target on expiry, and
     // the deadline rides out to clients so they can show a countdown.
@@ -144,6 +162,9 @@ class GameRoom(
 
     /** Test hook: arm the current player's turn clock as checkNextTurn() would. */
     internal fun startTurnTimerForTest() = startTurnTimer()
+
+    /** Test visibility: the deadline currently being sent to clients. */
+    internal val turnDeadlineForTest: Long? get() = turnDeadlineMs
 
     /** Test visibility: whether [playerId]'s seat is currently played by a bot. */
     internal fun isBotSeatForTest(playerId: String): Boolean? = gameState?.getPlayer(playerId)?.isBot
@@ -338,7 +359,7 @@ class GameRoom(
         absent.forEach { disconnectJobs.remove(it.playerId)?.cancel() }
 
         // Send game started to all connected players
-        broadcastGameViews()
+        broadcastAfterMove()
         // Say so in the game log: otherwise a human name plays at bot pace from move one and
         // nobody at the table knows why. Same event a mid-game replacement broadcasts.
         broadcastEvents(absent.map { GameEvent.PlayerReplacedByBot(it.playerId, it.playerName) })
@@ -377,7 +398,7 @@ class GameRoom(
                     state = result.newState
                     gameState = state
 
-                    broadcastGameViews()
+                    broadcastAfterMove()
                     broadcastEvents(result.events)
                 }
                 // A successful ask can end the game by emptying the other team.
@@ -428,7 +449,7 @@ class GameRoom(
                     startPassSelectionTimer() // sets the deadline read by broadcastGameViews
                 }
 
-                broadcastGameViews()
+                broadcastAfterMove()
                 broadcastEvents(result.events)
             }
         } finally {
@@ -497,7 +518,7 @@ class GameRoom(
             val result = engine.applyPassSelection(state, target)
             gameState = result.newState
             markFinishedIfNeeded(result.newState)
-            broadcastGameViews()
+            broadcastAfterMove()
             broadcastEvents(result.events)
         }
         checkNextTurn()
@@ -793,7 +814,7 @@ class GameRoom(
             // broadcasting the reconnect event. This ensures the client's event
             // replay (which filters by lastSeenEventTimestamp) processes the
             // GameUpdate before any new events update that timestamp.
-            val view = state.toPlayerView(playerId, getConnectionStatus(), getDisconnectDeadlines(), passSelectionDeadline)
+            val view = state.toPlayerView(playerId, getConnectionStatus(), getDisconnectDeadlines(), passSelectionDeadline, turnDeadlineMs)
             session.send(ServerMessage.GameUpdate(view))
 
             // Now broadcast reconnect event to all players
@@ -830,7 +851,7 @@ class GameRoom(
                 if (it.id == playerId) it.copy(isBot = false) else it
             }
             gameState = state.copy(players = updatedPlayers)
-            broadcastGameViews()
+            broadcastAfterMove() // the seat is human again: their clock starts now
         }
     }
 
@@ -878,7 +899,7 @@ class GameRoom(
                 events = state.events + newEvents
             )
 
-            broadcastGameViews()
+            broadcastAfterMove()
             broadcastEvents(newEvents)
         }
         checkNextTurn()
@@ -887,13 +908,16 @@ class GameRoom(
     private fun startTurnTimer() {
         turnTimeoutJob?.cancel()
         val state = gameState ?: return
-        if (state.phase != GamePhase.IN_PROGRESS) return
-        if (state.pendingPass != null) return // the pass-selection timer owns the clock
+        if (state.phase != GamePhase.IN_PROGRESS) { turnDeadlineMs = null; return }
+        if (state.pendingPass != null) { turnDeadlineMs = null; return } // the pass timer owns the clock
         val currentId = state.currentPlayer.id
-        if (state.currentPlayer.isBot) return
+        if (state.currentPlayer.isBot) { turnDeadlineMs = null; return }
 
+        // Honour the stamp the move already broadcast, so the countdown a player sees and the
+        // clock the server enforces are the same one.
+        val deadline = turnDeadlineMs ?: (System.currentTimeMillis() + turnTimeoutMs).also { turnDeadlineMs = it }
         turnTimeoutJob = botScope?.launch {
-            delay(turnTimeoutMs)
+            delay((deadline - System.currentTimeMillis()).coerceAtLeast(0))
             skipTurn(currentId)
         }
     }
@@ -919,6 +943,7 @@ class GameRoom(
 
         if (current.isBot) {
             turnTimeoutJob?.cancel()
+            turnDeadlineMs = null // no clock runs on a bot's turn
             // Single-flight: only ever run ONE bot-turn loop at a time. Any
             // checkNextTurn() that fires while a loop is mid-decision — notably
             // replaceWithBot() from the disconnect timer — would otherwise launch
@@ -958,13 +983,32 @@ class GameRoom(
         }
     }
 
+    /**
+     * Broadcast after a move: re-stamps the turn clock first, because the server restarts its
+     * turn timer for whoever is on turn now. Every move path uses this; the plain
+     * [broadcastGameViews] is for everything else (a disconnect, a reconnect, a bot swap),
+     * where the running clock must be reported as-is rather than reset.
+     */
+    private suspend fun broadcastAfterMove() {
+        stampTurnDeadline()
+        broadcastGameViews()
+    }
+
+    /** Matches what [startTurnTimer] will arm: a deadline only while a human is on the clock. */
+    private fun stampTurnDeadline() {
+        val state = gameState
+        turnDeadlineMs = if (state != null && state.phase == GamePhase.IN_PROGRESS &&
+            state.pendingPass == null && !state.currentPlayer.isBot
+        ) System.currentTimeMillis() + turnTimeoutMs else null
+    }
+
     private suspend fun broadcastGameViews() {
         val state = gameState ?: return
         val connectionStatus = getConnectionStatus()
         val deadlines = getDisconnectDeadlines()
         val passDeadline = passSelectionDeadline
         players.values.filter { it.isConnected }.forEach { session ->
-            val view = state.toPlayerView(session.playerId, connectionStatus, deadlines, passDeadline)
+            val view = state.toPlayerView(session.playerId, connectionStatus, deadlines, passDeadline, turnDeadlineMs)
             session.send(ServerMessage.GameUpdate(view))
         }
     }
@@ -1069,7 +1113,7 @@ class GameRoom(
                     is BotAction.Claim -> lastAskerId = null
                 }
 
-                broadcastGameViews()
+                broadcastAfterMove()
                 broadcastEvents(result.events)
                 true
             }
