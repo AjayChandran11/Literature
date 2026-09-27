@@ -4,7 +4,10 @@ import com.cards.game.literature.protocol.RoomPhase
 import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketExtension
 import io.ktor.websocket.WebSocketSession
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -185,6 +188,54 @@ class GameRoomWaitingRoomTest {
         override suspend fun flush() {}
         @Deprecated("Use cancel() instead.", level = DeprecationLevel.ERROR)
         override fun terminate() {}
+    }
+
+    // --- simultaneous joins (a room code landing in a group chat) ---
+
+    @Test
+    fun peopleJoiningAtTheSameMomentGetDistinctSeats() = runBlocking {
+        repeat(30) { attempt ->
+            val room = GameRoom("TESTRC$attempt", 8)
+            val start = CompletableDeferred<Unit>()
+            // Release them all at once, on real threads: seat allocation was a plain
+            // counter++ with no lock, so two joiners built the same id and the second
+            // overwrote the first in the players map. Seen for real on a test rig.
+            val seated = (1..8).map { i ->
+                async(Dispatchers.Default) {
+                    start.await()
+                    room.trySeat("Player$i")
+                }
+            }
+            start.complete(Unit)
+            val ids = seated.awaitAll().map { (it as GameRoom.SeatResult.Seated).playerId }
+
+            assertEquals(ids.size, ids.toSet().size, "every joiner gets their own seat: $ids")
+            assertEquals(8, room.getHumanPlayerCount(), "and every seat is accounted for")
+            room.cleanup()
+        }
+    }
+
+    @Test
+    fun simultaneousJoinsCannotOverfillTheRoom() = runBlocking {
+        repeat(30) { attempt ->
+            val room = GameRoom("TESTOF$attempt", 4)
+            val start = CompletableDeferred<Unit>()
+            // The capacity check was a check-then-act outside any lock, so several joiners
+            // could all pass it. A 6-player room issuing 7 seats shows up in production logs.
+            val results = (1..10).map { i ->
+                async(Dispatchers.Default) {
+                    start.await()
+                    room.trySeat("Player$i")
+                }
+            }
+            start.complete(Unit)
+            val outcomes = results.awaitAll()
+
+            assertEquals(4, outcomes.count { it is GameRoom.SeatResult.Seated }, "exactly the room's capacity")
+            assertEquals(6, outcomes.count { it is GameRoom.SeatResult.RoomFull }, "the rest are turned away")
+            assertEquals(4, room.getHumanPlayerCount())
+            room.cleanup()
+        }
     }
 
     @Test

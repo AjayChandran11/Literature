@@ -123,7 +123,7 @@ class GameRoom(
         }
     }
 
-    fun addPlayer(name: String, isHost: Boolean = false): String {
+    fun addPlayer(name: String, isHost: Boolean = false): String = synchronized(seatLock) {
         val playerId = "player_${playerIdCounter++}"
         val session = PlayerSession(
             playerId = playerId,
@@ -141,7 +141,35 @@ class GameRoom(
         if (isHost || currentHost == null || !players.containsKey(currentHost)) {
             hostPlayerId = playerId
         }
-        return playerId
+        return@synchronized playerId
+    }
+
+    /** What happened when someone asked for a seat. */
+    sealed class SeatResult {
+        /** [reclaimed] is true when they got their own held seat back rather than a new one. */
+        data class Seated(val playerId: String, val reclaimed: Boolean) : SeatResult()
+        data object RoomFull : SeatResult()
+        data object NotWaiting : SeatResult()
+    }
+
+    /**
+     * The whole join decision — still waiting? own seat to reclaim? room full? evict? new seat? —
+     * as ONE atomic step. Split across the handler as separate calls it was a check-then-act
+     * race: see [seatLock].
+     */
+    fun trySeat(name: String): SeatResult = synchronized(seatLock) {
+        if (phase != RoomPhase.WAITING) return@synchronized SeatResult.NotWaiting
+
+        findSeatToReclaim(name)?.let { held ->
+            reclaimSeat(held)
+            return@synchronized SeatResult.Seated(held, reclaimed = true)
+        }
+
+        if (getHumanPlayerCount() >= targetPlayerCount && !evictLongestAbsentSeat()) {
+            return@synchronized SeatResult.RoomFull
+        }
+
+        SeatResult.Seated(addPlayer(name), reclaimed = false)
     }
 
     fun switchTeam(playerId: String) {
