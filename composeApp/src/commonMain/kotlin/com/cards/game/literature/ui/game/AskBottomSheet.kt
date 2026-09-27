@@ -33,13 +33,21 @@ import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import com.cards.game.literature.ui.common.emoji
 import com.cards.game.literature.ui.common.displayEmoji
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
-private fun Suit.accessibleName(): String = when (this) {
-    Suit.SPADES -> "Spades"
-    Suit.HEARTS -> "Hearts"
-    Suit.DIAMONDS -> "Diamonds"
-    Suit.CLUBS -> "Clubs"
-}
+/** A suit chip's label is a bare glyph, which TalkBack reads as nothing useful (or as
+ *  "black spade suit"). This names it, and it is localised — the old version was a dead
+ *  hard-coded English helper nothing called. */
+@Composable
+private fun Suit.accessibleName(): String = stringResource(
+    when (this) {
+        Suit.SPADES -> Res.string.cd_suit_spades
+        Suit.HEARTS -> Res.string.cd_suit_hearts
+        Suit.DIAMONDS -> Res.string.cd_suit_diamonds
+        Suit.CLUBS -> Res.string.cd_suit_clubs
+    }
+)
 
 private fun suitFor(hs: HalfSuit): Suit = when (hs) {
     HalfSuit.SPADES_LOW, HalfSuit.SPADES_HIGH -> Suit.SPADES
@@ -176,6 +184,7 @@ fun AskBottomSheet(
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Suit.entries.forEach { suit ->
+                            val suitName = suit.accessibleName()
                             FilterChip(
                                 selected = selectedSuit == suit,
                                 enabled = suit in availableSuits,
@@ -187,7 +196,8 @@ fun AskBottomSheet(
                                         onIsLowSelected(null)
                                     }
                                 },
-                                label = { Text(suit.emoji, style = MaterialTheme.typography.titleMedium) }
+                                label = { Text(suit.emoji, style = MaterialTheme.typography.titleMedium) },
+                                modifier = Modifier.semantics { contentDescription = suitName }
                             )
                         }
                     }
@@ -302,6 +312,7 @@ fun AskBottomSheet(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Suit.entries.forEach { suit ->
+                        val suitName = suit.accessibleName()
                         FilterChip(
                             selected = selectedSuit == suit,
                             enabled = suit in availableSuits,
@@ -313,7 +324,8 @@ fun AskBottomSheet(
                                     onIsLowSelected(null)
                                 }
                             },
-                            label = { Text(suit.emoji, style = MaterialTheme.typography.headlineSmall) }
+                            label = { Text(suit.emoji, style = MaterialTheme.typography.headlineSmall) },
+                            modifier = Modifier.semantics { contentDescription = suitName }
                         )
                     }
                 }

@@ -667,7 +667,7 @@ private fun BoardColumn(label: String, tint: Color, modifier: Modifier = Modifie
 private fun GapSlot(selected: Card?) {
     if (selected != null) {
         // Mirror the player's choice in the gap, highlighted, so the board reads as solved-in-progress.
-        CardView(card = selected, isSelected = true, onClick = {})
+        CardView(card = selected, isSelected = true)
         return
     }
     val gold = GoldAccent

@@ -30,6 +30,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -657,6 +660,7 @@ fun GameBoardContent(
         // Finale dim under the last claim's banner, so the stinger doesn't pop over
         // a fully lit board. It also swallows board taps once the match is decided;
         // tapping it skips straight to the result screen.
+        val skipLabel = stringResource(Res.string.match_intro_skip_hint)
         val finaleDim by animateFloatAsState(
             targetValue = if (finaleDimmed) 0.55f else 0f,
             animationSpec = tween(500),
@@ -670,6 +674,8 @@ fun GameBoardContent(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
+                        onClickLabel = skipLabel,
+                        role = Role.Button,
                         onClick = skipFinale
                     )
             )
@@ -979,6 +985,9 @@ private fun LastEventStrip(events: List<GameEvent>) {
     if (messages.isEmpty()) return
 
     Surface(
+        // Announced as it changes: TalkBack users had no way to know an opponent had asked,
+        // taken a card, or claimed — the whole narration of the match was silent.
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
     ) {
@@ -1209,27 +1218,41 @@ private fun CompactHeaderRow(
 
         // Help icon
         val helpDesc = stringResource(Res.string.help_button_description)
+        // 40dp of tap area around a 20dp circle. The footprint stays 20dp and the target
+        // OVERFLOWS it: sized properly, this box became the tallest thing in its row and
+        // pushed the header open. wrapContentSize(unbounded) measures the inner 40dp with
+        // its own constraints while this node keeps reporting 20dp, and nothing here clips,
+        // so the extra area is still hit-tested.
         Box(
             modifier = Modifier
                 .size(20.dp)
-                .background(
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-                    shape = CircleShape
-                )
+                .wrapContentSize(align = Alignment.Center, unbounded = true)
+                .size(40.dp)
                 .clickable(
                     onClick = onHelpClick,
                     indication = null,
+                    role = Role.Button,
                     interactionSource = remember { MutableInteractionSource() }
                 )
                 .semantics { contentDescription = helpDesc },
             contentAlignment = Alignment.Center
         ) {
+          Box(
+            modifier = Modifier
+                .size(20.dp)
+                .background(
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+          ) {
             Text(
                 "?",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+          }
         }
     }
 }
@@ -1315,6 +1338,9 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
     // onSurface already IS "bright on dark, dark on light" — no luminance math needed.
     val darkSuitColor = MaterialTheme.colorScheme.onSurface
     Surface(
+        // Announced as it changes: TalkBack users had no way to know an opponent had asked,
+        // taken a card, or claimed — the whole narration of the match was silent.
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
     ) {
@@ -1431,7 +1457,10 @@ private fun TurnIndicatorBanner(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(bannerColor)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                // Whose turn it is is the single most important thing on this screen, and it
+                // changed silently for anyone not watching the colour.
+                .semantics { liveRegion = LiveRegionMode.Polite },
             contentAlignment = Alignment.Center
         ) {
             val pass = uiState.passSelection
@@ -1509,26 +1538,38 @@ private fun TurnIndicatorBanner(
 
             // Help icon
             val helpDesc = stringResource(Res.string.help_button_description)
+            // As in the header: 22dp of layout, 44dp of tap area overflowing it. Sized
+            // properly this was the tallest child of the banner's Box, and the banner grew
+            // by the difference.
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .size(22.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-                        shape = CircleShape
-                    )
+                    .wrapContentSize(align = Alignment.Center, unbounded = true)
+                    .size(44.dp)
                     .clickable(onClick = onHelpClick,
                         indication = null,
+                        role = Role.Button,
                         interactionSource = remember { MutableInteractionSource() })
                     .semantics { contentDescription = helpDesc },
                 contentAlignment = Alignment.Center
             ) {
+              Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+              ) {
                 Text(
                     "?",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+              }
             }
         }
     }

@@ -151,7 +151,9 @@ fun ClaimBottomSheet(
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                    modifier = Modifier.height(if (isCompact) 32.dp else 36.dp)
+                                    // heightIn, not height: at the larger accessibility font
+                                    // scales a fixed pill clipped its own label.
+                                    modifier = Modifier.heightIn(min = if (isCompact) 32.dp else 36.dp)
                                 ) {
                                     Box(
                                         contentAlignment = Alignment.Center,
@@ -165,14 +167,23 @@ fun ClaimBottomSheet(
                                     }
                                 }
                             } else {
+                                // Names the target of the tap: the pill itself only reads out a
+                                // teammate's name and a glyph, so TalkBack gave no clue what it did.
+                                val assignLabel = stringResource(
+                                    Res.string.cd_assign_card,
+                                    "${card.value.displayName} ${card.suit.name.lowercase()}"
+                                )
                                 var expanded by remember { mutableStateOf(false) }
                                 Box {
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
                                         color = MaterialTheme.colorScheme.surfaceVariant,
                                         modifier = Modifier
-                                            .height(if (isCompact) 32.dp else 36.dp)
-                                            .clickable { expanded = true }
+                                            .heightIn(min = if (isCompact) 32.dp else 36.dp)
+                                            .clickable(
+                                                onClickLabel = assignLabel,
+                                                role = Role.Button
+                                            ) { expanded = true }
                                     ) {
                                         Box(
                                             contentAlignment = Alignment.Center,
@@ -282,7 +293,7 @@ fun ClaimBottomSheet(
                                 "$name:",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.width(72.dp)
+                                modifier = Modifier.widthIn(min = 72.dp).weight(0.4f)
                             )
                             Text(
                                 cards.joinToString(", ") { it.key.displayEmoji },
