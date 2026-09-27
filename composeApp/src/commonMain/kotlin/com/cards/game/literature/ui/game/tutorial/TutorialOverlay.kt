@@ -362,7 +362,8 @@ private fun TooltipCard(state: TutorialState, accentColor: Color, surfaceColor: 
             text = hintText,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
-            color = Color(accentColor.red, accentColor.green, accentColor.blue),
+            // onSurface, not the gold accent: gold on the tooltip's own surface was ~1.8:1.
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
     }

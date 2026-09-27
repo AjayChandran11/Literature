@@ -63,6 +63,8 @@ import com.cards.game.literature.ui.game.tutorial.rememberTutorialState
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
+import com.cards.game.literature.ui.theme.successGreen
+import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.viewmodel.GameUiState
 import com.cards.game.literature.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
@@ -1140,7 +1142,7 @@ private fun CompactHeaderRow(
         Spacer(modifier = Modifier.width(4.dp))
         AnimatedScoreText(
             score = uiState.myTeamScore,
-            color = LightGreen,
+            color = successGreen,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
