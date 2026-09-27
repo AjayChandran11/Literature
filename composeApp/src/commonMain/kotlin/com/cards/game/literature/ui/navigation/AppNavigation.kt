@@ -34,6 +34,9 @@ import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.stats.PuzzleStore
 import com.cards.game.literature.stats.currentEpochDay
 import com.cards.game.literature.repository.OnlineGameRepository
+import com.cards.game.literature.repository.GameRepository
+import com.cards.game.literature.preferences.OnlineSessionBackup
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.cards.game.literature.ui.game.GameBoardScreen
 import com.cards.game.literature.ui.home.HomeScreen
 import com.cards.game.literature.ui.home.SettingsScreen
@@ -286,6 +289,21 @@ fun AppNavigation() {
             val difficulty = backStackEntry.arguments?.read { getStringOrNull("difficulty") }
                 ?.let { runCatching { BotDifficulty.valueOf(it) }.getOrNull() }
                 ?: BotDifficulty.MEDIUM
+            // Process death mid-match: the route is restored but the repository is not, and the
+            // board below would quietly deal a brand new hand and present it as the game in
+            // progress — a 4-2 lead replaced by a fresh deal, with no message. Compare the game
+            // that was running against the one that is: a configuration change matches (or has
+            // nothing recorded yet), a lost process cannot.
+            val localRepo = koinInject<GameRepository>()
+            var lastGameId by rememberSaveable { mutableStateOf("") }
+            LaunchedEffect(Unit) {
+                if (lastGameId.isNotEmpty() && localRepo.gameState.value?.gameId != lastGameId) {
+                    navController.popBackStack(Routes.HOME, inclusive = false)
+                }
+            }
+            LaunchedEffect(Unit) {
+                localRepo.gameState.filterNotNull().collect { lastGameId = it.gameId }
+            }
             GameBoardScreen(
                 playerName = playerName,
                 playerCount = playerCount,
