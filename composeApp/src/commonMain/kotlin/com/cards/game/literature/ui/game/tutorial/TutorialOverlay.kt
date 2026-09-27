@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,10 +67,10 @@ private fun TutorialStep.emoji(): String = when (this) {
 
 // ─── Tutorial State ─────────────────────────────────────────────────────────
 
-class TutorialState(initiallyActive: Boolean) {
+class TutorialState(initiallyActive: Boolean, initialStep: TutorialStep = TutorialStep.SCORE_BAR) {
     var isActive by mutableStateOf(initiallyActive)
         private set
-    var currentStep by mutableStateOf(TutorialStep.SCORE_BAR)
+    var currentStep by mutableStateOf(initialStep)
         private set
     /** When true, skip HAND_TAB step (landscape has no tab bar). */
     var skipHandTab by mutableStateOf(false)
@@ -99,10 +101,25 @@ class TutorialState(initiallyActive: Boolean) {
     }
 }
 
+/**
+ * Saves which step the tutorial is on. Without it an Activity recreation — a rotation, or the
+ * system switching to dark mode — restarted a first-timer's walkthrough from step one, every
+ * time. Target bounds aren't saved: the targets re-report them on the next layout pass.
+ */
+private val TutorialStateSaver = listSaver<TutorialState, String>(
+    save = { listOf(it.isActive.toString(), it.currentStep.name) },
+    restore = { saved ->
+        TutorialState(
+            initiallyActive = saved[0].toBooleanStrictOrNull() ?: false,
+            initialStep = TutorialStep.entries.firstOrNull { it.name == saved[1] } ?: TutorialStep.SCORE_BAR
+        )
+    }
+)
+
 @Composable
 fun rememberTutorialState(isFirstGame: Boolean): TutorialState {
     val windowInfo = currentWindowAdaptiveInfo()
-    val state = remember { TutorialState(initiallyActive = isFirstGame) }
+    val state = rememberSaveable(saver = TutorialStateSaver) { TutorialState(initiallyActive = isFirstGame) }
     // Skip HAND_TAB in side-by-side layout (no tab bar exists)
     state.skipHandTab = windowInfo.useSideBySide
     return state

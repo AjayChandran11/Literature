@@ -11,6 +11,11 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
+import com.cards.game.literature.ui.common.cardAssignmentsSaver
+import com.cards.game.literature.ui.common.enumSaver
+import com.cards.game.literature.ui.common.nullableEnumSaver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,9 +45,11 @@ fun ClaimBottomSheet(
     onConfirm: (ClaimDeclaration) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var step by remember { mutableStateOf(ClaimStep.SELECT_HALF_SUIT) }
-    var selectedHalfSuit by remember { mutableStateOf<HalfSuit?>(null) }
-    var assignments by remember { mutableStateOf<MutableMap<Card, String>>(mutableMapOf()) }
+    // Saved, not just remembered — an Activity recreation (rotation, or the system flipping to
+    // dark mode) used to drop a claim half-way through assigning six cards to teammates.
+    var step by rememberSaveable(stateSaver = enumSaver<ClaimStep>()) { mutableStateOf(ClaimStep.SELECT_HALF_SUIT) }
+    var selectedHalfSuit by rememberSaveable(stateSaver = nullableEnumSaver<HalfSuit>()) { mutableStateOf<HalfSuit?>(null) }
+    var assignments by rememberSaveable(stateSaver = cardAssignmentsSaver) { mutableStateOf<MutableMap<Card, String>>(mutableMapOf()) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val claimYouLabel = stringResource(Res.string.claim_you)

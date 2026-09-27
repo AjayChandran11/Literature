@@ -11,11 +11,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import com.cards.game.literature.ui.common.enumSaver
+import com.cards.game.literature.ui.common.nullableEnumSaver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -156,14 +159,18 @@ fun GameBoardContent(
     val uiState by viewModel.uiState.collectAsState()
     val gameLog by viewModel.gameLog.collectAsState()
 
-    var showAskSheet by remember { mutableStateOf(false) }
-    var showClaimSheet by remember { mutableStateOf(false) }
-    var showHelpSheet by remember { mutableStateOf(false) }
-    var askSuit by remember { mutableStateOf<Suit?>(null) }
-    var askIsLow by remember { mutableStateOf<Boolean?>(null) }
-    // var selectedCard by remember { mutableStateOf<Card?>(null) } // TODO: future use
-    var selectedTab by remember { mutableStateOf(GameTab.TABLE) }
-    var previouslyMyTurn by remember { mutableStateOf(false) }
+    // rememberSaveable, not remember: MainActivity sets no configChanges, so a rotation — or the
+    // system switching to dark mode at dusk — recreates the Activity mid-turn. A plain remember
+    // dropped the open sheet, the half-picked ask, and the tab you were on, while the server's
+    // turn clock kept running. previouslyMyTurn is saved for the same reason: restored as false on
+    // your own turn it re-fired the your-turn chime and yanked you back to the Hand tab.
+    var showAskSheet by rememberSaveable { mutableStateOf(false) }
+    var showClaimSheet by rememberSaveable { mutableStateOf(false) }
+    var showHelpSheet by rememberSaveable { mutableStateOf(false) }
+    var askSuit by rememberSaveable(stateSaver = nullableEnumSaver<Suit>()) { mutableStateOf<Suit?>(null) }
+    var askIsLow by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    var selectedTab by rememberSaveable(stateSaver = enumSaver<GameTab>()) { mutableStateOf(GameTab.TABLE) }
+    var previouslyMyTurn by rememberSaveable { mutableStateOf(false) }
     // Bookmark of how far into the event log we've already reacted (sounds/haptics/celebration).
     // Seed it at the CURRENT log length, not 0: the ViewModel-scoped gameLog survives an Activity
     // recreation (a system dark/light theme change is a uiMode config change and MainActivity has no

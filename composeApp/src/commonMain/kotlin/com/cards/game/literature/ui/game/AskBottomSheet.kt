@@ -11,6 +11,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.cards.game.literature.ui.common.cardListSaver
+import com.cards.game.literature.ui.common.nullableEnumSaver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -64,10 +67,15 @@ fun AskBottomSheet(
     onConfirm: (targetId: String, cards: List<Card>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedSuit by remember { mutableStateOf(initialSuit) }
-    var selectedIsLow by remember { mutableStateOf(initialIsLow) }
-    val selectedCards = remember { mutableStateListOf<Card>() }
-    var selectedOpponent by remember { mutableStateOf<PlayerInfo?>(null) }
+    // Saved, not just remembered: a rotation or a system dark-mode switch recreates the Activity,
+    // and a plain remember threw away a queue of cards picked one by one — mid-turn, on the clock.
+    var selectedSuit by rememberSaveable(stateSaver = nullableEnumSaver<Suit>()) { mutableStateOf(initialSuit) }
+    var selectedIsLow by rememberSaveable { mutableStateOf(initialIsLow) }
+    val selectedCards = rememberSaveable(saver = cardListSaver) { mutableStateListOf<Card>() }
+    // Held by id, not by value: the opponent's own card count changes as the turn goes on, so a
+    // saved copy would go stale. Resolving each time also drops the selection if they leave.
+    var selectedOpponentId by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedOpponent = opponents.firstOrNull { it.id == selectedOpponentId }
 
     val availableSuits = myHandByHalfSuit.keys.map { suitFor(it) }.toSet()
 
@@ -249,8 +257,8 @@ fun AskBottomSheet(
                         ) {
                             activeOpponents.forEach { opp ->
                                 FilterChip(
-                                    selected = selectedOpponent == opp,
-                                    onClick = { selectedOpponent = opp },
+                                    selected = selectedOpponentId == opp.id,
+                                    onClick = { selectedOpponentId = opp.id },
                                     label = { Text("${opp.name} (${opp.cardCount})") }
                                 )
                             }
@@ -372,8 +380,8 @@ fun AskBottomSheet(
                     ) {
                         activeOpponents.forEach { opp ->
                             FilterChip(
-                                selected = selectedOpponent == opp,
-                                onClick = { selectedOpponent = opp },
+                                selected = selectedOpponentId == opp.id,
+                                onClick = { selectedOpponentId = opp.id },
                                 label = { Text("${opp.name} (${opp.cardCount})") }
                             )
                         }
