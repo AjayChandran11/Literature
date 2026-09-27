@@ -1167,6 +1167,37 @@ class GameRoom(
         }
     }
 
+    /**
+     * True once the room has been taken out of the registry. Every handler checks it: a socket
+     * that was mid-conversation still holds a reference to this object, and without the flag it
+     * kept playing into a room that no longer existed — every later reconnect and every invite
+     * answered "Room not found", with nothing at the time to explain why.
+     */
+    @Volatile
+    private var closed = false
+    val isClosed: Boolean get() = closed
+
+    /**
+     * Shut the room down for good: tell whoever is still attached, close their sockets, then
+     * release the timers. [ServerMessage.RoomClosed] has been in the protocol and handled by the
+     * client since the beginning, and until now nothing ever sent it.
+     */
+    suspend fun closeAndNotify() {
+        if (closed) return
+        closed = true
+        players.values.filter { it.isConnected }.forEach { player ->
+            runCatching { player.send(ServerMessage.RoomClosed) }
+        }
+        players.values.forEach { player ->
+            runCatching {
+                player.session?.close(
+                    CloseReason(CloseReason.Codes.NORMAL, "Room closed")
+                )
+            }
+        }
+        cleanup()
+    }
+
     fun cleanup() {
         turnTimeoutJob?.cancel()
         passSelectionJob?.cancel()

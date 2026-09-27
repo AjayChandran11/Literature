@@ -52,6 +52,16 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                         continue
                     }
 
+                    // The room may have been swept or shut down while this socket sat idle.
+                    // Every handler below assumes a live room; say so once here instead.
+                    val attached = currentRoom
+                    if (attached != null && attached.isClosed) {
+                        sendMessage(ServerMessage.RoomClosed)
+                        currentRoom = null
+                        currentPlayerId = null
+                        continue
+                    }
+
                     when (message) {
                         is ClientMessage.CreateRoom -> {
                             if (currentRoom != null) {

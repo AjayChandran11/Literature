@@ -31,7 +31,10 @@ class RoomManager {
     fun getRoom(roomCode: String): GameRoom? = rooms[roomCode.uppercase()]
 
     fun removeRoom(roomCode: String) {
-        rooms.remove(roomCode)?.cleanup()
+        val room = rooms.remove(roomCode) ?: return
+        // Announce it before it stops existing. A client whose socket is still open otherwise
+        // played on into a room the registry had already dropped.
+        cleanupScope.launch { room.closeAndNotify() }
         log.info("Room {} removed", roomCode)
     }
 
@@ -69,8 +72,22 @@ class RoomManager {
     }
 
     fun shutdown() {
-        cleanupScope.cancel()
-        rooms.values.forEach { it.cleanup() }
+        val open = rooms.values.toList()
         rooms.clear()
+        // Best effort only, and deliberately not wired to a JVM shutdown hook: Netty's event
+        // loops are daemon threads, so they are already being torn down while hooks run and the
+        // frames are simply never written (measured — the sends are rejected with "event
+        // executor terminated"). Delivering a goodbye on SIGTERM would need a signal handler
+        // running before JVM shutdown begins. What this does guarantee is that the rooms are
+        // marked closed and their sockets released; the clients then reconnect and are told
+        // the room is gone, which is the same outcome with one extra round trip.
+        // Bounded: shutdown must not hang on a socket that will not drain.
+        runBlocking {
+            withTimeoutOrNull(2_000) {
+                open.map { room -> async { room.closeAndNotify() } }.awaitAll()
+            }
+        }
+        open.forEach { it.cleanup() }
+        cleanupScope.cancel()
     }
 }
