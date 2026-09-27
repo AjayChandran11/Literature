@@ -6,11 +6,14 @@ import androidx.compose.ui.window.ComposeViewport
 import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.di.appModule
 import com.cards.game.literature.network.NetworkMonitor
+import androidx.compose.runtime.LaunchedEffect
 import com.cards.game.literature.notifications.AppLifecycleObserver
+import com.cards.game.literature.notifications.NotificationCoordinator
 import com.cards.game.literature.preferences.OnlineSessionBackup
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.koin.compose.KoinApplication
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalWasmJsInterop::class)
 fun main() {
@@ -37,6 +40,12 @@ fun main() {
         WithEmojiFallback {
             WebPageColumn {
                 KoinApplication(application = { modules(appModule) }) {
+                    // Android starts this in its Application class; the web never started it
+                    // at all, so the your-turn cue had nothing driving it. Inside the Koin
+                    // scope because that is where the graph exists on this platform; start()
+                    // is idempotent.
+                    val notifications = koinInject<NotificationCoordinator>()
+                    LaunchedEffect(Unit) { notifications.start() }
                     App()
                 }
             }
