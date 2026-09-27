@@ -33,8 +33,7 @@ fun CompactActionButtons(
             shape = RoundedCornerShape(8.dp),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
             Text(stringResource(Res.string.action_ask_card), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -47,8 +46,7 @@ fun CompactActionButtons(
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.onSecondary,
-                disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                contentColor = MaterialTheme.colorScheme.onSecondary
             )
         ) {
             Text(stringResource(Res.string.action_claim_deck), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -73,8 +71,7 @@ fun ActionButtons(
             modifier = Modifier.weight(1f).height(56.dp),
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
             Text(stringResource(Res.string.action_ask_card), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -86,8 +83,7 @@ fun ActionButtons(
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.onSecondary,
-                disabledContainerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                contentColor = MaterialTheme.colorScheme.onSecondary
             )
         ) {
             Text(stringResource(Res.string.action_claim_deck), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

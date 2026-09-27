@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -83,8 +84,21 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = Color(0xFF424242),
     error = Color(0xFFB00020),
     onError = Color.White,
-    outline = Color(0xFF4CAF50),
+    // A green-biased neutral, not the brand green this used to be. Material spends `outline` on
+    // hairlines and on anything meant to read as inactive, so a vivid #4CAF50 made disabled
+    // controls look live and every divider look like an accent.
+    outline = Color(0xFF77826F),
 )
+
+/**
+ * The "your team" / success green, as text. [LightGreen] is a dark-theme value: on the light
+ * theme's near-white grounds it computes to roughly 2.5:1, well under the 4.5:1 minimum for
+ * text. Dark keeps the brighter green; light steps down to [FeltGreen], which reads the same
+ * and passes. Read from the live scheme, so a dynamic or manually-set theme still picks right.
+ */
+val successGreen: Color
+    @Composable
+    get() = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) FeltGreen else LightGreen
 
 // ─── Typography ──────────────────────────────────────────────────────────────
 

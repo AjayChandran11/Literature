@@ -11,6 +11,11 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
+import com.cards.game.literature.ui.common.cardAssignmentsSaver
+import com.cards.game.literature.ui.common.enumSaver
+import com.cards.game.literature.ui.common.nullableEnumSaver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,9 +45,11 @@ fun ClaimBottomSheet(
     onConfirm: (ClaimDeclaration) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var step by remember { mutableStateOf(ClaimStep.SELECT_HALF_SUIT) }
-    var selectedHalfSuit by remember { mutableStateOf<HalfSuit?>(null) }
-    var assignments by remember { mutableStateOf<MutableMap<Card, String>>(mutableMapOf()) }
+    // Saved, not just remembered — an Activity recreation (rotation, or the system flipping to
+    // dark mode) used to drop a claim half-way through assigning six cards to teammates.
+    var step by rememberSaveable(stateSaver = enumSaver<ClaimStep>()) { mutableStateOf(ClaimStep.SELECT_HALF_SUIT) }
+    var selectedHalfSuit by rememberSaveable(stateSaver = nullableEnumSaver<HalfSuit>()) { mutableStateOf<HalfSuit?>(null) }
+    var assignments by rememberSaveable(stateSaver = cardAssignmentsSaver) { mutableStateOf<MutableMap<Card, String>>(mutableMapOf()) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val claimYouLabel = stringResource(Res.string.claim_you)
@@ -144,7 +151,9 @@ fun ClaimBottomSheet(
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                    modifier = Modifier.height(if (isCompact) 32.dp else 36.dp)
+                                    // heightIn, not height: at the larger accessibility font
+                                    // scales a fixed pill clipped its own label.
+                                    modifier = Modifier.heightIn(min = if (isCompact) 32.dp else 36.dp)
                                 ) {
                                     Box(
                                         contentAlignment = Alignment.Center,
@@ -158,14 +167,23 @@ fun ClaimBottomSheet(
                                     }
                                 }
                             } else {
+                                // Names the target of the tap: the pill itself only reads out a
+                                // teammate's name and a glyph, so TalkBack gave no clue what it did.
+                                val assignLabel = stringResource(
+                                    Res.string.cd_assign_card,
+                                    "${card.value.displayName} ${card.suit.name.lowercase()}"
+                                )
                                 var expanded by remember { mutableStateOf(false) }
                                 Box {
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
                                         color = MaterialTheme.colorScheme.surfaceVariant,
                                         modifier = Modifier
-                                            .height(if (isCompact) 32.dp else 36.dp)
-                                            .clickable { expanded = true }
+                                            .heightIn(min = if (isCompact) 32.dp else 36.dp)
+                                            .clickable(
+                                                onClickLabel = assignLabel,
+                                                role = Role.Button
+                                            ) { expanded = true }
                                     ) {
                                         Box(
                                             contentAlignment = Alignment.Center,
@@ -275,7 +293,7 @@ fun ClaimBottomSheet(
                                 "$name:",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.width(72.dp)
+                                modifier = Modifier.widthIn(min = 72.dp).weight(0.4f)
                             )
                             Text(
                                 cards.joinToString(", ") { it.key.displayEmoji },

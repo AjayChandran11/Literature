@@ -1,5 +1,8 @@
 package com.cards.game.literature.server
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -33,6 +36,33 @@ class RoomManagerTest {
         } finally {
             manager.shutdown()
         }
+    }
+
+    @Test
+    fun aRemovedRoomIsClosedSoNothingKeepsPlayingIntoIt() = runBlocking {
+        val manager = RoomManager()
+        try {
+            val (room, _) = manager.createRoom("Alice", 4)
+            manager.removeRoom(room.roomCode)
+
+            // removeRoom announces the closure off the caller's thread, so wait for the flag
+            // rather than assume it lands synchronously.
+            withTimeout(2_000) { while (!room.isClosed) delay(10) }
+            assertNull(manager.getRoom(room.roomCode), "and it is gone from the registry")
+        } finally {
+            manager.shutdown()
+        }
+    }
+
+    @Test
+    fun shutdownClosesEveryRoomItWasHolding() {
+        val manager = RoomManager()
+        val (first, _) = manager.createRoom("Alice", 4)
+        val (second, _) = manager.createRoom("Bob", 6)
+
+        manager.shutdown()
+
+        assertTrue(first.isClosed && second.isClosed, "every room is marked closed and released")
     }
 
     @Test

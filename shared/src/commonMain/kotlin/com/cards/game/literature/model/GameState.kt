@@ -54,7 +54,11 @@ data class GameState(
     // Epoch-ms deadline for the pending pass selection, for a client countdown.
     // Set only on the CLIENT's reconstructed state (from PlayerGameView); the
     // server owns the real timer and sends the deadline via the view.
-    val pendingPassDeadlineMs: Long? = null
+    val pendingPassDeadlineMs: Long? = null,
+    // Epoch-ms deadline for the current player's turn, same arrangement: the server owns the
+    // clock and sends it, the client only counts down to it. Null offline, where there is no
+    // turn clock at all, and on a bot's turn.
+    val turnDeadlineMs: Long? = null
 ) {
     val currentPlayer: Player get() = players[currentPlayerIndex]
     val isGameOver: Boolean get() = phase == GamePhase.FINISHED

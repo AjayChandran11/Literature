@@ -87,6 +87,7 @@ import com.cards.game.literature.ui.stats.ui
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
+import com.cards.game.literature.ui.theme.successGreen
 import com.cards.game.literature.ui.theme.LiteratureTheme
 import com.cards.game.literature.viewmodel.ResultUiState
 import com.cards.game.literature.viewmodel.ResultViewModel
@@ -329,7 +330,7 @@ private fun SuitChipCell(
         else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
     }
     val border = when (owner) {
-        1 -> LightGreen
+        1 -> successGreen
         2 -> CardRed
         else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
     }
@@ -339,7 +340,7 @@ private fun SuitChipCell(
         else -> stringResource(Res.string.deck_tracker_open)
     }
     val ownColor = when (owner) {
-        1 -> LightGreen
+        1 -> successGreen
         2 -> CardRed
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -560,7 +561,7 @@ fun ResultScreenContent(
                 style = MaterialTheme.typography.displaySmall,
                 color = when {
                     uiState.isDraw -> MaterialTheme.colorScheme.secondary
-                    uiState.isWinner -> LightGreen
+                    uiState.isWinner -> successGreen
                     else -> CardRed
                 },
                 modifier = Modifier.graphicsLayer {
@@ -593,7 +594,7 @@ fun ResultScreenContent(
                         "$animatedMyScore",
                         style = scoreStyle,
                         fontWeight = FontWeight.Bold,
-                        color = LightGreen
+                        color = successGreen
                     )
                 }
                 Text(

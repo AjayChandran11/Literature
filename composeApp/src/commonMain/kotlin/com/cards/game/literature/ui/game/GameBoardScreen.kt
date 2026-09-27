@@ -11,11 +11,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import com.cards.game.literature.ui.common.enumSaver
+import com.cards.game.literature.ui.common.nullableEnumSaver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,6 +30,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +63,8 @@ import com.cards.game.literature.ui.game.tutorial.rememberTutorialState
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
+import com.cards.game.literature.ui.theme.successGreen
+import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.viewmodel.GameUiState
 import com.cards.game.literature.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
@@ -156,14 +164,18 @@ fun GameBoardContent(
     val uiState by viewModel.uiState.collectAsState()
     val gameLog by viewModel.gameLog.collectAsState()
 
-    var showAskSheet by remember { mutableStateOf(false) }
-    var showClaimSheet by remember { mutableStateOf(false) }
-    var showHelpSheet by remember { mutableStateOf(false) }
-    var askSuit by remember { mutableStateOf<Suit?>(null) }
-    var askIsLow by remember { mutableStateOf<Boolean?>(null) }
-    // var selectedCard by remember { mutableStateOf<Card?>(null) } // TODO: future use
-    var selectedTab by remember { mutableStateOf(GameTab.TABLE) }
-    var previouslyMyTurn by remember { mutableStateOf(false) }
+    // rememberSaveable, not remember: MainActivity sets no configChanges, so a rotation — or the
+    // system switching to dark mode at dusk — recreates the Activity mid-turn. A plain remember
+    // dropped the open sheet, the half-picked ask, and the tab you were on, while the server's
+    // turn clock kept running. previouslyMyTurn is saved for the same reason: restored as false on
+    // your own turn it re-fired the your-turn chime and yanked you back to the Hand tab.
+    var showAskSheet by rememberSaveable { mutableStateOf(false) }
+    var showClaimSheet by rememberSaveable { mutableStateOf(false) }
+    var showHelpSheet by rememberSaveable { mutableStateOf(false) }
+    var askSuit by rememberSaveable(stateSaver = nullableEnumSaver<Suit>()) { mutableStateOf<Suit?>(null) }
+    var askIsLow by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    var selectedTab by rememberSaveable(stateSaver = enumSaver<GameTab>()) { mutableStateOf(GameTab.TABLE) }
+    var previouslyMyTurn by rememberSaveable { mutableStateOf(false) }
     // Bookmark of how far into the event log we've already reacted (sounds/haptics/celebration).
     // Seed it at the CURRENT log length, not 0: the ViewModel-scoped gameLog survives an Activity
     // recreation (a system dark/light theme change is a uiMode config change and MainActivity has no
@@ -650,6 +662,7 @@ fun GameBoardContent(
         // Finale dim under the last claim's banner, so the stinger doesn't pop over
         // a fully lit board. It also swallows board taps once the match is decided;
         // tapping it skips straight to the result screen.
+        val skipLabel = stringResource(Res.string.match_intro_skip_hint)
         val finaleDim by animateFloatAsState(
             targetValue = if (finaleDimmed) 0.55f else 0f,
             animationSpec = tween(500),
@@ -663,6 +676,8 @@ fun GameBoardContent(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
+                        onClickLabel = skipLabel,
+                        role = Role.Button,
                         onClick = skipFinale
                     )
             )
@@ -972,6 +987,9 @@ private fun LastEventStrip(events: List<GameEvent>) {
     if (messages.isEmpty()) return
 
     Surface(
+        // Announced as it changes: TalkBack users had no way to know an opponent had asked,
+        // taken a card, or claimed — the whole narration of the match was silent.
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
     ) {
@@ -1047,35 +1065,54 @@ private fun PersistentHeader(
 /** Merged score + turn info in a single ~36dp row for landscape. */
 /**
  * Online turn countdown, isolated into its own leaf so ticking it each second recomposes ONLY this
- * text — not the whole header row (score, turn label). Owns the 60s state; [timerKey] (a turn/score
- * composite) resets it. Renders nothing when offline or above 15s.
+ * text — not the whole header row (score, turn label). Counts down to the server's [deadlineMs],
+ * which arrives with every view: the server restarts its turn clock after EVERY move, including a
+ * successful ask that keeps the turn, so a countdown the client drove itself drifted and could sit
+ * at a red "0s" while the player still had most of a minute. Renders nothing when there is no
+ * clock (offline, a bot's turn, a pending pass) or above 15s.
  */
 @Composable
 private fun TurnTimerText(
-    timerKey: String,
+    deadlineMs: Long?,
     timerPaused: Boolean,
-    isOnline: Boolean,
     style: TextStyle,
     normalColor: Color,
     spacer: Dp,
 ) {
-    var secondsRemaining by remember { mutableStateOf(60) }
-    LaunchedEffect(timerKey, timerPaused, isOnline) {
-        if (!isOnline) return@LaunchedEffect
-        secondsRemaining = 60
-        while (secondsRemaining > 0 && !timerPaused) {
-            delay(1000L)
-            secondsRemaining--
+    var secondsRemaining by remember { mutableStateOf(0) }
+    LaunchedEffect(deadlineMs, timerPaused) {
+        if (deadlineMs == null) { secondsRemaining = 0; return@LaunchedEffect }
+        while (!timerPaused) {
+            val left = ((deadlineMs - currentTimeMillis() + 999) / 1000).coerceAtLeast(0)
+            secondsRemaining = left.toInt()
+            if (left <= 0L) break
+            delay(250L) // re-read the clock rather than assume a tick took exactly a second
         }
     }
-    if (isOnline && secondsRemaining <= 15) {
+    if (deadlineMs != null && secondsRemaining in 1..15) {
         Spacer(modifier = Modifier.width(spacer))
-        Text(
-            stringResource(Res.string.game_timer_seconds, secondsRemaining),
-            style = style,
-            fontWeight = FontWeight.Bold,
-            color = if (secondsRemaining <= 10) CardRed else normalColor
-        )
+        val label = stringResource(Res.string.game_timer_seconds, secondsRemaining)
+        if (secondsRemaining <= 10) {
+            // A pill, not just a red word. Colour alone carried the urgency, which says nothing
+            // to a red-green colour-blind player, and plain red on the dark header sat near
+            // 2.5:1. The error container pair is contrast-checked by the theme.
+            //
+            // Painted on the text's own line box, with horizontal padding only: any vertical
+            // padding here makes this the tallest thing in the banner and the whole banner
+            // grows by it the moment the clock passes ten seconds. The line box already
+            // carries the font's ascent and descent, so the fill has its own breathing room.
+            Text(
+                label,
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 6.dp),
+                style = style,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        } else {
+            Text(label, style = style, fontWeight = FontWeight.Bold, color = normalColor)
+        }
     }
 }
 
@@ -1085,7 +1122,6 @@ private fun CompactHeaderRow(
     onHelpClick: () -> Unit = {},
     timerPaused: Boolean = false
 ) {
-    val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
 
     Row(
         modifier = Modifier
@@ -1106,7 +1142,7 @@ private fun CompactHeaderRow(
         Spacer(modifier = Modifier.width(4.dp))
         AnimatedScoreText(
             score = uiState.myTeamScore,
-            color = LightGreen,
+            color = successGreen,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -1154,9 +1190,8 @@ private fun CompactHeaderRow(
                         )
                     }
                     TurnTimerText(
-                        timerKey = timerKey,
+                        deadlineMs = uiState.turnDeadlineMs,
                         timerPaused = timerPaused,
-                        isOnline = uiState.isOnline,
                         style = MaterialTheme.typography.bodySmall,
                         normalColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         spacer = 6.dp,
@@ -1185,27 +1220,41 @@ private fun CompactHeaderRow(
 
         // Help icon
         val helpDesc = stringResource(Res.string.help_button_description)
+        // 40dp of tap area around a 20dp circle. The footprint stays 20dp and the target
+        // OVERFLOWS it: sized properly, this box became the tallest thing in its row and
+        // pushed the header open. wrapContentSize(unbounded) measures the inner 40dp with
+        // its own constraints while this node keeps reporting 20dp, and nothing here clips,
+        // so the extra area is still hit-tested.
         Box(
             modifier = Modifier
                 .size(20.dp)
-                .background(
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-                    shape = CircleShape
-                )
+                .wrapContentSize(align = Alignment.Center, unbounded = true)
+                .size(40.dp)
                 .clickable(
                     onClick = onHelpClick,
                     indication = null,
+                    role = Role.Button,
                     interactionSource = remember { MutableInteractionSource() }
                 )
                 .semantics { contentDescription = helpDesc },
             contentAlignment = Alignment.Center
         ) {
+          Box(
+            modifier = Modifier
+                .size(20.dp)
+                .background(
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+          ) {
             Text(
                 "?",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+          }
         }
     }
 }
@@ -1291,6 +1340,9 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
     // onSurface already IS "bright on dark, dark on light" — no luminance math needed.
     val darkSuitColor = MaterialTheme.colorScheme.onSurface
     Surface(
+        // Announced as it changes: TalkBack users had no way to know an opponent had asked,
+        // taken a card, or claimed — the whole narration of the match was silent.
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
     ) {
@@ -1396,10 +1448,6 @@ private fun TurnIndicatorBanner(
     onHelpClick: () -> Unit = {},
     timerPaused: Boolean = false
 ) {
-    // Composite key that changes on every action (turn change, ask, claim) — resets the countdown
-    // inside TurnTimerText below.
-    val timerKey = "${uiState.activePlayerId}_${uiState.myHand.size}_${uiState.myTeamScore}_${uiState.opponentTeamScore}"
-
     AnimatedVisibility(visible = uiState.phase == GamePhase.IN_PROGRESS) {
         // The gold "it's you" tint eases in rather than snapping.
         val bannerColor by animateColorAsState(
@@ -1411,7 +1459,10 @@ private fun TurnIndicatorBanner(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(bannerColor)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                // Whose turn it is is the single most important thing on this screen, and it
+                // changed silently for anyone not watching the colour.
+                .semantics { liveRegion = LiveRegionMode.Polite },
             contentAlignment = Alignment.Center
         ) {
             val pass = uiState.passSelection
@@ -1441,9 +1492,8 @@ private fun TurnIndicatorBanner(
                         color = MaterialTheme.colorScheme.secondary
                     )
                     TurnTimerText(
-                        timerKey = timerKey,
+                        deadlineMs = uiState.turnDeadlineMs,
                         timerPaused = timerPaused,
-                        isOnline = uiState.isOnline,
                         style = MaterialTheme.typography.titleMedium,
                         normalColor = MaterialTheme.colorScheme.secondary,
                         spacer = 8.dp,
@@ -1478,9 +1528,8 @@ private fun TurnIndicatorBanner(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     TurnTimerText(
-                        timerKey = timerKey,
+                        deadlineMs = uiState.turnDeadlineMs,
                         timerPaused = timerPaused,
-                        isOnline = uiState.isOnline,
                         style = MaterialTheme.typography.titleMedium,
                         normalColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         spacer = 8.dp,
@@ -1491,26 +1540,38 @@ private fun TurnIndicatorBanner(
 
             // Help icon
             val helpDesc = stringResource(Res.string.help_button_description)
+            // As in the header: 22dp of layout, 44dp of tap area overflowing it. Sized
+            // properly this was the tallest child of the banner's Box, and the banner grew
+            // by the difference.
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .size(22.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-                        shape = CircleShape
-                    )
+                    .wrapContentSize(align = Alignment.Center, unbounded = true)
+                    .size(44.dp)
                     .clickable(onClick = onHelpClick,
                         indication = null,
+                        role = Role.Button,
                         interactionSource = remember { MutableInteractionSource() })
                     .semantics { contentDescription = helpDesc },
                 contentAlignment = Alignment.Center
             ) {
+              Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+              ) {
                 Text(
                     "?",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+              }
             }
         }
     }

@@ -40,6 +40,11 @@ import com.cards.game.literature.ui.theme.LiteratureTheme
 import kotlinx.coroutines.delay
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.cd_card
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.onClick
+import literature.composeapp.generated.resources.cd_remove_card
+import literature.composeapp.generated.resources.cd_select_card
 import org.jetbrains.compose.resources.stringResource
 import com.cards.game.literature.ui.common.emoji
 
@@ -150,7 +155,6 @@ private fun AnimatedCardView(
     CardView(
         card = card,
         isSelected = false,
-        onClick = { },
         modifier = modifier
             .graphicsLayer {
                 this.alpha = alpha
@@ -165,7 +169,9 @@ private fun AnimatedCardView(
 fun CardView(
     card: Card,
     isSelected: Boolean,
-    onClick: () -> Unit,
+    /** Null for a card that is only being shown. A no-op handler made TalkBack promise an
+     *  activation that did nothing, on every card in the hand. */
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     badgeNumber: Int? = null
 ) {
@@ -174,6 +180,15 @@ fun CardView(
     val borderColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.LightGray
 
     val cardDesc = stringResource(Res.string.cd_card, card.value.displayName, card.suit.name.lowercase().replaceFirstChar { it.uppercase() })
+    val actionLabel = stringResource(
+        if (isSelected) Res.string.cd_remove_card else Res.string.cd_select_card, cardDesc
+    )
+    // A card face is artwork, not prose. Sized in sp it overran its fixed 60x80 box at the
+    // larger accessibility font scales; converting from dp keeps the rank and pip in
+    // proportion to the card at every setting.
+    val density = LocalDensity.current
+    val rankSize = with(density) { 24.dp.toSp() }
+    val pipSize = with(density) { 20.dp.toSp() }
     Box(
         modifier = modifier
             .width(60.dp)
@@ -185,21 +200,30 @@ fun CardView(
             .shadow(if (isSelected) 0.dp else 2.dp, RoundedCornerShape(8.dp))
             .background(bgColor, RoundedCornerShape(8.dp))
             .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .semantics { contentDescription = cardDesc }
+            .then(
+                if (onClick != null) {
+                    Modifier.selectable(selected = isSelected, onClick = onClick)
+                } else {
+                    Modifier
+                }
+            )
+            .semantics {
+                contentDescription = cardDesc
+                if (onClick != null) onClick(label = actionLabel, action = null)
+            }
             .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = card.value.displayName,
-                fontSize = 24.sp,
+                fontSize = rankSize,
                 fontWeight = FontWeight.Bold,
                 color = cardColor
             )
             Text(
                 text = card.suit.emoji,
-                fontSize = 20.sp,
+                fontSize = pipSize,
                 color = cardColor
             )
         }

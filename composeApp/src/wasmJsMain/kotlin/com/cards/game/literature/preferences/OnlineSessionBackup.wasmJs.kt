@@ -10,50 +10,45 @@ private const val KEY_PLAYER = "lit_session_player"
 private const val KEY_TOKEN = "lit_session_token"
 private const val KEY_TOUCHED_AT = "lit_session_touched_at"
 
-/** Server-side reconnect window is 2 minutes; don't attempt resumes that can only fail. */
-private const val MAX_AGE_MS = 120_000L
-
 actual object OnlineSessionBackup {
     init {
         // The server's reconnect window starts at DISCONNECT, but touch() otherwise only runs
         // on inbound server messages — an idle lobby tab (no traffic for 2 min) would wrongly
         // fail the staleness check on refresh. Stamp the clock as the page goes away instead:
         // pagehide is the exact moment the disconnect (and the server's window) begins.
-        window.addEventListener("pagehide", {
-            if (window.sessionStorage.getItem(KEY_ROOM) != null) touch()
-        })
+        runCatching {
+            window.addEventListener("pagehide", {
+                if (WebStorage.getSession(KEY_ROOM) != null) touch()
+            })
+        }
     }
 
     actual fun save(roomCode: String, playerId: String, reconnectToken: String) {
-        val s = window.sessionStorage
-        s.setItem(KEY_ROOM, roomCode)
-        s.setItem(KEY_PLAYER, playerId)
-        s.setItem(KEY_TOKEN, reconnectToken)
+        WebStorage.setSession(KEY_ROOM, roomCode)
+        WebStorage.setSession(KEY_PLAYER, playerId)
+        WebStorage.setSession(KEY_TOKEN, reconnectToken)
         touch()
     }
 
     actual fun touch() {
-        window.sessionStorage.setItem(KEY_TOUCHED_AT, currentTimeMillis().toString())
+        WebStorage.setSession(KEY_TOUCHED_AT, currentTimeMillis().toString())
     }
 
     actual fun load(): OnlineSessionSnapshot? {
-        val s = window.sessionStorage
-        val room = s.getItem(KEY_ROOM) ?: return null
-        val player = s.getItem(KEY_PLAYER) ?: return null
-        val token = s.getItem(KEY_TOKEN) ?: return null
-        val touchedAt = s.getItem(KEY_TOUCHED_AT)?.toLongOrNull() ?: return null
-        if (currentTimeMillis() - touchedAt > MAX_AGE_MS) {
-            clear()
-            return null
-        }
+        val room = WebStorage.getSession(KEY_ROOM) ?: return null
+        val player = WebStorage.getSession(KEY_PLAYER) ?: return null
+        val token = WebStorage.getSession(KEY_TOKEN) ?: return null
+        // No age check. There used to be a 2-minute one, on the theory that the server's
+        // reconnect window had closed — but mid-game the server keeps the seat for the whole
+        // match (it turns into a bot and hands back on return), so the client was giving up on
+        // resumes that would have worked. The server decides; a rejection clears the snapshot.
         return OnlineSessionSnapshot(room, player, token)
     }
 
     actual fun clear() {
-        val s = window.sessionStorage
-        s.removeItem(KEY_ROOM)
-        s.removeItem(KEY_PLAYER)
-        s.removeItem(KEY_TOKEN)
-        s.removeItem(KEY_TOUCHED_AT)
+        WebStorage.removeSession(KEY_ROOM)
+        WebStorage.removeSession(KEY_PLAYER)
+        WebStorage.removeSession(KEY_TOKEN)
+        WebStorage.removeSession(KEY_TOUCHED_AT)
     }
 }
