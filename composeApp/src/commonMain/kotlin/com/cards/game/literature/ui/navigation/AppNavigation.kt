@@ -9,6 +9,18 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import literature.composeapp.generated.resources.Res
+import literature.composeapp.generated.resources.button_dismiss
+import literature.composeapp.generated.resources.connection_retry
+import literature.composeapp.generated.resources.resume_failed_message
+import literature.composeapp.generated.resources.resume_failed_title
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -99,10 +111,37 @@ fun AppNavigation() {
     // Keyed on Unit, not pendingResume: consumeResume() nulls the flow, and a key change
     // would cancel this effect mid-wait — leaving the curtain up forever.
     val onlineRepository = koinInject<OnlineGameRepository>()
+    // Losing the process mid-game restores the navigation stack onto a fresh repository — the
+    // singletons live in the process, not the Activity. A saved seat means the server is still
+    // holding it, so rejoin under the curtain instead of showing an empty board. Skipped on a
+    // configuration change (the repository is still there) and on web, whose entry point
+    // submits its own resume before the UI exists.
     LaunchedEffect(Unit) {
-        val resume = DeepLinkHandler.pendingResume.filterNotNull().first()
+        if (onlineRepository.roomCode.isEmpty() &&
+            DeepLinkHandler.pendingResume.value == null &&
+            !DeepLinkHandler.resumeInFlight.value &&
+            DeepLinkHandler.pendingRoomCode.value == null
+        ) {
+            OnlineSessionBackup.load()?.let { saved ->
+                DeepLinkHandler.submitResume(
+                    DeepLinkHandler.PendingResume(saved.roomCode, saved.playerId, saved.reconnectToken)
+                )
+            }
+        }
+    }
+
+    // A resume that runs out of time is offered again rather than dropped in silence.
+    var resumeRetry by remember { mutableStateOf<DeepLinkHandler.PendingResume?>(null) }
+    var failedResume by remember { mutableStateOf<DeepLinkHandler.PendingResume?>(null) }
+    var resumeAttempt by remember { mutableStateOf(0) }
+    LaunchedEffect(resumeAttempt) {
+        val resume = resumeRetry ?: DeepLinkHandler.pendingResume.filterNotNull().first()
         DeepLinkHandler.consumeResume()
         try {
+            // Wake the server FIRST, still under the curtain. Render's free tier spins down and
+            // a cold start takes longer than the whole 15-second budget below, so a resume after
+            // any idle period failed on the clock rather than on the seat.
+            onlineRepository.warmUp()
             onlineRepository.resumeSession(resume.roomCode, resume.playerId, resume.reconnectToken)
             // Wait (under the curtain, on Home) for the session to say where it is, then land
             // there in ONE hop — routing through the waiting room let it flash for the length
@@ -133,6 +172,9 @@ fun AppNavigation() {
                 // too, or it can silently re-seat the player while nothing observes the
                 // session from Home — teammates would see them "reconnected" but stalled.
                 onlineRepository.disconnect()
+                failedResume = resume
+                // A restored stack can be sitting on the online board with nothing behind it.
+                navController.popBackStack(Routes.HOME, inclusive = false)
             }
         } finally {
             DeepLinkHandler.finishResume()
@@ -142,6 +184,27 @@ fun AppNavigation() {
     // One consistent motion language for the whole app (previously all defaults):
     // forward = slide in from the trailing edge with a fade, back = the reverse.
     // A quarter-width offset keeps it subtle — screens glide, they don't fly.
+    failedResume?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { failedResume = null },
+            title = { Text(stringResource(Res.string.resume_failed_title)) },
+            text = { Text(stringResource(Res.string.resume_failed_message, pending.roomCode)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    failedResume = null
+                    resumeRetry = pending
+                    DeepLinkHandler.submitResume(pending)
+                    resumeAttempt++
+                }) { Text(stringResource(Res.string.connection_retry)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { failedResume = null }) {
+                    Text(stringResource(Res.string.button_dismiss))
+                }
+            }
+        )
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination,

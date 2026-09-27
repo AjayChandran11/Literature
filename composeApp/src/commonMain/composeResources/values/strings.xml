@@ -72,6 +72,9 @@
     <string name="waiting_room_share_code">Share this code with friends</string>
     <string name="cd_copy_room_code">Copy room code</string>
     <string name="resume_rejoining">Rejoining your game…</string>
+    <string name="resume_failed_title">Couldn't rejoin</string>
+    <string name="resume_failed_message">We couldn't get you back into room %1$s. The server may still be waking up.</string>
+    <string name="button_dismiss">Dismiss</string>
     <string name="waiting_room_invite">Invite Friends</string>
     <string name="waiting_room_invite_whatsapp">Invite on WhatsApp</string>
     <string name="waiting_room_invite_other">Other apps</string>
