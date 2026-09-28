@@ -23,7 +23,13 @@ data class PlayerGameView(
     val pendingPass: PendingPass? = null,
     /** Epoch-ms deadline for the pending pass selection; on timeout the server
      *  auto-picks [PendingPass.defaultTarget]. Null when nothing is pending. */
-    val pendingPassDeadlineMs: Long? = null
+    val pendingPassDeadlineMs: Long? = null,
+    /** Epoch-ms deadline for the current player's turn, or null when no clock is running
+     *  (a bot's turn, a pending pass, a finished game). The server restarts this clock after
+     *  EVERY move, including a successful ask that keeps the turn, so a client guessing at it
+     *  from its own state drifts and can sit at "0s" while the player still has most of a
+     *  minute. Defaulted so older clients simply ignore it. */
+    val turnDeadlineMs: Long? = null
 )
 
 @Serializable
@@ -43,7 +49,9 @@ fun GameState.toPlayerView(
     connectionStatus: Map<String, Boolean> = emptyMap(),
     disconnectDeadlines: Map<String, Long?> = emptyMap(),
     // Server-supplied deadline for an in-flight Option C selection (see GameRoom).
-    pendingPassDeadlineMs: Long? = null
+    pendingPassDeadlineMs: Long? = null,
+    // Server-supplied deadline for the current player's turn (see GameRoom.turnDeadlineMs).
+    turnDeadlineMs: Long? = null
 ): PlayerGameView {
     val myPlayer = getPlayer(playerId)
     return PlayerGameView(
@@ -69,6 +77,7 @@ fun GameState.toPlayerView(
         recentEvents = events.takeLast(20),
         gameId = this.gameId,
         pendingPass = this.pendingPass,
-        pendingPassDeadlineMs = if (this.pendingPass != null) pendingPassDeadlineMs else null
+        pendingPassDeadlineMs = if (this.pendingPass != null) pendingPassDeadlineMs else null,
+        turnDeadlineMs = turnDeadlineMs
     )
 }

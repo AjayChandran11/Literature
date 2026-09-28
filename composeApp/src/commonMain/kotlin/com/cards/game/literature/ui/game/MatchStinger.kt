@@ -11,6 +11,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import literature.composeapp.generated.resources.match_intro_skip_hint
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -67,6 +69,7 @@ fun MatchStingerOverlay(
         exit = fadeOut(tween(250)),
         modifier = modifier
     ) {
+        val skipLabel = stringResource(Res.string.match_intro_skip_hint)
         val inPreview = LocalInspectionMode.current
         // Outcome IS the color here (unlike the neutral intro curtain): green win /
         // red loss / navy draw, matching the app-wide semantics. The win wash starts
@@ -110,6 +113,8 @@ fun MatchStingerOverlay(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
+                    onClickLabel = skipLabel,
+                    role = Role.Button,
                     onClick = onSkip
                 )
                 .onGloballyPositioned { boxOrigin = it.boundsInRoot().topLeft },

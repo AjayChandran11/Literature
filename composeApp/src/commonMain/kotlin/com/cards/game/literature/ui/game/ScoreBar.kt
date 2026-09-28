@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.LightGreen
+import com.cards.game.literature.ui.theme.successGreen
 import literature.composeapp.generated.resources.Res
 import literature.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -72,7 +73,7 @@ fun ScoreBar(myTeamScore: Int, opponentTeamScore: Int, modifier: Modifier = Modi
             Text(stringResource(Res.string.label_your_team), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             AnimatedScoreText(
                 score = myTeamScore,
-                color = LightGreen,
+                color = successGreen,
                 style = MaterialTheme.typography.headlineLarge
             )
         }

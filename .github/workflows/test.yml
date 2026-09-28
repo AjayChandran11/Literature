@@ -74,14 +74,29 @@ jobs:
           EOF
           fi
 
-      - name: Run shared and server tests
-        run: ./gradlew :shared:jvmTest :server:test
+      # The client's own tests were never run here — only shared and server.
+      - name: Run unit tests
+        run: ./gradlew :shared:jvmTest :server:test :composeApp:testDebugUnitTest
 
       - name: Compile Android client
         run: ./gradlew :composeApp:compileDebugKotlinAndroid
 
-      - name: Compile web client (wasm)
-        run: ./gradlew :composeApp:compileKotlinWasmJs
+      # Build the distribution, not just the compile. Packaging is where the web build
+      # actually breaks — index.html, the resource bundle, the webpack step — and none of
+      # that ran until a hand deploy after a release.
+      - name: Build web client distribution
+        run: ./gradlew :composeApp:wasmJsBrowserDistribution
+
+      # The deployed page must keep its boot guards: without the WasmGC probe an invitee on
+      # an older browser sits on a splash that spins for ever, with no way to the app.
+      - name: Check the web page still ships its boot fallback
+        run: |
+          page=composeApp/build/dist/wasmJs/productionExecutable/index.html
+          test -f "$page" || { echo "no index.html in the distribution"; exit 1; }
+          for needle in "WebAssembly.validate" "web_boot_failed" "play.google.com"; do
+            grep -q "$needle" "$page" || { echo "missing from the shipped page: $needle"; exit 1; }
+          done
+          echo "boot fallback present"
 
       - name: Upload test reports on failure
         if: failure()
@@ -91,6 +106,7 @@ jobs:
           path: |
             shared/build/reports/tests/
             server/build/reports/tests/
+            composeApp/build/reports/tests/
           retention-days: 7
 
   # The shipped APK is R8-minified; debug compiles cannot see shrinker regressions. 1.1.12 and

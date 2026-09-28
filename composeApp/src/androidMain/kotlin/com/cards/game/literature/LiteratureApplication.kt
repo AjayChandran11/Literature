@@ -8,6 +8,7 @@ import com.cards.game.literature.notifications.NotificationCoordinator
 import com.cards.game.literature.notifications.Notifier
 import com.cards.game.literature.notifications.PuzzleReminderScheduler
 import com.cards.game.literature.preferences.GamePrefs
+import com.cards.game.literature.preferences.OnlineSessionBackup
 import com.cards.game.literature.preferences.StatsPrefs
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
@@ -28,6 +29,7 @@ class LiteratureApplication : Application() {
         // them here in the Application — the one entry point common to every process start.
         GamePrefs.init(this)
         StatsPrefs.init(this)
+        OnlineSessionBackup.init(this)
         PuzzleReminderScheduler.init(this)
         if (GamePrefs.isPuzzleReminderEnabled()) PuzzleReminderScheduler.schedule()
     }

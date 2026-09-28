@@ -109,6 +109,80 @@ class GameRoomLifecycleTest {
         room.cleanup()
     }
 
+    @Test
+    fun anAskForNoCardsIsAnsweredWithAnErrorRatherThanSilence() = runBlocking {
+        val room = runningRoom(t2HasSpare = true)
+        val socket = RecordingSocket()
+        room.getPlayerSession("player_0")!!.session = socket
+        room.turnTimeoutMs = 60_000
+        room.startTurnTimerForTest()
+        val before = room.turnDeadlineForTest
+
+        room.processAsk("player_0", "player_1", emptyList())
+
+        // Unguarded, the loop iterates zero times and the sender hears nothing at all.
+        assertTrue(socket.sentText().contains("Ask at least one card"), "the sender is told why")
+        assertEquals("player_0", room.currentPlayerId, "and the turn has not moved")
+        assertEquals(before, room.turnDeadlineForTest, "nor has the clock")
+        room.cleanup()
+    }
+
+    // --- the turn clock the client counts down to ---
+
+    @Test
+    fun theTurnDeadlineIsSentAndRestartsAfterEveryMove() = runBlocking {
+        val room = runningRoom(t2HasSpare = true)
+        val socket = RecordingSocket()
+        room.getPlayerSession("player_0")!!.session = socket
+        room.turnTimeoutMs = 60_000
+
+        room.startTurnTimerForTest()
+        val first = room.turnDeadlineForTest
+        assertNotNull(first, "a human on turn has a deadline")
+        assertTrue(first > System.currentTimeMillis(), "and it is in the future")
+
+        // A successful ask keeps the turn with player_0 — and the server restarts its clock, so
+        // the deadline must move too. A client deriving the countdown from the turn holder alone
+        // saw no change here and ran itself down to a stuck "0s".
+        delay(30)
+        room.processAsk("player_0", "player_1", listOf(spadesLow[2]))
+        assertEquals("player_0", room.currentPlayerId, "a successful ask keeps the turn")
+        val second = room.turnDeadlineForTest
+        assertNotNull(second)
+        assertTrue(second > first, "the clock restarts on every move, not just a turn change")
+
+        assertTrue(socket.sentText().contains("turnDeadlineMs"), "and it rides out with the view")
+        room.cleanup()
+    }
+
+    @Test
+    fun noTurnDeadlineIsSentWhenNoClockIsRunning() = runBlocking {
+        val room = runningRoom(t2HasSpare = false)
+        room.startTurnTimerForTest()
+        assertNotNull(room.turnDeadlineForTest)
+
+        room.processAsk("player_0", "player_1", listOf(spadesLow[2])) // empties t2, ends the game
+        assertEquals(RoomPhase.FINISHED, room.phase)
+        assertNull(room.turnDeadlineForTest, "a finished game runs no clock")
+        room.cleanup()
+    }
+
+    @Test
+    fun closingARoomTellsThePlayersWhoAreStillThere() = runBlocking {
+        val room = runningRoom(t2HasSpare = true)
+        val socket = RecordingSocket()
+        room.getPlayerSession("player_0")!!.session = socket
+
+        room.closeAndNotify()
+
+        assertTrue(room.isClosed)
+        assertTrue(
+            socket.sentText().contains("RoomClosed"),
+            "RoomClosed has been in the protocol from the start and nothing ever sent it"
+        )
+        room.cleanup()
+    }
+
     // --- F-12: a game that ends by an ask must finish the room ---
 
     @Test
@@ -323,8 +397,11 @@ class GameRoomLifecycleTest {
 
         private val seen = mutableListOf<String>()
 
-        /** Every text frame received so far (drained frames are remembered). */
-        fun sentText(): String = seen.joinToString("\n")
+        /** Every text frame sent so far. Drains first, so it works on its own. */
+        fun sentText(): String {
+            sentTypes()
+            return seen.joinToString("\n")
+        }
 
         fun sentTypes(): List<String> = buildList {
             while (true) {

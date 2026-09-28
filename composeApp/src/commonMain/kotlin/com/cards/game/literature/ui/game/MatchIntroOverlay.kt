@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -91,6 +92,7 @@ fun MatchIntroOverlay(
     onDone: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val skipLabel = stringResource(Res.string.match_intro_skip_hint)
     val inPreview = LocalInspectionMode.current
 
     // Beat machine: 1 = teams slide in, 2 = "goes first" line, 3 = fade out.
@@ -145,6 +147,8 @@ fun MatchIntroOverlay(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                onClickLabel = skipLabel,
+                role = Role.Button,
                 onClick = onDone
             )
             .onGloballyPositioned { overlayOrigin = it.boundsInRoot().topLeft },

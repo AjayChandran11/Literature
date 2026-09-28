@@ -469,7 +469,9 @@ private fun OutcomeBadge(outcome: Outcome) {
     val (label, color) = when (outcome) {
         Outcome.WIN -> stringResource(Res.string.stats_outcome_win) to LightGreen
         Outcome.LOSS -> stringResource(Res.string.stats_outcome_loss) to CardRed
-        Outcome.DRAW -> stringResource(Res.string.stats_outcome_draw) to MaterialTheme.colorScheme.outline
+        // Neutral, deliberately: a draw is neither result. This was the outline token, which in the
+        // light theme was the same green as a win — the two badges were indistinguishable.
+        Outcome.DRAW -> stringResource(Res.string.stats_outcome_draw) to MaterialTheme.colorScheme.onSurfaceVariant
     }
     Box(
         modifier = Modifier

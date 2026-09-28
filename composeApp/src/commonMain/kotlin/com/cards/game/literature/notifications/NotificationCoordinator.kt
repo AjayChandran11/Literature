@@ -7,6 +7,7 @@ import com.cards.game.literature.repository.OnlineGameRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -48,17 +49,23 @@ class NotificationCoordinator(
             }
         }
 
+        // Combined, not keyed on the turn alone: leaving while it is ALREADY your turn is the
+        // common case — you look at the board, switch away to reply to someone, and come back
+        // to a timed-out turn. Keyed only on isMyTurn nothing fired then, because the turn had
+        // not changed. Watching both means either edge raises the cue.
         scope.launch {
-            onlineRepo.gameState
-                .map { state ->
+            combine(
+                onlineRepo.gameState.map { state ->
                     val me = onlineRepo.myPlayerId
                     state != null && me.isNotEmpty() &&
                         state.players.getOrNull(state.currentPlayerIndex)?.id == me
-                }
+                },
+                AppLifecycleObserver.isAppInForeground
+            ) { isMyTurn, inForeground -> isMyTurn to inForeground }
                 .distinctUntilChanged()
-                .collect { isMyTurn ->
+                .collect { (isMyTurn, inForeground) ->
                     if (!GamePrefs.isNotificationsEnabled()) return@collect
-                    if (isMyTurn && !AppLifecycleObserver.isAppInForeground.value) {
+                    if (isMyTurn && !inForeground) {
                         Notifier.notifyYourTurn()
                     } else {
                         Notifier.clearYourTurn()

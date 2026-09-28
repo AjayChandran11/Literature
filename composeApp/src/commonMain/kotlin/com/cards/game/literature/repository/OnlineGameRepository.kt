@@ -94,7 +94,8 @@ class OnlineGameRepository(
     // must not touch shared connection state on its way out (see the finally in connectAndSend).
     private var connectionGeneration = 0L
     // The name we joined under, so a lost seat can be re-claimed without asking again.
-    private var myPlayerName = ""
+    /** internal, not private: the tests arrange this the way a real join would have. */
+    internal var myPlayerName = ""
     // One automatic re-join per session, so a doomed one can never loop.
     private var rejoinAttempted = false
     private var autoReconnectJob: Job? = null
@@ -124,7 +125,7 @@ class OnlineGameRepository(
     var myPlayerId: String = ""
         private set
     var roomCode: String = ""
-        private set
+        internal set
     // Proof of identity for reconnects, issued by the server in RoomCreated.
     private var reconnectToken: String = ""
 
@@ -526,7 +527,12 @@ class OnlineGameRepository(
         return false
     }
 
-    private suspend fun handleServerMessage(text: String) {
+    /**
+     * Every server frame lands here. `internal` rather than private so the test source set can
+     * drive real frames through it: this is where a bad message classification strands a player
+     * on a dead board, and it had no tests at all.
+     */
+    internal suspend fun handleServerMessage(text: String) {
         val message = try {
             json.decodeFromString<ServerMessage>(text)
         } catch (e: Exception) {
@@ -696,7 +702,8 @@ class OnlineGameRepository(
             // Carry the server's Option C suspension through so the ViewModel/UI
             // can show the picker (or, for everyone else, a "choosing…" state).
             pendingPass = view.pendingPass,
-            pendingPassDeadlineMs = view.pendingPassDeadlineMs
+            pendingPassDeadlineMs = view.pendingPassDeadlineMs,
+            turnDeadlineMs = view.turnDeadlineMs
         )
 
         _gameState.value = syntheticState

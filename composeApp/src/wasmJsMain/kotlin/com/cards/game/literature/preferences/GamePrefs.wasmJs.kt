@@ -1,74 +1,73 @@
 package com.cards.game.literature.preferences
 
-import kotlinx.browser.localStorage
 
 actual object GamePrefs {
     actual fun isSoundEnabled(): Boolean =
-        localStorage.getItem("sound_enabled")?.toBoolean() ?: true
+        WebStorage.get("sound_enabled")?.toBoolean() ?: true
 
     actual fun setSoundEnabled(enabled: Boolean) {
-        localStorage.setItem("sound_enabled", enabled.toString())
+        WebStorage.set("sound_enabled", enabled.toString())
     }
 
     actual fun isHapticsEnabled(): Boolean =
-        localStorage.getItem("haptics_enabled")?.toBoolean() ?: true
+        WebStorage.get("haptics_enabled")?.toBoolean() ?: true
 
     actual fun setHapticsEnabled(enabled: Boolean) {
-        localStorage.setItem("haptics_enabled", enabled.toString())
+        WebStorage.set("haptics_enabled", enabled.toString())
     }
 
     actual fun isNotificationsEnabled(): Boolean =
-        localStorage.getItem("notifications_enabled")?.toBoolean() ?: true
+        WebStorage.get("notifications_enabled")?.toBoolean() ?: true
 
     actual fun setNotificationsEnabled(enabled: Boolean) {
-        localStorage.setItem("notifications_enabled", enabled.toString())
+        WebStorage.set("notifications_enabled", enabled.toString())
     }
 
     actual fun isPuzzleReminderEnabled(): Boolean =
-        localStorage.getItem("puzzle_reminder_enabled")?.toBoolean() ?: true
+        WebStorage.get("puzzle_reminder_enabled")?.toBoolean() ?: true
 
     actual fun setPuzzleReminderEnabled(enabled: Boolean) {
-        localStorage.setItem("puzzle_reminder_enabled", enabled.toString())
+        WebStorage.set("puzzle_reminder_enabled", enabled.toString())
     }
 
     actual fun hasRequestedNotificationPermission(): Boolean =
-        localStorage.getItem("notif_perm_requested")?.toBoolean() ?: false
+        WebStorage.get("notif_perm_requested")?.toBoolean() ?: false
 
     actual fun setRequestedNotificationPermission(requested: Boolean) {
-        localStorage.setItem("notif_perm_requested", requested.toString())
+        WebStorage.set("notif_perm_requested", requested.toString())
     }
 
     actual fun getThemeMode(): String =
-        localStorage.getItem("theme_mode") ?: "SYSTEM"
+        WebStorage.get("theme_mode") ?: "SYSTEM"
 
     actual fun setThemeMode(mode: String) {
-        localStorage.setItem("theme_mode", mode)
+        WebStorage.set("theme_mode", mode)
     }
 
     actual fun isDynamicColorsEnabled(): Boolean =
-        localStorage.getItem("dynamic_colors")?.toBoolean() ?: false
+        WebStorage.get("dynamic_colors")?.toBoolean() ?: false
 
     actual fun setDynamicColorsEnabled(enabled: Boolean) {
-        localStorage.setItem("dynamic_colors", enabled.toString())
+        WebStorage.set("dynamic_colors", enabled.toString())
     }
 
     actual fun isBotSpeedCustomEnabled(): Boolean =
-        localStorage.getItem("bot_speed_custom")?.toBoolean() ?: false
+        WebStorage.get("bot_speed_custom")?.toBoolean() ?: false
 
     actual fun setBotSpeedCustomEnabled(enabled: Boolean) {
-        localStorage.setItem("bot_speed_custom", enabled.toString())
+        WebStorage.set("bot_speed_custom", enabled.toString())
     }
 
     actual fun getBotDelaySeconds(): Float =
-        localStorage.getItem("bot_delay_secs")?.toFloatOrNull() ?: BotPacing.DEFAULT_SECONDS
+        WebStorage.get("bot_delay_secs")?.toFloatOrNull() ?: BotPacing.DEFAULT_SECONDS
 
     actual fun setBotDelaySeconds(seconds: Float) {
-        localStorage.setItem("bot_delay_secs", seconds.toString())
+        WebStorage.set("bot_delay_secs", seconds.toString())
     }
 
-    actual fun getPlayerName(): String = localStorage.getItem("player_name") ?: ""
+    actual fun getPlayerName(): String = WebStorage.get("player_name") ?: ""
 
     actual fun setPlayerName(name: String) {
-        localStorage.setItem("player_name", name)
+        WebStorage.set("player_name", name)
     }
 }

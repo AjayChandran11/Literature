@@ -10,10 +10,11 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.googleServices)
     alias(libs.plugins.firebaseCrashlytics)
+    alias(libs.plugins.kover)
 }
 
-val appVersionName = "1.1.17"
-val appVersionCode = 32
+val appVersionName = "1.1.18"
+val appVersionCode = 33
 
 // Single source of truth for the version on wasm: Android reads BuildConfig, but wasm has
 // no equivalent, so generate the AppInfo actual from the Gradle version at build time.
@@ -109,13 +110,33 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
         }
+        // Compose UI tests run on the JVM via Robolectric — no device, no emulator, so they
+        // can run in CI like any other unit test. Android-only because runComposeUiTest needs
+        // an Android runtime here; the composables under test are common code.
+        androidUnitTest.dependencies {
+            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+            implementation(compose.uiTest)
+            implementation(libs.robolectric)
+        }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            // The client's logic is coroutine- and flow-shaped; the mock engine keeps the
+            // repository tests off the network entirely.
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
+            implementation(libs.koin.test)
         }
     }
 }
 
 android {
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     namespace = "com.cards.game.literature"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 

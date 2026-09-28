@@ -52,6 +52,16 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                         continue
                     }
 
+                    // The room may have been swept or shut down while this socket sat idle.
+                    // Every handler below assumes a live room; say so once here instead.
+                    val attached = currentRoom
+                    if (attached != null && attached.isClosed) {
+                        sendMessage(ServerMessage.RoomClosed)
+                        currentRoom = null
+                        currentPlayerId = null
+                        continue
+                    }
+
                     when (message) {
                         is ClientMessage.CreateRoom -> {
                             if (currentRoom != null) {
@@ -102,24 +112,24 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Room not found")
                                 continue
                             }
+                            // One atomic step: still waiting, own seat to reclaim, room full,
+                            // evict, new seat. As separate calls this was a check-then-act race —
+                            // simultaneous joins collided on a seat id, and two could both pass
+                            // the capacity test and over-fill the room (see GameRoom.seatLock).
                             // The invite link keeps working after the host starts; a late friend
                             // used to be seated on a live board with no hand and no turn.
-                            if (room.phase != com.cards.game.literature.protocol.RoomPhase.WAITING) {
-                                sendError("Game already started")
-                                continue
+                            val seat = room.trySeat(joinName)
+                            val playerId = when (seat) {
+                                is GameRoom.SeatResult.NotWaiting -> {
+                                    sendError("Game already started")
+                                    continue
+                                }
+                                is GameRoom.SeatResult.RoomFull -> {
+                                    sendError("Room is full")
+                                    continue
+                                }
+                                is GameRoom.SeatResult.Seated -> seat.playerId
                             }
-                            // Hand back the seat this player already had, if it is still held:
-                            // same name, currently away. Keeps their team and stops a room from
-                            // filling up with the same people under new ids.
-                            val heldSeat = room.findSeatToReclaim(joinName)
-                            if (heldSeat == null && room.getHumanPlayerCount() >= room.targetPlayerCount
-                                && !room.evictLongestAbsentSeat()
-                            ) {
-                                sendError("Room is full")
-                                continue
-                            }
-
-                            val playerId = heldSeat?.also { room.reclaimSeat(it) } ?: room.addPlayer(joinName)
                             currentRoom = room
                             currentPlayerId = playerId
 
