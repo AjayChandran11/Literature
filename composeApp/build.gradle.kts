@@ -111,6 +111,11 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            // The client's logic is coroutine- and flow-shaped; the mock engine keeps the
+            // repository tests off the network entirely.
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
+            implementation(libs.koin.test)
         }
     }
 }
