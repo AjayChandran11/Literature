@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ktor)
     application
+    alias(libs.plugins.kover)
 }
 
 application {
