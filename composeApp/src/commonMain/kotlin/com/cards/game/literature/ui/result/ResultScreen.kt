@@ -86,6 +86,9 @@ import com.cards.game.literature.ui.stats.AchievementUnlockCard
 import com.cards.game.literature.ui.stats.ui
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.ui.graphics.luminance
+import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
 import com.cards.game.literature.ui.theme.successGreen
 import com.cards.game.literature.ui.theme.LiteratureTheme
@@ -240,6 +243,19 @@ private fun HalfSuitStatus.owner(myTeamId: String): Int = when (claimedByTeamId)
     else -> 2
 }
 
+/**
+ * Colour of the steal mark. Dark keeps the gold it has always been — it reads at 6-8:1 there and
+ * is part of how the moment feels. Light has no gold that clears 3:1 on a pale chip, so it falls
+ * back to the ordinary foreground.
+ */
+@Composable
+private fun stolenMarkTint(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        GoldAccent
+    }
+
 /** A set is "stolen" when it was awarded to its owner by the OTHER team's failed claim
  *  (claimCorrect == false) — the most dramatic beat in a game, marked with a ⚡. */
 private val HalfSuitStatus.isStolen: Boolean get() = claimCorrect == false
@@ -291,15 +307,29 @@ private fun SuitChipGrid(
                 animationSpec = tween(300, delayMillis = if (visible) 560 else 0, easing = EaseOut),
                 label = "stealHintAlpha"
             )
-            Text(
-                text = "⚡ " + stringResource(Res.string.result_steal_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // The same mark as the chips, drawn the same way: this legend only works if the
+            // reader recognises the thing it is explaining. It used to be the ⚡ emoji here and
+            // a tinted vector up there, which is two different symbols for one idea.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(top = 2.dp)
                     .graphicsLayer { alpha = hintAlpha }
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Bolt,
+                    contentDescription = null, // the sentence beside it already says what it means
+                    tint = stolenMarkTint(),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(2.dp))
+                Text(
+                    text = stringResource(Res.string.result_steal_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -379,7 +409,17 @@ private fun SuitChipCell(
             )
         }
         if (status.isStolen) {
-            Text("⚡", fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
+            // A tinted vector, not the ⚡ emoji. The system glyph is a fixed gold that measures
+            // 6-8:1 on the dark chips but only 1.2-1.6:1 on the light theme's pale washes, where
+            // it all but disappears. An Icon always takes its tint, so the mark can follow the
+            // theme; no amber survives on a light chip (the best manages 2.6:1, under the 3:1
+            // minimum for a non-text indicator), so light uses the ordinary foreground colour.
+            Icon(
+                imageVector = Icons.Filled.Bolt,
+                contentDescription = null, // the cell's own description already says "stolen"
+                tint = stolenMarkTint(),
+                modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(14.dp)
+            )
         }
     }
 }

@@ -35,6 +35,13 @@ class ThemeContrastTest {
         return (max(a, b) + 0.05) / (min(a, b) + 0.05)
     }
 
+    /** Composites [fg] at [alpha] over [bg], the way a translucent chip renders. */
+    private fun blend(fg: Color, alpha: Float, bg: Color) = Color(
+        red = fg.red * alpha + bg.red * (1 - alpha),
+        green = fg.green * alpha + bg.green * (1 - alpha),
+        blue = fg.blue * alpha + bg.blue * (1 - alpha),
+    )
+
     private fun assertReadable(name: String, fg: Color, bg: Color, minimum: Double) {
         val ratio = contrast(fg, bg)
         assertTrue(
@@ -112,6 +119,26 @@ class ThemeContrastTest {
         // successGreen picks per theme precisely because LightGreen fails on a light ground.
         assertReadable("FeltGreen on light surface", FeltGreen, LightColorScheme.surface, 4.5)
         assertReadable("LightGreen on dark surface", LightGreen, DarkColorScheme.surface, 4.5)
+    }
+
+    @Test
+    fun theStealMarkNeedsADifferentTintPerTheme() {
+        // The result screen's half-suit chips are a 20% wash of the team colour over the
+        // surface. On dark that is a deep chip and the gold bolt sings; on light it is a pale
+        // one and the same gold vanishes. This pins the arithmetic so the two-branch tint in
+        // ResultScreen.stolenMarkTint cannot be "simplified" back to one colour.
+        val lightChip = blend(LightGreen, 0.20f, LightColorScheme.surface)
+        val darkChip = blend(LightGreen, 0.20f, DarkColorScheme.surface)
+
+        assertTrue(
+            contrast(GoldAccent, darkChip) >= 3.0,
+            "gold is the right mark on a dark chip (${contrast(GoldAccent, darkChip)})"
+        )
+        assertTrue(
+            contrast(GoldAccent, lightChip) < 3.0,
+            "and is unusable on a light one — this is why the tint branches"
+        )
+        assertReadable("steal mark on a light chip", LightColorScheme.onSurface, lightChip, 3.0)
     }
 
     @Test
