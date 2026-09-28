@@ -109,6 +109,24 @@ class GameRoomLifecycleTest {
         room.cleanup()
     }
 
+    @Test
+    fun anAskForNoCardsIsAnsweredWithAnErrorRatherThanSilence() = runBlocking {
+        val room = runningRoom(t2HasSpare = true)
+        val socket = RecordingSocket()
+        room.getPlayerSession("player_0")!!.session = socket
+        room.turnTimeoutMs = 60_000
+        room.startTurnTimerForTest()
+        val before = room.turnDeadlineForTest
+
+        room.processAsk("player_0", "player_1", emptyList())
+
+        // Unguarded, the loop iterates zero times and the sender hears nothing at all.
+        assertTrue(socket.sentText().contains("Ask at least one card"), "the sender is told why")
+        assertEquals("player_0", room.currentPlayerId, "and the turn has not moved")
+        assertEquals(before, room.turnDeadlineForTest, "nor has the clock")
+        room.cleanup()
+    }
+
     // --- the turn clock the client counts down to ---
 
     @Test
