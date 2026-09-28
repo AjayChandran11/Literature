@@ -110,6 +110,15 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
         }
+        // Compose UI tests run on the JVM via Robolectric — no device, no emulator, so they
+        // can run in CI like any other unit test. Android-only because runComposeUiTest needs
+        // an Android runtime here; the composables under test are common code.
+        androidUnitTest.dependencies {
+            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+            implementation(compose.uiTest)
+            implementation(libs.robolectric)
+        }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             // The client's logic is coroutine- and flow-shaped; the mock engine keeps the
@@ -122,6 +131,12 @@ kotlin {
 }
 
 android {
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     namespace = "com.cards.game.literature"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
