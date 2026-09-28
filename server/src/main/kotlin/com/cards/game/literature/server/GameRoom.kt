@@ -411,6 +411,14 @@ class GameRoom(
                     players[playerId]?.send(ServerMessage.Error("It's not your turn"))
                     return
                 }
+                // An ask for nothing is not a move: the loop below would iterate zero times and
+                // the player would be left waiting on a message that silently did nothing. Say so
+                // instead. (It costs no turn time either way — the deadline is stamped, so the
+                // re-arm in the finally returns to the same instant rather than a fresh minute.)
+                if (cards.isEmpty()) {
+                    players[playerId]?.send(ServerMessage.Error("Ask at least one card"))
+                    return
+                }
                 // Only now is this the current player's own move, so their clock stops.
                 // Cancelling before the guards killed the timer for every off-turn or
                 // rejected message, and nothing re-armed it: the table sat frozen.

@@ -42,7 +42,7 @@ val OnSurfaceLight = Color(0xFFE0E0E0)
 val CardFaceInk = Color(0xFF1A1A2E)
 
 // ─── Dark colour scheme ────────────────────────────────────────────────────
-private val DarkColorScheme = darkColorScheme(
+internal val DarkColorScheme = darkColorScheme(
     primary = LightGreen,
     onPrimary = Color.White,
     primaryContainer = DarkGreen,
@@ -65,7 +65,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 // ─── Light colour scheme ───────────────────────────────────────────────────
-private val LightColorScheme = lightColorScheme(
+internal val LightColorScheme = lightColorScheme(
     primary = FeltGreen,
     onPrimary = Color.White,
     primaryContainer = Color(0xFFA5D6A7),
