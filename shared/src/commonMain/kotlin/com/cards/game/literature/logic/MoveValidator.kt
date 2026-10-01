@@ -15,6 +15,9 @@ object MoveValidator {
         val target = state.getPlayer(targetId)
             ?: return ValidationResult(false, "Target not found")
 
+        if (state.pendingPass != null) {
+            return ValidationResult(false, "Waiting for the claimer to pass the turn")
+        }
         if (state.currentPlayer.id != askerId) {
             return ValidationResult(false, "It's not your turn")
         }
@@ -57,6 +60,14 @@ object MoveValidator {
         val claimer = state.getPlayer(declaration.claimerId)
             ?: return ValidationResult(false, "Claimer not found")
 
+        // While the game is suspended for an Option C pass the claimer is STILL the current
+        // player, and nothing here asks them to hold cards — so an empty-handed claimer could
+        // claim again, and processClaim would move the turn with pendingPass still set, leaving
+        // checkNextTurn returning early for ever. Every caller happens to guard this today; the
+        // engine should not depend on that.
+        if (state.pendingPass != null) {
+            return ValidationResult(false, "Waiting for the claimer to pass the turn")
+        }
         if (state.currentPlayer.id != declaration.claimerId) {
             return ValidationResult(false, "It's not your turn")
         }
