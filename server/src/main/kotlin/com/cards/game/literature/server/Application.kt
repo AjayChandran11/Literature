@@ -52,6 +52,8 @@ fun Application.configureServer() {
 
     val roomManager = RoomManager()
     val rateLimiter = RateLimiter()
+    // Sweep stale per-address records; without this the map only ever grows.
+    rateLimiter.startCleanup()
 
     routing {
         gameWebSocket(roomManager, rateLimiter)
