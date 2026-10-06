@@ -87,6 +87,9 @@ import com.cards.game.literature.ui.stats.ui
 import com.cards.game.literature.ui.theme.CardRed
 import com.cards.game.literature.ui.theme.GoldAccent
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.ui.text.style.TextAlign
+import literature.composeapp.generated.resources.result_waiting_rematch
+import literature.composeapp.generated.resources.result_waiting_rematch_no_host
 import androidx.compose.ui.graphics.luminance
 import com.cards.game.literature.ui.theme.GoldAccent
 import com.cards.game.literature.ui.theme.LightGreen
@@ -745,19 +748,42 @@ fun ResultScreenContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── Primary action ────────────────────────────────────────────
-            // Online host gets Rematch (same room, same players); everyone
-            // else keeps the local Play Again behavior.
-            Button(
-                onClick = if (uiState.canRematch) onRematch else onPlayAgain,
-                modifier = Modifier
-                    .fillMaxWidth(0.7f)
-                    .height(50.dp),
-                shape = RoundedCornerShape(10.dp)
-            ) {
+            // Online host gets Rematch (same room, same players). An online GUEST gets
+            // neither: "Play Again" here popped to Home, and the ResultViewModel's onCleared
+            // sends LeaveRoom — so the obvious primary button quietly left the room, at the
+            // exact moment the host was tapping Rematch. The screen already follows
+            // rematchStarted on its own, so all a guest has to do is wait; Home below is the
+            // deliberate way out. Offline keeps Play Again.
+            if (uiState.isOnline && !uiState.canRematch) {
+                // A quiet line, not a button-shaped slot: there is no action here, so occupying
+                // the Rematch button's 50dp footprint left a hole with text floating in it. No
+                // spinner either — nothing is loading, the guest is waiting on another person,
+                // and if the host does start one this screen navigates away by itself. Matches
+                // the lobby's own warming-up line, which is the app's idiom for exactly this.
                 Text(
-                    stringResource(if (uiState.canRematch) Res.string.button_rematch else Res.string.button_play_again),
-                    fontWeight = FontWeight.Bold
+                    text = if (uiState.hostName.isNotBlank()) {
+                        stringResource(Res.string.result_waiting_rematch, uiState.hostName)
+                    } else {
+                        stringResource(Res.string.result_waiting_rematch_no_host)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 14.dp)
                 )
+            } else {
+                Button(
+                    onClick = if (uiState.canRematch) onRematch else onPlayAgain,
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(
+                        stringResource(if (uiState.canRematch) Res.string.button_rematch else Res.string.button_play_again),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1075,6 +1101,34 @@ private fun PreviewResultFirstGameShort() {
         )
     }
 }
+
+/** The online guest: no Rematch of their own, waiting on the host. Light and dark side by
+ *  side, because this is the state whose layout is easiest to get wrong — there is no button
+ *  in the primary slot, so the spacing has to hold on its own. */
+@Composable
+private fun PreviewGuestWaitingBody(darkTheme: Boolean) {
+    LiteratureTheme(darkTheme = darkTheme) {
+        ResultScreenContent(
+            uiState = previewLoseState.copy(
+                isOnline = true,
+                canRematch = false,
+                hostName = "Vinu",
+            ),
+            showLog = false,
+            onToggleLog = {},
+            onPlayAgain = {},
+            onGoHome = {}
+        )
+    }
+}
+
+@Preview(name = "Result — Guest waiting (light)", showBackground = true)
+@Composable
+private fun PreviewResultGuestWaitingLight() = PreviewGuestWaitingBody(darkTheme = false)
+
+@Preview(name = "Result — Guest waiting (dark)", showBackground = true)
+@Composable
+private fun PreviewResultGuestWaitingDark() = PreviewGuestWaitingBody(darkTheme = true)
 
 @Preview(name = "Result — Lose", showBackground = true)
 @Composable
