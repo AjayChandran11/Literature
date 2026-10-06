@@ -273,6 +273,18 @@ class OnlineGameRepository(
     }
 
     /**
+     * The same, for leaving a game in progress. Every caller of [leaveGame] was launching it on
+     * a scope that the navigation on the very next line tears down — a ViewModel's own scope, or
+     * a composition's. On a healthy socket the frame is usually away before that happens, which
+     * is why it looked fine; on a stalled one the send is cancelled mid-flight and the server
+     * sees a bare drop instead of a deliberate leave, costing the table a two-minute wait and a
+     * bot replacement. The repository's scope outlives the screen, so the goodbye lands.
+     */
+    fun leaveGameAndReset() {
+        scope.launch { leaveGame() }
+    }
+
+    /**
      * Deliberate leave: send the final message, then close the socket GRACEFULLY and let the
      * connection wind down on its own. send() only queues the frame in the engine (OkHttp keeps
      * its own writer queue), and disconnect() cancels the job — which tears the TCP socket down

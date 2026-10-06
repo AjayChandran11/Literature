@@ -119,11 +119,12 @@ class WaitingRoomViewModel(
         }
     }
 
-    fun leaveRoom() {
-        viewModelScope.launch {
-            onlineRepository.leaveRoom()
-        }
-    }
+    /**
+     * Leaving always runs on the repository's scope, never this ViewModel's: every caller
+     * navigates away on the next line, which clears the ViewModel and cancelled the send
+     * half-way on a stalled socket — the server then saw a bare drop rather than a leave.
+     */
+    fun leaveRoom() = onlineRepository.leaveRoomAndReset()
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null, isStartGameTimedOut = false) }

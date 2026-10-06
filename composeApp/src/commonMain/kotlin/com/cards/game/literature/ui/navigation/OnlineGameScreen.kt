@@ -79,7 +79,8 @@ fun OnlineGameScreen(
                         if (isQuitting) return@Button
                         isQuitting = true
                         showQuitDialog = false
-                        scope.launch { onlineRepository.leaveGame() }
+                        // Not scope.launch: onQuit() below tears this composition down.
+                        onlineRepository.leaveGameAndReset()
                         onQuit()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
