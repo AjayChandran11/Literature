@@ -12,9 +12,6 @@ import com.cards.game.literature.viewmodel.GameViewModel
 import com.cards.game.literature.viewmodel.LobbyViewModel
 import com.cards.game.literature.viewmodel.ResultViewModel
 import com.cards.game.literature.viewmodel.WaitingRoomViewModel
-import io.ktor.client.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.websocket.*
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
@@ -25,12 +22,7 @@ val appModule = module {
     single<GameRepository> { LocalGameRepository(get()) }
 
     // Online dependencies
-    single {
-        HttpClient {
-            install(WebSockets)
-            install(HttpTimeout)
-        }
-    }
+    single { createAppHttpClient() }
     single { OnlineGameRepository(serverUrl = serverUrl, client = get()) }
     single { NotificationCoordinator(get()) }
 

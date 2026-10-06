@@ -186,6 +186,8 @@
     <string name="result_lose">You Lose!</string>
     <string name="result_breakdown_title">Half-Suit Breakdown</string>
     <string name="result_unclaimed">Unclaimed</string>
+    <string name="result_waiting_rematch">Waiting for %1$s to start a rematch…</string>
+    <string name="result_waiting_rematch_no_host">Waiting for the host to start a rematch…</string>
     <string name="result_steal_hint">Stolen on a failed claim</string>
     <string name="result_show_log">Show Game Log</string>
     <string name="result_hide_log">Hide Game Log</string>

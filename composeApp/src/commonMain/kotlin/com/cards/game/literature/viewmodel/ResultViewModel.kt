@@ -37,6 +37,10 @@ data class ResultUiState(
     val unlockedAchievements: List<Achievement> = emptyList(),
     /** True when this is an online game and the local player is the host. */
     val canRematch: Boolean = false,
+    /** True for any online game, host or not — a local game has no room to go back to. */
+    val isOnline: Boolean = false,
+    /** Whose Rematch an online guest is waiting on. Follows a host handover. */
+    val hostName: String = "",
     /** True only on the player's first completed game — gates the one-time debrief. */
     val isFirstGame: Boolean = false
 )
@@ -149,6 +153,10 @@ class ResultViewModel(
                 gameLog = onlineRepository?.eventLog?.takeIf { it.isNotEmpty() } ?: state.events,
                 canRematch = onlineRepository != null &&
                     onlineRepository.roomState.value?.hostPlayerId == myPlayerId,
+                isOnline = onlineRepository != null,
+                hostName = onlineRepository?.roomState?.value?.let { room ->
+                    room.players.firstOrNull { it.id == room.hostPlayerId }?.name
+                } ?: "",
                 isFirstGame = isFirstGame
             )
             if (isFirstGame) TutorialPrefs.markFirstGameDebriefShown()
@@ -167,7 +175,12 @@ class ResultViewModel(
         viewModelScope.launch {
             onlineRepository?.roomState?.collect { room ->
                 val canRematch = room?.hostPlayerId == myPlayerId
-                _uiState.update { if (it.canRematch != canRematch) it.copy(canRematch = canRematch) else it }
+                val hostName = room?.let { r -> r.players.firstOrNull { it.id == r.hostPlayerId }?.name } ?: ""
+                _uiState.update {
+                    if (it.canRematch != canRematch || it.hostName != hostName) {
+                        it.copy(canRematch = canRematch, hostName = hostName)
+                    } else it
+                }
             }
         }
 

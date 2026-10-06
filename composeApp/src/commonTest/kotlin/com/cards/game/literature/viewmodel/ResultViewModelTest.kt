@@ -117,6 +117,19 @@ class ResultViewModelTest {
     }
 
     @Test
+    fun anOfflineResultIsNotTreatedAsAnOnlineOne() = runTest(dispatcher) {
+        // isOnline is what decides whether the primary button is Play Again or a "waiting for
+        // the host" line. Getting it wrong offline would leave a local game with no way to
+        // start another one.
+        val vm = ResultViewModel(FinishedRepository(finished(6, 2)), "player_0")
+        runCurrent()
+
+        assertFalse(vm.uiState.value.isOnline)
+        assertFalse(vm.uiState.value.canRematch)
+        assertEquals("", vm.uiState.value.hostName)
+    }
+
+    @Test
     fun theHalfSuitBreakdownIsCarriedToTheResultScreen() = runTest(dispatcher) {
         val state = finished(6, 2)
         val vm = ResultViewModel(FinishedRepository(state), "player_0")
