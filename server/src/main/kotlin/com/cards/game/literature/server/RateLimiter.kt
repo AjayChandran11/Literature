@@ -1,5 +1,6 @@
 package com.cards.game.literature.server
 
+import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
@@ -27,6 +28,9 @@ class RateLimiter(
     )
 
     private val records = ConcurrentHashMap<String, IpRecord>()
+
+    /** Sweeps stale records on a timer. Started by [startCleanup], stopped by [stop]. */
+    private var cleanupScope: CoroutineScope? = null
 
     /**
      * Attempts to allow a new connection from the given IP.
@@ -74,6 +78,33 @@ class RateLimiter(
     /**
      * Periodically clean up stale IP records with no active connections.
      */
+    /**
+     * Starts the periodic sweep. [cleanup] existed from the beginning and nothing ever called
+     * it: [release] only drops a record when its window happens to be empty at that moment, so
+     * an address that connects once and leaves keeps an entry until something else evicts it.
+     * On a long-lived process that is a slow leak of one entry per address, for ever.
+     */
+    fun startCleanup(intervalMs: Long = windowMs) {
+        if (cleanupScope != null) return
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        cleanupScope = scope
+        scope.launch {
+            while (isActive) {
+                delay(intervalMs)
+                cleanup()
+            }
+        }
+    }
+
+    /** Stops the sweep. */
+    fun stop() {
+        cleanupScope?.cancel()
+        cleanupScope = null
+    }
+
+    /** Test visibility: how many addresses are currently held. */
+    internal val trackedAddressCount: Int get() = records.size
+
     @Synchronized
     fun cleanup() {
         val now = System.currentTimeMillis()

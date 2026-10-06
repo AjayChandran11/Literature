@@ -291,6 +291,28 @@ class GameEngineClaimTest {
     }
 
     @Test
+    fun noMoveIsAcceptedWhileTheClaimerIsStillChoosingWhoPlaysNext() {
+        val paused = engine.processClaim(buildTwoEligibleState(), twoEligibleClaim, pauseForPassSelection = true).newState
+        assertTrue(paused.isAwaitingPassSelection)
+
+        // The claimer is STILL the current player while the game waits on their pick, and
+        // validateClaim asks for no cards in hand — so an empty-handed claimer could claim
+        // again, processClaim would move the turn with pendingPass still set, and the server's
+        // checkNextTurn would return early for ever. The engine has to own this, not rely on
+        // every caller guarding it.
+        // Assert the REASON, not just the rejection: both of these would be refused anyway
+        // (the claimed cards have left the hand), so checking only isValid passes whether or
+        // not the pending-pass guard exists at all.
+        val askAgain = MoveValidator.validateAsk(paused, "p1", "p2", spadesLow[0])
+        assertFalse(askAgain.isValid, "no asking while a pass is pending")
+        assertEquals("Waiting for the claimer to pass the turn", askAgain.errorMessage)
+
+        val claimAgain = MoveValidator.validateClaim(paused, twoEligibleClaim)
+        assertFalse(claimAgain.isValid, "and no claiming either")
+        assertEquals("Waiting for the claimer to pass the turn", claimAgain.errorMessage)
+    }
+
+    @Test
     fun applyPassSelectionMovesTurnToChosenTeammate() {
         val paused = engine.processClaim(buildTwoEligibleState(), twoEligibleClaim, pauseForPassSelection = true).newState
 
