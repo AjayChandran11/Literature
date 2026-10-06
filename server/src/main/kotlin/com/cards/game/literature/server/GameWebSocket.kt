@@ -19,10 +19,85 @@ private val json = Json {
     isLenient = false
 }
 
+/**
+ * The client's address, as the only party we trust reports it.
+ *
+ * X-Forwarded-For is a list that each proxy APPENDS to, so behind one trusted proxy (Render)
+ * the right-most entry is the address Render itself saw. Everything to its left was supplied by
+ * the caller. Reading the LEFT-most — which is what this did — let any client pick its own
+ * identity by sending a header, and with it defeat the rate limiter completely: a different
+ * value per connection looked like a different machine every time.
+ *
+ * Falls back to the socket's own address when the header is missing (direct connections, local
+ * development), which is unspoofable.
+ */
+internal fun clientAddress(forwardedFor: List<String>, socketAddress: String): String =
+    forwardedFor
+        .flatMap { it.split(',') }
+        .map { it.trim() }
+        .lastOrNull { it.isNotEmpty() }
+        ?: socketAddress
+
+/**
+ * Hosts allowed to open a WebSocket from a browser.
+ *
+ * Overridable with ALLOWED_ORIGINS (comma-separated) so a mistake here can be corrected from
+ * Render's dashboard without a deploy — this is the one change in the batch that could lock the
+ * live web client out, and it should be reversible in a minute.
+ */
+private val allowedOrigins: Set<String> =
+    System.getenv("ALLOWED_ORIGINS")
+        ?.split(',')?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() }?.toSet()
+        ?: setOf(
+            "literature-game.pages.dev",
+            "*.literature-game.pages.dev", // Cloudflare preview deployments
+            "localhost",
+            "127.0.0.1",
+        )
+
+/** scheme "://" host [":" port] — the only shape a browser ever sends. */
+private val ORIGIN_PATTERN = Regex("""^[a-zA-Z][a-zA-Z0-9+.\-]*://([^/:?#]+)(?::\d+)?$""")
+
+/**
+ * Whether a browser at [origin] may open a socket.
+ *
+ * Note on what this is and is not worth: the game holds no ambient credential — the reconnect
+ * token travels in the message body, never a cookie — so the classic cross-site hijack this
+ * header defends against does not apply. What it does stop is a third-party page using this
+ * server as free infrastructure. Modest, but the check is nearly free.
+ *
+ * A missing Origin is ALLOWED: native Android and iOS clients send none, only browsers do.
+ */
+internal fun isOriginAllowed(origin: String?, allowed: Set<String> = allowedOrigins): Boolean {
+    if (origin.isNullOrBlank()) return true
+    // Parsed strictly, by hand. Ktor's Url() is lenient and DEFAULTS a missing host to
+    // "localhost" rather than failing — so routing a malformed header through it allowed
+    // anything unparseable straight in, including the literal "null" a sandboxed frame sends.
+    // Caught by anUnparseableOriginIsRejected.
+    val host = ORIGIN_PATTERN.matchEntire(origin.trim())?.groupValues?.get(1)?.lowercase()
+    if (host.isNullOrEmpty()) return false
+    return allowed.any { pattern ->
+        if (pattern.startsWith("*.")) {
+            val suffix = pattern.removePrefix("*.")
+            host == suffix || host.endsWith(".$suffix")
+        } else {
+            host == pattern
+        }
+    }
+}
+
 fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
     webSocket("/game") {
-        val ip = call.request.headers["X-Forwarded-For"]?.split(",")?.firstOrNull()?.trim()
-            ?: call.request.local.remoteAddress
+        val origin = call.request.headers["Origin"]
+        if (!isOriginAllowed(origin)) {
+            log.warn("Rejected WebSocket upgrade from origin {}", origin)
+            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Origin not allowed"))
+            return@webSocket
+        }
+        val ip = clientAddress(
+            forwardedFor = call.request.headers.getAll("X-Forwarded-For").orEmpty(),
+            socketAddress = call.request.local.remoteAddress
+        )
         if (!rateLimiter.tryAcquire(ip)) {
             close(CloseReason(CloseReason.Codes.TRY_AGAIN_LATER, "Rate limit exceeded"))
             return@webSocket
