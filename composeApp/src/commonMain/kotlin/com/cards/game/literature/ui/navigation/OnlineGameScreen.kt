@@ -1,5 +1,7 @@
 package com.cards.game.literature.ui.navigation
 
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.ui.common.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -79,6 +81,7 @@ fun OnlineGameScreen(
                         if (isQuitting) return@Button
                         isQuitting = true
                         showQuitDialog = false
+                        Analytics.log(AnalyticsEvent.GameLeft(mode = "online"))
                         // Not scope.launch: onQuit() below tears this composition down.
                         onlineRepository.leaveGameAndReset()
                         onQuit()

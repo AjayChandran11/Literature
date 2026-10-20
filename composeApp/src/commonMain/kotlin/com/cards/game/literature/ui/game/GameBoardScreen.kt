@@ -102,6 +102,7 @@ fun GameBoardScreen(
                 Button(
                     onClick = {
                         showQuitDialog = false
+                        Analytics.log(AnalyticsEvent.GameLeft(mode = "offline_bots"))
                         onQuit()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)

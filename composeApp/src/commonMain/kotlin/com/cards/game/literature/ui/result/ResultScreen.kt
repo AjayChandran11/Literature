@@ -773,7 +773,10 @@ fun ResultScreenContent(
                 )
             } else {
                 Button(
-                    onClick = if (uiState.canRematch) onRematch else onPlayAgain,
+                    onClick = {
+                        Analytics.log(AnalyticsEvent.RematchRequested(mode = if (uiState.isOnline) "online" else "offline_bots"))
+                        if (uiState.canRematch) onRematch() else onPlayAgain()
+                    },
                     modifier = Modifier
                         .fillMaxWidth(0.7f)
                         .height(50.dp),
