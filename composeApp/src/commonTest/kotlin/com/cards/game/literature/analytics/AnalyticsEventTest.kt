@@ -13,8 +13,8 @@ class AnalyticsEventTest {
 
     /** One representative instance of every event, so the rule checks cover the whole catalogue. */
     private val sampleEvents: List<AnalyticsEvent> = listOf(
-        AnalyticsEvent.GameStarted(mode = "online", teamSize = 3, hasBots = true, isHost = false),
-        AnalyticsEvent.GameFinished(mode = "offline_bots", won = false, teamSize = 2, durationSecs = 420L),
+        AnalyticsEvent.GameStarted(mode = "online", playerCount = 6, hasBots = true, isHost = false),
+        AnalyticsEvent.GameFinished(mode = "offline_bots", won = false, playerCount = 4, durationSecs = 420L),
         AnalyticsEvent.OnboardingFinished(completed = true),
         AnalyticsEvent.TutorialCompleted,
         AnalyticsEvent.ResultShared,
@@ -27,6 +27,11 @@ class AnalyticsEventTest {
         AnalyticsEvent.InviteOpened(source = "app_link"),
         AnalyticsEvent.InstallReferrerJoin,
         AnalyticsEvent.AchievementUnlocked(id = "ROOKIE_DETECTIVE"),
+        AnalyticsEvent.GameLeft(mode = "online"),
+        AnalyticsEvent.RematchRequested(mode = "offline_bots"),
+        AnalyticsEvent.ReviewRequested(trigger = "game"),
+        AnalyticsEvent.DailyPuzzleShared(solved = true),
+        AnalyticsEvent.AppShared,
     )
 
     @Test
@@ -45,18 +50,23 @@ class AnalyticsEventTest {
         assertEquals("onboarding_finished", AnalyticsEvent.OnboardingFinished(true).name)
         assertEquals("tutorial_completed", AnalyticsEvent.TutorialCompleted.name)
         assertEquals("result_shared", AnalyticsEvent.ResultShared.name)
+        assertEquals("game_left", AnalyticsEvent.GameLeft("online").name)
+        assertEquals("rematch_requested", AnalyticsEvent.RematchRequested("online").name)
+        assertEquals("review_requested", AnalyticsEvent.ReviewRequested("game").name)
+        assertEquals("daily_puzzle_shared", AnalyticsEvent.DailyPuzzleShared(true).name)
+        assertEquals("app_shared", AnalyticsEvent.AppShared.name)
     }
 
     @Test
     fun paramsCarryTheExpectedKeysAndValues() {
-        val started = AnalyticsEvent.GameStarted(mode = "online", teamSize = 3, hasBots = true, isHost = true)
-        assertEquals(mapOf("mode" to "online", "team_size" to 3, "has_bots" to true, "is_host" to true), started.params)
-        val startedOffline = AnalyticsEvent.GameStarted(mode = "offline_bots", teamSize = 2, hasBots = true)
-        assertEquals(mapOf("mode" to "offline_bots", "team_size" to 2, "has_bots" to true), startedOffline.params)
+        val started = AnalyticsEvent.GameStarted(mode = "online", playerCount = 6, hasBots = true, isHost = true)
+        assertEquals(mapOf("mode" to "online", "player_count" to 6, "has_bots" to true, "is_host" to true), started.params)
+        val startedOffline = AnalyticsEvent.GameStarted(mode = "offline_bots", playerCount = 4, hasBots = true)
+        assertEquals(mapOf("mode" to "offline_bots", "player_count" to 4, "has_bots" to true), startedOffline.params)
 
-        val finished = AnalyticsEvent.GameFinished(mode = "online", won = true, teamSize = 3, durationSecs = 120L)
+        val finished = AnalyticsEvent.GameFinished(mode = "online", won = true, playerCount = 6, durationSecs = 120L)
         assertEquals(
-            mapOf("mode" to "online", "won" to true, "team_size" to 3, "duration_secs" to 120L),
+            mapOf("mode" to "online", "won" to true, "player_count" to 6, "duration_secs" to 120L),
             finished.params,
         )
 
@@ -81,6 +91,26 @@ class AnalyticsEventTest {
         assertEquals(mapOf("achievement_id" to "CASE_MASTER"), AnalyticsEvent.AchievementUnlocked("CASE_MASTER").params)
         assertEquals(mapOf("completed" to true), AnalyticsEvent.OnboardingFinished(true).params)
         assertEquals(mapOf("completed" to false), AnalyticsEvent.OnboardingFinished(false).params)
+
+        assertEquals(mapOf("mode" to "online"), AnalyticsEvent.GameLeft("online").params)
+        assertEquals(mapOf("mode" to "offline_bots"), AnalyticsEvent.RematchRequested("offline_bots").params)
+        assertEquals(mapOf("trigger" to "puzzle"), AnalyticsEvent.ReviewRequested("puzzle").params)
+        assertEquals(mapOf("solved" to false), AnalyticsEvent.DailyPuzzleShared(false).params)
+        assertTrue(AnalyticsEvent.AppShared.params.isEmpty())
+    }
+
+    @Test
+    fun playerCountIsOneDimensionAcrossRoomAndGameEvents() {
+        // room_created said player_count while game_started/finished said team_size for the same
+        // thing, so no single GA4 dimension could follow a game from room to result.
+        val events = listOf(
+            AnalyticsEvent.RoomCreated(6),
+            AnalyticsEvent.RoomJoined("code", 6),
+            AnalyticsEvent.GameStarted("online", 6, false),
+            AnalyticsEvent.GameFinished("online", true, 6, null),
+        )
+        for (event in events) assertEquals(6, event.params["player_count"], "player_count on ${event.name}")
+        assertTrue(sampleEvents.none { "team_size" in it.params }, "team_size must be gone")
     }
 
     @Test
