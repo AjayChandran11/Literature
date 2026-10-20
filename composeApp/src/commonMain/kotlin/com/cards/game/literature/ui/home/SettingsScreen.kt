@@ -167,7 +167,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             SettingsLinkRow(
                 label = stringResource(Res.string.settings_invite_friends),
                 onClick = {
-                    Analytics.log(AnalyticsEvent.InviteShared(surface = "settings", channel = "system"))
+                    Analytics.log(AnalyticsEvent.AppShared)
                     Sharer.shareText(inviteText)
                 }
             )

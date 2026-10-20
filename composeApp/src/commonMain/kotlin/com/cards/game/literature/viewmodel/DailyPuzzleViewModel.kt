@@ -184,7 +184,10 @@ class DailyPuzzleViewModel(
                             streak = progress.displayedStreak(day),
                         )
                     )
-                    if (progress.totalSolved >= PUZZLE_REVIEW_MIN_SOLVED) AppReview.requestReview()
+                    if (progress.totalSolved >= PUZZLE_REVIEW_MIN_SOLVED) {
+                        Analytics.log(AnalyticsEvent.ReviewRequested(trigger = "puzzle"))
+                        AppReview.requestReview()
+                    }
                     StatsStore.recordPuzzleAchievements(progress)
                 } else emptyList()
                 _uiState.value = _uiState.value.copy(

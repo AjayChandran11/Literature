@@ -9,6 +9,8 @@ import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.protocol.RoomPhase
 import com.cards.game.literature.repository.GameRepository
 import com.cards.game.literature.repository.OnlineGameRepository
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.review.AppReview
 import com.cards.game.literature.stats.Achievement
 import com.cards.game.literature.stats.StatsStore
@@ -165,6 +167,7 @@ class ResultViewModel(
             // the real signal of a happy player, and gating on the outcome only halves the reach.
             // Play's own quota decides whether the sheet actually shows and rate-limits how often.
             if (StatsStore.stats.value.gamesPlayed >= REVIEW_MIN_GAMES) {
+                Analytics.log(AnalyticsEvent.ReviewRequested(trigger = "game"))
                 AppReview.requestReview()
             }
         }

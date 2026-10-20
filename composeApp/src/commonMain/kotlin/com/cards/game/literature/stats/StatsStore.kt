@@ -68,7 +68,7 @@ object StatsStore {
             AnalyticsEvent.GameFinished(
                 mode = if (record.isOnline) "online" else "offline_bots",
                 won = record.outcome == Outcome.WIN,
-                teamSize = record.playerCount / 2,
+                playerCount = record.playerCount,
                 durationSecs = record.durationSecs,
             )
         )

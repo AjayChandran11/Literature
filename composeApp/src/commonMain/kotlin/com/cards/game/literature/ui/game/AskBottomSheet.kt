@@ -73,7 +73,9 @@ fun AskBottomSheet(
     onSuitSelected: (Suit?) -> Unit = {},
     onIsLowSelected: (Boolean?) -> Unit = {},
     onConfirm: (targetId: String, cards: List<Card>) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** The server's turn deadline, for the countdown in the header; null when no clock runs. */
+    turnDeadlineMs: Long? = null,
 ) {
     // Saved, not just remembered: a rotation or a system dark-mode switch recreates the Activity,
     // and a plain remember threw away a queue of cards picked one by one — mid-turn, on the clock.
@@ -176,12 +178,24 @@ fun AskBottomSheet(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = stringResource(Res.string.ask_sheet_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(Res.string.ask_sheet_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        // The header's countdown, repeated here: this sheet covers the header, and the
+                        // turn used to run out behind it with no warning before the sheet vanished.
+                        TurnTimerText(
+                            deadlineMs = turnDeadlineMs,
+                            timerPaused = false,
+                            style = MaterialTheme.typography.titleSmall,
+                            normalColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            spacer = 8.dp,
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Suit.entries.forEach { suit ->
                             val suitName = suit.accessibleName()
@@ -304,12 +318,24 @@ fun AskBottomSheet(
                     .padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = stringResource(Res.string.ask_sheet_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(Res.string.ask_sheet_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    // The header's countdown, repeated here: this sheet covers the header, and the
+                    // turn used to run out behind it with no warning before the sheet vanished.
+                    TurnTimerText(
+                        deadlineMs = turnDeadlineMs,
+                        timerPaused = false,
+                        style = MaterialTheme.typography.titleLarge,
+                        normalColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        spacer = 8.dp,
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Suit.entries.forEach { suit ->
                         val suitName = suit.accessibleName()

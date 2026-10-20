@@ -43,7 +43,9 @@ fun ClaimBottomSheet(
     teammates: List<PlayerInfo>,
     halfSuitStatuses: List<HalfSuitStatus>,
     onConfirm: (ClaimDeclaration) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** The server's turn deadline, for the countdown in the header; null when no clock runs. */
+    turnDeadlineMs: Long? = null,
 ) {
     // Saved, not just remembered — an Activity recreation (rotation, or the system flipping to
     // dark mode) used to drop a claim half-way through assigning six cards to teammates.
@@ -70,16 +72,28 @@ fun ClaimBottomSheet(
                     vertical = if (isCompact) 8.dp else 16.dp
                 )
         ) {
-            Text(
-                text = when (step) {
-                    ClaimStep.SELECT_HALF_SUIT -> stringResource(Res.string.claim_step1_title)
-                    ClaimStep.ASSIGN_CARDS -> stringResource(Res.string.claim_step2_title)
-                    ClaimStep.CONFIRM -> stringResource(Res.string.claim_confirm_title)
-                },
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = when (step) {
+                        ClaimStep.SELECT_HALF_SUIT -> stringResource(Res.string.claim_step1_title)
+                        ClaimStep.ASSIGN_CARDS -> stringResource(Res.string.claim_step2_title)
+                        ClaimStep.CONFIRM -> stringResource(Res.string.claim_confirm_title)
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.weight(1f)
+                )
+                // The header's countdown, repeated here: a claim is the slowest thing a player
+                // does, and this sheet covers the only place the clock was shown.
+                TurnTimerText(
+                    deadlineMs = turnDeadlineMs,
+                    timerPaused = false,
+                    style = MaterialTheme.typography.titleLarge,
+                    normalColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    spacer = 8.dp,
+                )
+            }
             Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 16.dp))
 
             when (step) {
