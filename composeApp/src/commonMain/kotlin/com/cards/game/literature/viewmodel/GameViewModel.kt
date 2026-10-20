@@ -237,7 +237,7 @@ class GameViewModel(
         Analytics.log(
             AnalyticsEvent.GameStarted(
                 mode = "offline_bots",
-                teamSize = playerCount / 2,
+                playerCount = playerCount,
                 hasBots = true,
             )
         )

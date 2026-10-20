@@ -18,14 +18,14 @@ sealed class AnalyticsEvent(
      *  [isHost] splits hosts from guests; offline it fires on the deal. */
     class GameStarted(
         mode: String,
-        teamSize: Int,
+        playerCount: Int,
         hasBots: Boolean,
         isHost: Boolean? = null,
     ) : AnalyticsEvent(
         name = "game_started",
         params = buildMap {
             put("mode", mode)
-            put("team_size", teamSize)
+            put("player_count", playerCount)
             put("has_bots", hasBots)
             if (isHost != null) put("is_host", isHost)
         },
@@ -35,16 +35,37 @@ sealed class AnalyticsEvent(
     class GameFinished(
         mode: String,
         won: Boolean,
-        teamSize: Int,
+        playerCount: Int,
         durationSecs: Long?,
     ) : AnalyticsEvent(
         name = "game_finished",
         params = buildMap {
             put("mode", mode)
             put("won", won)
-            put("team_size", teamSize)
+            put("player_count", playerCount)
             if (durationSecs != null) put("duration_secs", durationSecs)
         },
+    )
+
+    /** Player quit a match before it ended, from the leave dialog. [mode] mirrors [GameStarted].
+     *  Pairs with [GameStarted] minus [GameFinished] to tell abandoned games from dropped ones. */
+    class GameLeft(mode: String) : AnalyticsEvent(
+        name = "game_left",
+        params = mapOf("mode" to mode),
+    )
+
+    /** Player tapped Rematch (online host) or Play Again (offline) on the result screen — the
+     *  intent to go again, logged before the new game's own [GameStarted]. [mode] mirrors it. */
+    class RematchRequested(mode: String) : AnalyticsEvent(
+        name = "rematch_requested",
+        params = mapOf("mode" to mode),
+    )
+
+    /** We asked Play for the in-app review sheet. Play never says whether it showed, so this is
+     *  the eligibility count, not the prompt count. [trigger] is "game" or "puzzle". */
+    class ReviewRequested(trigger: String) : AnalyticsEvent(
+        name = "review_requested",
+        params = mapOf("trigger" to trigger),
     )
 
     /** Player left the intro carousel. [completed] = reached the end; false = tapped Skip.
@@ -59,6 +80,12 @@ sealed class AnalyticsEvent(
 
     /** Player shared the end-of-game result card (a growth surface distinct from a room invite). */
     data object ResultShared : AnalyticsEvent(name = "result_shared")
+
+    /** Player shared today's puzzle result line (spoiler-free, carries the store link). */
+    class DailyPuzzleShared(solved: Boolean) : AnalyticsEvent(
+        name = "daily_puzzle_shared",
+        params = mapOf("solved" to solved),
+    )
 
     /** Player opened the Daily Puzzle screen. */
     data object DailyPuzzleOpened : AnalyticsEvent(name = "daily_puzzle_opened")
@@ -107,6 +134,10 @@ sealed class AnalyticsEvent(
         name = "invite_shared",
         params = mapOf("surface" to surface, "channel" to channel),
     )
+
+    /** Player shared the app's store link from Settings. Not an [InviteShared]: there is no room
+     *  to join, so it can never close the invite loop and must not be counted in it. */
+    data object AppShared : AnalyticsEvent(name = "app_shared")
 
     /** App opened via a room-invite link. [source] is how it arrived: "app_link" (verified https),
      *  "custom_scheme" (literature://), "web" (?room= on the browser build) or "referrer" (Play

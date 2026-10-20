@@ -78,7 +78,7 @@ class WaitingRoomViewModel(
             Analytics.log(
                 AnalyticsEvent.GameStarted(
                     mode = "online",
-                    teamSize = started.players.size / 2,
+                    playerCount = started.players.size,
                     hasBots = started.players.any { it.isBot },
                     isHost = _uiState.value.isHost,
                 )

@@ -93,6 +93,8 @@ import com.cards.game.literature.puzzle.LocateCard
 import com.cards.game.literature.puzzle.PuzzleKind
 import com.cards.game.literature.puzzle.PuzzlePlayer
 import com.cards.game.literature.puzzle.WastedAsk
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.share.Sharer
 import com.cards.game.literature.stats.PuzzleStatus
 import com.cards.game.literature.ui.common.ConfettiBurst
@@ -915,7 +917,13 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
                 AchievementUnlockCard(uiState.newlyUnlocked)
             }
             Spacer(Modifier.height(16.dp))
-            OutlinedButton(onClick = { Sharer.shareText(caption) }, shape = RoundedCornerShape(10.dp)) {
+            OutlinedButton(
+                onClick = {
+                    Analytics.log(AnalyticsEvent.DailyPuzzleShared(solved = solved))
+                    Sharer.shareText(caption)
+                },
+                shape = RoundedCornerShape(10.dp)
+            ) {
                 Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(Res.string.button_share))
