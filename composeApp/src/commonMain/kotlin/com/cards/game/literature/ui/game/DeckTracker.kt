@@ -1,12 +1,16 @@
 package com.cards.game.literature.ui.game
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -14,7 +18,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -117,7 +126,7 @@ fun CompactDeckTracker(
                     Text(
                         text = stringResource(Res.string.deck_tracker_open),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -131,67 +140,104 @@ fun DeckTracker(
     myTeamId: String,
     modifier: Modifier = Modifier
 ) {
-    LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp)
-    ) {
-        items(statuses) { status ->
-            val bgColor = animatedClaimColor(
-                claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
-                open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
-                ours = LightGreen.copy(alpha = 0.3f),
-                theirs = CardRed.copy(alpha = 0.3f)
-            )
-            val borderColor = animatedClaimColor(
-                claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
-                open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
-                ours = LightGreen,
-                theirs = CardRed
-            )
+    // Eight 96 dp cells never fit a phone, and on a 411 dp screen the fourth is cut by only
+    // 19 dp, which reads as padding: half the sets went unseen. The edge fades say "more".
+    val listState = rememberLazyListState()
+    Box(modifier = modifier.fillMaxWidth()) {
+        LazyRow(
+            state = listState,
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            items(statuses) { status ->
+                DeckTrackerCell(status = status, myTeamId = myTeamId)
+            }
+        }
+        ScrollEdgeFade(visible = listState.canScrollBackward, atStart = true)
+        ScrollEdgeFade(visible = listState.canScrollForward, atStart = false)
+    }
+}
 
-            val deckDesc = when {
-                status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.displayName)
-                status.claimedByTeamId == myTeamId -> stringResource(Res.string.cd_deck_ours, status.halfSuit.displayName)
-                else -> stringResource(Res.string.cd_deck_theirs, status.halfSuit.displayName)
-            }
-            Column(
-                modifier = Modifier
-                    .width(96.dp)
-                    .background(bgColor, RoundedCornerShape(6.dp))
-                    .border(1.dp, borderColor, RoundedCornerShape(6.dp))
-                    .padding(10.dp)
-                    .semantics { contentDescription = deckDesc },
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = status.halfSuit.displayName.replace(" ", "\n"),
-                    style = MaterialTheme.typography.labelMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    minLines = 2,
-                    maxLines = 2,
+@Composable
+private fun BoxScope.ScrollEdgeFade(visible: Boolean, atStart: Boolean) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = Modifier.matchParentSize().testTag(if (atStart) "deck_tracker_fade_start" else "deck_tracker_fade_end"),
+        enter = fadeIn(tween(150)),
+        exit = fadeOut(tween(150))
+    ) {
+        val background = MaterialTheme.colorScheme.background
+        Box(
+            Modifier.fillMaxSize().drawBehind {
+                val fade = 32.dp.toPx()
+                val left = if (atStart) 0f else size.width - fade
+                val colors = if (atStart) listOf(background, Color.Transparent) else listOf(Color.Transparent, background)
+                drawRect(
+                    brush = Brush.horizontalGradient(colors, startX = left, endX = left + fade),
+                    topLeft = Offset(left, 0f),
+                    size = Size(fade, size.height)
                 )
-                if (status.claimedByTeamId != null) {
-                    val label = if (status.claimedByTeamId == myTeamId)
-                        stringResource(Res.string.deck_tracker_ours)
-                    else
-                        stringResource(Res.string.deck_tracker_theirs)
-                    val labelColor = if (status.claimedByTeamId == myTeamId) LightGreen else CardRed
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = labelColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else {
-                    Text(
-                        text = stringResource(Res.string.deck_tracker_open),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
             }
+        )
+    }
+}
+
+@Composable
+private fun DeckTrackerCell(status: HalfSuitStatus, myTeamId: String) {
+    val bgColor = animatedClaimColor(
+        claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
+        open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+        ours = LightGreen.copy(alpha = 0.3f),
+        theirs = CardRed.copy(alpha = 0.3f)
+    )
+    val borderColor = animatedClaimColor(
+        claimedByTeamId = status.claimedByTeamId, myTeamId = myTeamId,
+        open = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+        ours = LightGreen,
+        theirs = CardRed
+    )
+
+    val deckDesc = when {
+        status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.displayName)
+        status.claimedByTeamId == myTeamId -> stringResource(Res.string.cd_deck_ours, status.halfSuit.displayName)
+        else -> stringResource(Res.string.cd_deck_theirs, status.halfSuit.displayName)
+    }
+    Column(
+        modifier = Modifier
+            .width(96.dp)
+            .background(bgColor, RoundedCornerShape(6.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(6.dp))
+            .padding(10.dp)
+            .semantics { contentDescription = deckDesc },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = status.halfSuit.displayName.replace(" ", "\n"),
+            style = MaterialTheme.typography.labelMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface,
+            minLines = 2,
+            maxLines = 2,
+        )
+        if (status.claimedByTeamId != null) {
+            val label = if (status.claimedByTeamId == myTeamId)
+                stringResource(Res.string.deck_tracker_ours)
+            else
+                stringResource(Res.string.deck_tracker_theirs)
+            val labelColor = if (status.claimedByTeamId == myTeamId) LightGreen else CardRed
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = labelColor,
+                fontWeight = FontWeight.Bold
+            )
+        } else {
+            Text(
+                text = stringResource(Res.string.deck_tracker_open),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -303,7 +349,7 @@ private fun SideBySideDeckCell(
             Text(
                 text = stringResource(Res.string.deck_tracker_open),
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
