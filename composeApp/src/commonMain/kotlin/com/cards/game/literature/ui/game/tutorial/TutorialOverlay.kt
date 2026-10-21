@@ -92,7 +92,12 @@ class TutorialState(initiallyActive: Boolean, initialStep: TutorialStep = Tutori
 
     /** End the tutorial early (Skip). The caller marks the first game complete
      *  when [isActive] flips to false. */
+    /** The step the player was on when they skipped; null when the tutorial ran to the end. */
+    var skippedAt: TutorialStep? by mutableStateOf(null)
+        private set
+
     fun skip() {
+        skippedAt = currentStep
         isActive = false
     }
 
