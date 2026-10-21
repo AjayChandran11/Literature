@@ -61,6 +61,13 @@ fun LobbyScreen(
             viewModel.clearError()
         }
     }
+    val admissionTimeoutMsg = stringResource(Res.string.lobby_error_admission_timeout)
+    LaunchedEffect(uiState.admissionTimedOut) {
+        if (uiState.admissionTimedOut) {
+            snackbarHostState.showSnackbar(admissionTimeoutMsg, duration = SnackbarDuration.Short)
+            viewModel.clearError()
+        }
+    }
 
     val roomGoneMsg = stringResource(Res.string.error_room_gone)
     val seatLostMsg = stringResource(Res.string.error_seat_lost)
@@ -110,6 +117,18 @@ fun LobbyScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(48.dp))
+
+            if (!isNetworkAvailable) {
+                // The buttons below are disabled while offline; say why instead of looking broken.
+                Text(
+                    text = stringResource(Res.string.lobby_offline_notice),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Create Room
             Button(

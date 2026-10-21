@@ -1,6 +1,7 @@
 package com.cards.game.literature.ui.lobby
 
 import com.cards.game.literature.ui.common.BackHandler
+import com.cards.game.literature.ui.common.enumSaver
 import com.cards.game.literature.ui.common.formatArgs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -66,8 +67,8 @@ fun WaitingRoomScreen(
     viewModel: WaitingRoomViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var fillWithBots by remember { mutableStateOf(true) }
-    var selectedDifficulty by remember { mutableStateOf(BotDifficulty.MEDIUM) }
+    var fillWithBots by rememberSaveable { mutableStateOf(true) }
+    var selectedDifficulty by rememberSaveable(stateSaver = enumSaver<BotDifficulty>()) { mutableStateOf(BotDifficulty.MEDIUM) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var isLeaving by remember { mutableStateOf(false) }
     var showHowToPlay by remember { mutableStateOf(false) }
