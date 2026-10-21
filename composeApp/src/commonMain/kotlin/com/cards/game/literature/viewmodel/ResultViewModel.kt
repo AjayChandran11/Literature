@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.cards.game.literature.repository.ConnectionState
 
@@ -50,6 +51,8 @@ data class ResultUiState(
 // Don't prompt for a review until the player has a few games behind them — a first-timer
 // hasn't formed an opinion yet, and Play's quota is a scarce resource not to spend on them.
 private const val REVIEW_MIN_GAMES = 3
+// Let the score reveal land first; the sheet used to open over the result screen's first frame.
+private const val REVIEW_PROMPT_DELAY_MS = 3_500L
 
 class ResultViewModel(
     private val repository: GameRepository,
@@ -167,8 +170,11 @@ class ResultViewModel(
             // the real signal of a happy player, and gating on the outcome only halves the reach.
             // Play's own quota decides whether the sheet actually shows and rate-limits how often.
             if (StatsStore.stats.value.gamesPlayed >= REVIEW_MIN_GAMES) {
-                Analytics.log(AnalyticsEvent.ReviewRequested(trigger = "game"))
-                AppReview.requestReview()
+                viewModelScope.launch {
+                    delay(REVIEW_PROMPT_DELAY_MS)
+                    Analytics.log(AnalyticsEvent.ReviewRequested(trigger = "game"))
+                    AppReview.requestReview()
+                }
             }
         }
 
