@@ -548,8 +548,9 @@ class OnlineGameRepository(
         val message = try {
             json.decodeFromString<ServerMessage>(text)
         } catch (e: Exception) {
+            // Logged, not shown: a frame this build cannot read is a developer problem, and the
+            // snackbar it used to raise only alarmed the player mid-game.
             log.e(e) { "Failed to decode server message: $text" }
-            _errors.emit("Invalid server message")
             return
         }
 
