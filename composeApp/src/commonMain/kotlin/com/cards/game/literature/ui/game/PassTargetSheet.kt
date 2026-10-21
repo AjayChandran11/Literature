@@ -39,9 +39,13 @@ fun PassTargetSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val defaultTarget = passSelection.candidates.firstOrNull()?.id
+    // One answer only: tapping a row also dismisses the sheet, and the dismiss used to send the
+    // default pick on top of the tapped one.
+    var chosen by remember { mutableStateOf(false) }
+    val choose: (String) -> Unit = { id -> if (!chosen) { chosen = true; onSelect(id) } }
     ModalBottomSheet(
         sheetState = sheetState,
-        onDismissRequest = { defaultTarget?.let(onSelect) },
+        onDismissRequest = { defaultTarget?.let(choose) },
         containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
@@ -76,7 +80,7 @@ fun PassTargetSheet(
             )
             Spacer(Modifier.height(4.dp))
             passSelection.candidates.forEach { candidate ->
-                PassCandidateRow(candidate = candidate, onClick = { onSelect(candidate.id) })
+                PassCandidateRow(candidate = candidate, onClick = { choose(candidate.id) })
             }
             Spacer(Modifier.height(8.dp))
         }
