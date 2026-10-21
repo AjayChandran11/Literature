@@ -31,10 +31,12 @@ sealed class AnalyticsEvent(
         },
     )
 
-    /** A match ended. [mode] mirrors [GameStarted]. */
+    /** A match ended. [mode] mirrors [GameStarted]. [result] is "win", "loss" or "draw"; the older
+     *  [won] flag stays for continuity but folded a draw into a loss. */
     class GameFinished(
         mode: String,
         won: Boolean,
+        result: String,
         playerCount: Int,
         durationSecs: Long?,
     ) : AnalyticsEvent(
@@ -42,6 +44,7 @@ sealed class AnalyticsEvent(
         params = buildMap {
             put("mode", mode)
             put("won", won)
+            put("result", result)
             put("player_count", playerCount)
             if (durationSecs != null) put("duration_secs", durationSecs)
         },
@@ -77,6 +80,13 @@ sealed class AnalyticsEvent(
 
     /** The first-game coached tutorial ran to completion. */
     data object TutorialCompleted : AnalyticsEvent(name = "tutorial_completed")
+
+    /** The first-game tutorial was skipped at [step] (lower-case TutorialStep name), so the drop-off
+     *  point is visible; it used to log as completed. */
+    class TutorialSkipped(step: String) : AnalyticsEvent(
+        name = "tutorial_skipped",
+        params = mapOf("step" to step),
+    )
 
     /** Player shared the end-of-game result card (a growth surface distinct from a room invite). */
     data object ResultShared : AnalyticsEvent(name = "result_shared")

@@ -109,7 +109,9 @@ class GameViewModel(
         message?.let { _errorEvents.tryEmit(it) }
     }
 
-    private val _gameLog = MutableStateFlow<List<GameEvent>>(emptyList())
+    // Seeded from the online repository's accumulated log so a resumed game (web refresh, process
+    // death) shows its history in the strip instead of starting blank; new events append below.
+    private val _gameLog = MutableStateFlow<List<GameEvent>>((repository as? OnlineGameRepository)?.eventLog ?: emptyList())
     val gameLog: StateFlow<List<GameEvent>> = _gameLog.asStateFlow()
 
     private var myPlayerId = overridePlayerId ?: "player_0"

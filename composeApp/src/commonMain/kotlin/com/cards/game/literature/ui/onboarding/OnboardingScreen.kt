@@ -451,7 +451,7 @@ private fun DeckPage(isActive: Boolean) {
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = CardRed,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -923,7 +923,7 @@ private fun ClaimBadge(visible: Boolean) {
                 fontSize = 13.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onSecondary,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
             )
         }
     }

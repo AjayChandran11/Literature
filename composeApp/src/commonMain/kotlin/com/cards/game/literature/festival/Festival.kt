@@ -42,6 +42,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
+import com.cards.game.literature.model.currentTimeMillis
+import com.cards.game.literature.stats.localUtcOffsetSeconds
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -60,7 +62,12 @@ enum class Festival {
 object FestivalCalendar {
     // Independence Day is India-specific and the app ships in many countries, so gate on the
     // device region. This is a proxy for "in India", not citizenship — the best signal available.
-    private fun inIndia(): Boolean = Locale.current.region == "IN"
+    // The language region alone misses an English (US) phone in India, which is common, so the
+    // clock's UTC offset (+5:30) counts too. Sri Lanka shares it; a greeting there is harmless.
+    private fun inIndia(): Boolean =
+        Locale.current.region == "IN" || localUtcOffsetSeconds(currentTimeMillis()) == INDIA_UTC_OFFSET_SECONDS
+
+    private const val INDIA_UTC_OFFSET_SECONDS = 5 * 3600 + 30 * 60
 
     /** The festival whose ACCENT window covers [epochDay] (default today), or null. The tricolour
      *  wordmark accent runs Aug 15–20 — nothing shows before the festival day; the greeting is

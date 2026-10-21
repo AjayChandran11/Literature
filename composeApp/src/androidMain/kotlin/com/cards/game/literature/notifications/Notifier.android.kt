@@ -42,38 +42,38 @@ actual object Notifier {
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_TURN,
-                "Your turn",
+                ctx.getString(R.string.notif_channel_turn_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Alerts you when it's your turn in an online game."
+                description = ctx.getString(R.string.notif_channel_turn_desc)
                 enableVibration(true)
             }
         )
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_GAME_STATE,
-                "Game starting",
+                ctx.getString(R.string.notif_channel_game_state_name),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Alerts you when your online game is starting."
+                description = ctx.getString(R.string.notif_channel_game_state_desc)
             }
         )
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_RESULT,
-                "Game result",
+                ctx.getString(R.string.notif_channel_result_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Quietly tells you when your online game has ended."
+                description = ctx.getString(R.string.notif_channel_result_desc)
             }
         )
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_REMINDER,
-                "Daily puzzle reminder",
+                ctx.getString(R.string.notif_channel_reminder_name),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "A once-a-day nudge that a fresh Daily Puzzle is ready."
+                description = ctx.getString(R.string.notif_channel_reminder_desc)
             }
         )
     }
@@ -127,25 +127,29 @@ actual object Notifier {
     }
 
     actual fun notifyYourTurn() {
-        post(ID_YOUR_TURN, CHANNEL_TURN, "Your turn", "Tap to play your move")
+        val ctx = appContext ?: return
+        post(ID_YOUR_TURN, CHANNEL_TURN, ctx.getString(R.string.notif_turn_title), ctx.getString(R.string.notif_turn_body))
     }
 
     actual fun notifyGameStarting() {
-        post(ID_GAME_STARTING, CHANNEL_GAME_STATE, "Game is starting", "Your room is ready")
+        val ctx = appContext ?: return
+        post(ID_GAME_STARTING, CHANNEL_GAME_STATE, ctx.getString(R.string.notif_game_starting_title), ctx.getString(R.string.notif_game_starting_body))
     }
 
     actual fun notifyGameOver(won: Boolean) {
-        val body = if (won) "Your team won — tap to see results" else "Your team lost — tap to see results"
-        post(ID_GAME_OVER, CHANNEL_RESULT, "Game over", body)
+        val ctx = appContext ?: return
+        val body = ctx.getString(if (won) R.string.notif_game_over_won else R.string.notif_game_over_lost)
+        post(ID_GAME_OVER, CHANNEL_RESULT, ctx.getString(R.string.notif_game_over_title), body)
     }
 
     /** Daily re-engagement nudge, fired by [PuzzleReminderReceiver] (not in the common contract). */
     fun notifyPuzzleReady() {
+        val ctx = appContext ?: return
         post(
             ID_PUZZLE_READY,
             CHANNEL_REMINDER,
-            "Today's puzzle is ready ⭐",
-            "A fresh Literature puzzle is waiting — keep your streak alive.",
+            ctx.getString(R.string.notif_puzzle_title),
+            ctx.getString(R.string.notif_puzzle_body),
             navigateTo = NAV_DAILY_PUZZLE
         )
     }

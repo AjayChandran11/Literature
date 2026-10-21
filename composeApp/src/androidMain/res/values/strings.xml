@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">Literature</string>
+
+    <!-- Notification channels (shown in the system's notification settings) -->
+    <string name="notif_channel_turn_name">Your turn</string>
+    <string name="notif_channel_turn_desc">Alerts you when it\'s your turn in an online game.</string>
+    <string name="notif_channel_game_state_name">Game starting</string>
+    <string name="notif_channel_game_state_desc">Alerts you when your online game is starting.</string>
+    <string name="notif_channel_result_name">Game result</string>
+    <string name="notif_channel_result_desc">Quietly tells you when your online game has ended.</string>
+    <string name="notif_channel_reminder_name">Daily puzzle reminder</string>
+    <string name="notif_channel_reminder_desc">A once-a-day nudge that a fresh Daily Puzzle is ready.</string>
+
+    <!-- Notification copy -->
+    <string name="notif_turn_title">Your turn</string>
+    <string name="notif_turn_body">Tap to play your move</string>
+    <string name="notif_game_starting_title">Game is starting</string>
+    <string name="notif_game_starting_body">Your room is ready</string>
+    <string name="notif_game_over_title">Game over</string>
+    <string name="notif_game_over_won">Your team won — tap to see results</string>
+    <string name="notif_game_over_lost">Your team lost — tap to see results</string>
+    <string name="notif_puzzle_title">Today\'s puzzle is ready ⭐</string>
+    <string name="notif_puzzle_body">A fresh Literature puzzle is waiting — keep your streak alive.</string>
 </resources>

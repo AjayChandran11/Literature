@@ -163,7 +163,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
             )
             // Store link, not a room invite — friends can install ahead of the session.
-            val inviteText = stringResource(Res.string.invite_app_share_text, InviteLink.PLAY_STORE)
+            val inviteText = stringResource(Res.string.invite_app_share_text, InviteLink.appLink)
             SettingsLinkRow(
                 label = stringResource(Res.string.settings_invite_friends),
                 onClick = {
