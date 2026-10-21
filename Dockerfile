@@ -28,4 +28,6 @@ WORKDIR /app
 COPY --from=builder /app/server/build/libs/server-all.jar server.jar
 # Informational only — the app binds to the PORT env var (Render injects 10000).
 EXPOSE 10000
-CMD ["java", "-jar", "server.jar"]
+# Without a heap flag the JVM gives itself 25% of the container (~128 MB on Render's 512 MB); 60%
+# leaves room for Netty's direct buffers and metaspace while no longer collecting at every rush.
+CMD ["java", "-XX:MaxRAMPercentage=60", "-jar", "server.jar"]
