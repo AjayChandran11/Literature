@@ -558,7 +558,7 @@ fun ResultScreenContent(
     // ── Shareable result card capture ─────────────────────────────────────
     val shareLayer = rememberGraphicsLayer()
     val shareScope = rememberCoroutineScope()
-    val shareCaption = stringResource(Res.string.share_result_caption, InviteLink.PLAY_STORE)
+    val shareCaption = stringResource(Res.string.share_result_caption, InviteLink.appLink)
 
     // safeDrawingPadding is on the Box (outside the scroll) so it frames the viewport as a fixed
     // inset — inside verticalScroll it would scroll away and let content slide under the status
