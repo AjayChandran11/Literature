@@ -24,7 +24,7 @@ class RoomManager {
         val room = GameRoom(roomCode, playerCount)
         rooms[roomCode] = room
         val playerId = room.addPlayer(hostName, isHost = true)
-        log.info("Room {} created by '{}' for {} players", roomCode, hostName, playerCount)
+        log.info("Room {} created for {} players", roomCode, playerCount)
         return Pair(room, playerId)
     }
 
