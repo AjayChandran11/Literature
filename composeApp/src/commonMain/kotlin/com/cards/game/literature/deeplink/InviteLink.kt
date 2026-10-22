@@ -21,6 +21,9 @@ object InviteLink {
     /** The web client, for people already in a browser. */
     const val WEB_APP = "https://literature-game.pages.dev"
 
+    /** Opens today's puzzle in the web client; the number is for the reader and for analytics. */
+    fun forPuzzle(puzzleNumber: Int): String = "$WEB_APP/?puzzle=$puzzleNumber"
+
     /** Where a share should send someone who wants the app: the web client when shared from the
      *  browser build (a store link there sends a desktop reader to a phone store), Play otherwise. */
     val appLink: String get() = if (isWebPlatform()) WEB_APP else PLAY_STORE

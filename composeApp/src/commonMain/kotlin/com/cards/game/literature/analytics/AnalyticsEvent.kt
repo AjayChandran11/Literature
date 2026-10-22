@@ -91,10 +91,18 @@ sealed class AnalyticsEvent(
     /** Player shared the end-of-game result card (a growth surface distinct from a room invite). */
     data object ResultShared : AnalyticsEvent(name = "result_shared")
 
-    /** Player shared today's puzzle result line (spoiler-free, carries the store link). */
-    class DailyPuzzleShared(solved: Boolean) : AnalyticsEvent(
+    /** Player shared today's puzzle result (spoiler-free, carries the web puzzle link). [channel]
+     *  is "whatsapp", "system" (the OS share sheet) or "copy", mirroring [InviteShared]. */
+    class DailyPuzzleShared(solved: Boolean, channel: String) : AnalyticsEvent(
         name = "daily_puzzle_shared",
-        params = mapOf("solved" to solved),
+        params = mapOf("solved" to solved, "channel" to channel),
+    )
+
+    /** The web client was opened from a puzzle share link (`?puzzle=N`): the receiving end of
+     *  [DailyPuzzleShared], so the share can be measured as a loop rather than a tap. */
+    class PuzzleLinkOpened(puzzleNumber: Int) : AnalyticsEvent(
+        name = "daily_puzzle_link_opened",
+        params = mapOf("puzzle_number" to puzzleNumber),
     )
 
     /** Player opened the Daily Puzzle screen. */

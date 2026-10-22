@@ -218,8 +218,10 @@
     <string name="daily_puzzle_failed">Out of tries</string>
     <string name="daily_puzzle_answer">Answer: %1$s</string>
     <string name="daily_puzzle_come_back">Come back tomorrow for a new puzzle.</string>
-    <string name="daily_puzzle_share_solved">Literature Daily #%1$d — solved %2$d/%3$d%4$s</string>
-    <string name="daily_puzzle_share_failed">Literature Daily #%1$d — couldn't crack it today</string>
+    <string name="daily_puzzle_kind_claim">The claim</string>
+    <string name="daily_puzzle_share_whatsapp">Share on WhatsApp</string>
+    <string name="cd_share_other_apps">Share using other apps</string>
+    <string name="cd_copy_result">Copy result</string>
     <string name="daily_puzzle_howto_title">How to play</string>
     <string name="daily_puzzle_howto_intro">Each day, your team can fully claim exactly one half-suit.</string>
     <string name="daily_puzzle_howto_s1">1. Read the moves and your hand.</string>
