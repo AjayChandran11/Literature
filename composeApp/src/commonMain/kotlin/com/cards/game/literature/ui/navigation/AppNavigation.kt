@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import com.cards.game.literature.isWebPlatform
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,7 +100,9 @@ fun AppNavigation() {
         when (pendingDestination) {
             DeepLinkHandler.LaunchDestination.DAILY_PUZZLE -> {
                 // Only if past onboarding — otherwise the puzzle would stack on the onboarding flow.
-                if (OnboardingPrefs.isCompleted()) {
+                // Except on the web, where a puzzle link is how a newcomer arrives: they came to
+                // play this puzzle, and Back still lands them on the onboarding start.
+                if (OnboardingPrefs.isCompleted() || isWebPlatform()) {
                     // The reminder already nudged the player and we're taking them to the puzzle,
                     // so mark the day's ready-hint as shown — no need to badge Home on the way back.
                     PuzzleStore.markReadyHintShown(currentEpochDay())

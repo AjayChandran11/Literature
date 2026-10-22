@@ -31,7 +31,8 @@ class AnalyticsEventTest {
         AnalyticsEvent.GameLeft(mode = "online"),
         AnalyticsEvent.RematchRequested(mode = "offline_bots"),
         AnalyticsEvent.ReviewRequested(trigger = "game"),
-        AnalyticsEvent.DailyPuzzleShared(solved = true),
+        AnalyticsEvent.DailyPuzzleShared(solved = true, channel = "whatsapp"),
+        AnalyticsEvent.PuzzleLinkOpened(puzzleNumber = 126),
         AnalyticsEvent.AppShared,
     )
 
@@ -55,7 +56,8 @@ class AnalyticsEventTest {
         assertEquals("game_left", AnalyticsEvent.GameLeft("online").name)
         assertEquals("rematch_requested", AnalyticsEvent.RematchRequested("online").name)
         assertEquals("review_requested", AnalyticsEvent.ReviewRequested("game").name)
-        assertEquals("daily_puzzle_shared", AnalyticsEvent.DailyPuzzleShared(true).name)
+        assertEquals("daily_puzzle_shared", AnalyticsEvent.DailyPuzzleShared(true, "system").name)
+        assertEquals("daily_puzzle_link_opened", AnalyticsEvent.PuzzleLinkOpened(1).name)
         assertEquals("app_shared", AnalyticsEvent.AppShared.name)
     }
 
@@ -97,7 +99,8 @@ class AnalyticsEventTest {
         assertEquals(mapOf("mode" to "online"), AnalyticsEvent.GameLeft("online").params)
         assertEquals(mapOf("mode" to "offline_bots"), AnalyticsEvent.RematchRequested("offline_bots").params)
         assertEquals(mapOf("trigger" to "puzzle"), AnalyticsEvent.ReviewRequested("puzzle").params)
-        assertEquals(mapOf("solved" to false), AnalyticsEvent.DailyPuzzleShared(false).params)
+        assertEquals(mapOf("solved" to false, "channel" to "copy"), AnalyticsEvent.DailyPuzzleShared(false, "copy").params)
+        assertEquals(mapOf("puzzle_number" to 126), AnalyticsEvent.PuzzleLinkOpened(126).params)
         assertTrue(AnalyticsEvent.AppShared.params.isEmpty())
         // A draw used to be reported as won=false, indistinguishable from a loss.
         assertEquals("draw", AnalyticsEvent.GameFinished("online", false, "draw", 4, null).params["result"])
