@@ -237,7 +237,7 @@ class GameRoom(
         session.disconnectDeadline = null
         session.isConnected = true
         session.lastSeen = System.currentTimeMillis()
-        log.info("[{}] '{}' ({}) reclaimed their seat", roomCode, session.playerName, playerId)
+        log.info("[{}] {} reclaimed their seat", roomCode, playerId)
     }
 
     /**
@@ -573,7 +573,7 @@ class GameRoom(
             return
         }
 
-        log.info("[{}] Player '{}' ({}) disconnected", roomCode, playerSession.playerName, playerId)
+        log.info("[{}] Player {} disconnected", roomCode, playerId)
         playerSession.isConnected = false
         playerSession.session = null
         playerSession.lastSeen = System.currentTimeMillis()
@@ -782,7 +782,7 @@ class GameRoom(
         if (departingId != hostPlayerId) return
         val newHost = players.values.firstOrNull { it.isConnected && it.playerId != departingId } ?: return
         hostPlayerId = newHost.playerId
-        log.info("[{}] Host transferred from {} to '{}' ({})", roomCode, departingId, newHost.playerName, newHost.playerId)
+        log.info("[{}] Host transferred from {} to {}", roomCode, departingId, newHost.playerId)
         players.values.filter { it.isConnected }.forEach { s ->
             s.send(ServerMessage.HostTransferred(newHost.playerId, newHost.playerName))
         }
@@ -797,7 +797,7 @@ class GameRoom(
             players[playerId]?.disconnectDeadline = null
             val player = state.getPlayer(playerId) ?: return
             if (player.isBot) return // Already a bot
-            log.info("[{}] Replacing '{}' ({}) with bot", roomCode, player.name, playerId)
+            log.info("[{}] Replacing {} with bot", roomCode, playerId)
 
             // Mark player as bot in game state
             val updatedPlayers = state.players.map {
@@ -818,7 +818,7 @@ class GameRoom(
 
     suspend fun handleReconnect(playerId: String): Boolean {
         val session = players[playerId] ?: return false
-        log.info("[{}] Player '{}' ({}) reconnected", roomCode, session.playerName, playerId)
+        log.info("[{}] Player {} reconnected", roomCode, playerId)
         session.isConnected = true
         session.lastSeen = System.currentTimeMillis()
         session.intentionalLeave = false

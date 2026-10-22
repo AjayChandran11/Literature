@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -88,7 +89,9 @@ object Routes {
 fun AppNavigation() {
     val navController = rememberNavController()
     PlatformNavigationEffects(navController)
-    val startDestination = if (OnboardingPrefs.isCompleted()) Routes.HOME else Routes.ONBOARDING
+    // Decided once: re-reading the preference on every recomposition could swap the graph's root
+    // under a live back stack the moment onboarding is marked complete.
+    val startDestination = remember { if (OnboardingPrefs.isCompleted()) Routes.HOME else Routes.ONBOARDING }
 
     // Jump straight to a screen the app was launched into (e.g. the daily-puzzle reminder tap).
     val pendingDestination by DeepLinkHandler.pendingDestination.collectAsState()
@@ -237,22 +240,22 @@ fun AppNavigation() {
         composable(Routes.HOME) {
             HomeScreen(
                 onStartGame = { playerName, playerCount, difficulty ->
-                    navController.navigate(Routes.game(playerName, playerCount, difficulty))
+                    navController.navigate(Routes.game(playerName, playerCount, difficulty)) { launchSingleTop = true }
                 },
                 onPlayOnline = { playerName ->
-                    navController.navigate(Routes.lobby(playerName))
+                    navController.navigate(Routes.lobby(playerName)) { launchSingleTop = true }
                 },
                 onJoinRoom = { playerName, roomCode ->
-                    navController.navigate(Routes.lobby(playerName, roomCode))
+                    navController.navigate(Routes.lobby(playerName, roomCode)) { launchSingleTop = true }
                 },
                 onOpenStats = {
-                    navController.navigate(Routes.STATS)
+                    navController.navigate(Routes.STATS) { launchSingleTop = true }
                 },
                 onOpenDailyPuzzle = {
-                    navController.navigate(Routes.DAILY_PUZZLE)
+                    navController.navigate(Routes.DAILY_PUZZLE) { launchSingleTop = true }
                 },
                 onOpenSettings = {
-                    navController.navigate(Routes.SETTINGS)
+                    navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
                 }
             )
         }

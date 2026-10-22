@@ -776,7 +776,7 @@ private fun HalfSuitTile(hs: HalfSuit, onClick: () -> Unit, modifier: Modifier =
         Text(suit.emoji, fontSize = 26.sp, color = if (suit.isRed) CardRed else MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(2.dp))
         Text(
-            if (isLow) "Low" else "High",
+            if (isLow) stringResource(Res.string.ask_filter_low) else stringResource(Res.string.ask_filter_high),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -828,7 +828,7 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
     } else {
         stringResource(Res.string.daily_puzzle_share_failed, uiState.puzzleNumber)
     }
-    val caption = "$base\n${InviteLink.PLAY_STORE}"
+    val caption = "$base\n${InviteLink.appLink}"
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(

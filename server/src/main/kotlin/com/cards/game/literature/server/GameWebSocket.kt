@@ -68,6 +68,22 @@ private val ORIGIN_PATTERN = Regex("""^[a-zA-Z][a-zA-Z0-9+.\-]*://([^/:?#]+)(?::
  *
  * A missing Origin is ALLOWED: native Android and iOS clients send none, only browsers do.
  */
+/**
+ * The display name as the room will keep it: trimmed and at most [PLAYER_NAME_MAX] UTF-16 units,
+ * the same limit the app's name field enforces. A plain `take(20)` could end on the first half of
+ * a surrogate pair, turning a trailing emoji into a lone surrogate that renders as a broken glyph
+ * on every other player's screen.
+ */
+internal fun String.asPlayerName(): String {
+    val trimmed = trim()
+    if (trimmed.length <= PLAYER_NAME_MAX) return trimmed
+    var end = PLAYER_NAME_MAX
+    if (Character.isHighSurrogate(trimmed[end - 1])) end--
+    return trimmed.substring(0, end).trimEnd()
+}
+
+internal const val PLAYER_NAME_MAX = 20
+
 internal fun isOriginAllowed(origin: String?, allowed: Set<String> = allowedOrigins): Boolean {
     if (origin.isNullOrBlank()) return true
     // Parsed strictly, by hand. Ktor's Url() is lenient and DEFAULTS a missing host to
@@ -143,7 +159,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Already in a room")
                                 continue
                             }
-                            val name = message.playerName.trim().take(20)
+                            val name = message.playerName.asPlayerName()
                             if (name.isBlank()) {
                                 sendError("Player name cannot be empty")
                                 continue
@@ -177,7 +193,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Already in a room")
                                 continue
                             }
-                            val joinName = message.playerName.trim().take(20)
+                            val joinName = message.playerName.asPlayerName()
                             if (joinName.isBlank()) {
                                 sendError("Player name cannot be empty")
                                 continue
@@ -298,6 +314,12 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                         }
 
                         is ClientMessage.Reconnect -> {
+                            // Same rule as Create/Join: one socket, one seat. A Reconnect on a socket
+                            // that already holds a seat would bind it to a second room.
+                            if (currentRoom != null) {
+                                sendError("Already in a room")
+                                continue
+                            }
                             val room = roomManager.getRoom(message.roomCode)
                             if (room == null) {
                                 sendError("Room not found")

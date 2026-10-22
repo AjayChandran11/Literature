@@ -142,7 +142,11 @@ fun GameBoardScreen(
     LaunchedEffect(tutorialState.isActive) {
         if (isFirstGame && !tutorialState.isActive) {
             TutorialPrefs.markFirstGameCompleted()
-            Analytics.log(AnalyticsEvent.TutorialCompleted)
+            val skippedAt = tutorialState.skippedAt
+            Analytics.log(
+                if (skippedAt != null) AnalyticsEvent.TutorialSkipped(step = skippedAt.name.lowercase())
+                else AnalyticsEvent.TutorialCompleted
+            )
         }
     }
 

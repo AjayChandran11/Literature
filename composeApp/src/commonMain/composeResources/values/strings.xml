@@ -62,6 +62,8 @@
     <string name="lobby_join_with_code">or join with a code</string>
     <string name="lobby_room_code_hint">Room Code</string>
     <string name="lobby_join_room">Join Room</string>
+    <string name="lobby_offline_notice">You are offline. Online play needs an internet connection.</string>
+    <string name="lobby_error_admission_timeout">Couldn't reach the room. Please check your connection and try again.</string>
     <string name="lobby_server_warming_up">Server is warming up, please wait…</string>
 
     <!-- Waiting Room Screen -->
@@ -69,7 +71,6 @@
     <string name="dialog_leave_room_message">Are you sure you want to leave the room?</string>
     <string name="waiting_room_title">Waiting Room</string>
     <string name="waiting_room_code_label">Room Code</string>
-    <string name="waiting_room_share_code">Share this code with friends</string>
     <string name="cd_copy_room_code">Copy room code</string>
     <string name="resume_rejoining">Rejoining your game…</string>
     <string name="resume_failed_title">Couldn't rejoin</string>
@@ -77,7 +78,6 @@
     <string name="button_dismiss">Dismiss</string>
     <string name="waiting_room_invite">Invite Friends</string>
     <string name="waiting_room_invite_whatsapp">Invite on WhatsApp</string>
-    <string name="waiting_room_invite_other">Other apps</string>
     <string name="cd_invite_other_apps">Invite using other apps</string>
     <string name="invite_share_text">Join my Literature game! 🃏\nRoom code: %1$s\n%2$s</string>
     <string name="invite_app_share_text">Let's play Literature 🃏 — the team card game where you track down half-suits by asking your opponents for cards.\n\nInstall it and I'll send you a room code:\n%1$s</string>
@@ -104,6 +104,7 @@
     <string name="dialog_session_ended_title">Game Ended</string>
     <string name="error_seat_lost">You are no longer in this room — you were away too long. Join again with the room code.</string>
     <string name="error_room_gone">This game is no longer available — the room may have closed or the server restarted.</string>
+    <string name="button_update">Update</string>
     <string name="error_update_required">Please update to the latest version to keep playing online.</string>
     <string name="reconnect_waiting">Waiting for %1$s to reconnect… (%2$ds)</string>
     <string name="game_your_turn">✦ Your Turn!</string>
@@ -127,12 +128,7 @@
     <string name="action_claim_deck">CLAIM DECK</string>
 
     <!-- Game Log / Event Strip -->
-    <string name="game_log_title">Game Log</string>
-    <string name="game_log_expand">Expand</string>
-    <string name="game_log_collapse">Collapse</string>
-    <string name="game_log_game_started">Game started!</string>
     <string name="game_log_got_card">%1$s got %2$s from %3$s</string>
-    <string name="game_log_asked_no">%1$s asked %2$s for %3$s - No!</string>
     <string name="game_log_asked_no_strip">%1$s asked %2$s for %3$s — No!</string>
     <string name="game_log_claimed_correctly">%1$s claimed %2$s correctly!</string>
     <string name="game_log_claimed_incorrectly">%1$s claimed %2$s incorrectly!</string>
@@ -185,14 +181,11 @@
     <string name="result_win">You Win!</string>
     <string name="result_lose">You Lose!</string>
     <string name="result_breakdown_title">Half-Suit Breakdown</string>
-    <string name="result_unclaimed">Unclaimed</string>
     <string name="result_waiting_rematch">Waiting for %1$s to start a rematch…</string>
     <string name="result_waiting_rematch_no_host">Waiting for the host to start a rematch…</string>
     <string name="result_steal_hint">Stolen on a failed claim</string>
     <string name="result_show_log">Show Game Log</string>
-    <string name="result_hide_log">Hide Game Log</string>
     <string name="result_log_title">Game Log</string>
-    <string name="cd_close_log">Close game log</string>
     <string name="result_share">Share Result</string>
     <string name="result_card_tagline">Think. Ask. Claim. Win.</string>
     <string name="result_card_cta">Get it on Google Play</string>
@@ -263,10 +256,10 @@
     <string name="onboarding_swipe_hint">Swipe to learn how to play →</string>
     <string name="onboarding_welcome_title">Literature</string>
     <string name="onboarding_ultimate_card_game">THE ULTIMATE CARD GAME</string>
-    <string name="onboarding_description">4–8 players  ·  2 teams  ·  48 cards\nAsk, strategise, and claim half suits</string>
+    <string name="onboarding_description">4, 6 or 8 players  ·  2 teams  ·  48 cards\nAsk, strategise, and claim half suits</string>
     <string name="onboarding_deck_title">The Deck</string>
     <string name="onboarding_deck_subtitle">48 cards — split into 8 Half Suits of 6 cards each</string>
-    <string name="onboarding_no_eights">  ✕  No 8s in Literature!  </string>
+    <string name="onboarding_no_eights">✕  No 8s in Literature!</string>
     <string name="onboarding_teams_title">Two Teams</string>
     <string name="onboarding_teams_subtitle">Collaborate with your teammates to claim the most half suits</string>
     <string name="onboarding_team_a">Team A</string>
@@ -289,7 +282,7 @@
     <string name="onboarding_rule_must_hold">You must hold a card from that half suit</string>
     <string name="onboarding_claim_title">Claim &amp; Win</string>
     <string name="onboarding_claim_subtitle">When your team holds all 6 cards of a half suit — claim it for a point!</string>
-    <string name="onboarding_claim_badge">  ♠&#xFE0F; Low Spades — CLAIMED!  </string>
+    <string name="onboarding_claim_badge">♠&#xFE0F; Low Spades — CLAIMED!</string>
     <string name="onboarding_your_team">Your Team</string>
     <string name="onboarding_half_suits_claimed">half suits claimed</string>
     <string name="onboarding_most_wins">Most half suits wins!</string>
@@ -380,7 +373,6 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="cd_assign_card">Assign %1$s to a teammate</string>
-    <string name="cd_connection_status">Connection status</string>
     <string name="cd_bot_thinking">Bot is thinking</string>
     <string name="cd_suit_spades">Spades</string>
     <string name="cd_suit_hearts">Hearts</string>
@@ -402,7 +394,6 @@
     <string name="settings_licenses">Fonts: Playfair Display (SIL OFL 1.1)</string>
     <string name="feedback_email_subject">Literature feedback (v%1$s)</string>
     <string name="home_settings">Settings</string>
-    <string name="button_done">Done</string>
 
     <!-- Online gate dialog -->
     <string name="dialog_online_gate_title">Play offline first?</string>
@@ -420,8 +411,6 @@
     <string name="difficulty_hard_desc">Expert</string>
 
     <!-- Reactions -->
-    <string name="reaction_picker_open">Send a reaction</string>
-    <string name="cd_reaction_button">Send %1$s reaction</string>
 
     <!-- Stats -->
     <string name="stats_title">My Stats</string>
@@ -429,8 +418,6 @@
     <string name="stats_games">Games</string>
     <string name="stats_wins">Wins</string>
     <string name="stats_win_rate">Win rate</string>
-    <string name="stats_losses">Losses</string>
-    <string name="stats_draws">Draws</string>
     <string name="stats_current_streak">Streak</string>
     <string name="stats_best_streak">Best streak</string>
     <string name="home_streak_best">Best</string>
@@ -465,7 +452,6 @@
     <string name="achievement_unlocked_banner">Achievement unlocked!</string>
     <string name="achievement_unlocked_more">+%1$d more</string>
     <string name="achievement_locked">Locked</string>
-    <string name="cd_achievement_locked">%1$s — locked</string>
     <string name="ach_first_win">First Victory</string>
     <string name="ach_first_win_desc">Win your first game</string>
     <string name="ach_hat_trick">Hat-Trick</string>

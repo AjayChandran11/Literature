@@ -55,6 +55,9 @@ fun ClaimBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val claimYouLabel = stringResource(Res.string.claim_you)
+    // Only teammates who still hold cards can be holding one of the six. A teammate who had run
+    // out used to be offered in the dropdown, and picking them failed the claim for certain.
+    val holders = teammates.filter { it.cardCount > 0 }
     val windowInfo = currentWindowAdaptiveInfo()
     val isCompact = windowInfo.isCompactHeight
 
@@ -111,7 +114,7 @@ fun ClaimBottomSheet(
                                 // Auto-assign my own cards
                                 val cards = DeckUtils.getAllCardsForHalfSuit(hs)
                                 val newAssignments = mutableMapOf<Card, String>()
-                                val soloTeammate = teammates.singleOrNull()
+                                val soloTeammate = holders.singleOrNull()
                                 cards.forEach { card ->
                                     if (card in myHand) {
                                         newAssignments[card] = myPlayerId
@@ -130,7 +133,7 @@ fun ClaimBottomSheet(
                     val allCards = DeckUtils.getAllCardsForHalfSuit(hs)
                     val allTeamPlayers = listOf(
                         PlayerInfo(myPlayerId, claimYouLabel, myHand.size, true, false)
-                    ) + teammates
+                    ) + holders
 
                     Text(
                         stringResource(Res.string.claim_assign_instruction),
@@ -222,7 +225,7 @@ fun ClaimBottomSheet(
                                             .compositeOver(MaterialTheme.colorScheme.surface),
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                                     ) {
-                                        teammates.forEach { player ->
+                                        holders.forEach { player ->
                                             DropdownMenuItem(
                                                 text = { Text(player.name, style = MaterialTheme.typography.titleMedium) },
                                                 onClick = {

@@ -23,6 +23,8 @@ private const val ADMISSION_TIMEOUT_MS = 20_000L
 data class LobbyUiState(
     val loadingOperation: LoadingOperation? = null,
     val errorMessage: String? = null,
+    /** The server never admitted us within the timeout; the screen owns the wording. */
+    val admissionTimedOut: Boolean = false,
     /** A terminal session error hit during create/join (e.g. this build is too old). */
     val fatalError: FatalSessionError? = null,
     val isServerReady: Boolean = false
@@ -90,7 +92,7 @@ class LobbyViewModel(
         viewModelScope.launch {
             log.i { "Creating room: player=$playerName, count=$playerCount" }
             Analytics.log(AnalyticsEvent.RoomCreated(playerCount))
-            _uiState.update { it.copy(loadingOperation = LoadingOperation.CREATE, errorMessage = null) }
+            _uiState.update { it.copy(loadingOperation = LoadingOperation.CREATE, errorMessage = null, admissionTimedOut = false) }
             serverReadyDeferred.await() // waits only if warmUp is still in progress
             onlineRepository.createRoom(playerName, playerCount)
             guardAdmissionTimeout()
@@ -102,7 +104,7 @@ class LobbyViewModel(
         pendingJoinSource = source
         viewModelScope.launch {
             log.i { "Joining room: code=$roomCode, player=$playerName" }
-            _uiState.update { it.copy(loadingOperation = LoadingOperation.JOIN, errorMessage = null) }
+            _uiState.update { it.copy(loadingOperation = LoadingOperation.JOIN, errorMessage = null, admissionTimedOut = false) }
             serverReadyDeferred.await()
             onlineRepository.joinRoom(roomCode, playerName)
             guardAdmissionTimeout()
@@ -120,19 +122,14 @@ class LobbyViewModel(
                 onlineRepository.roomState.filterNotNull().first()
             }
             if (admitted == null && _uiState.value.loadingOperation != null) {
-                _uiState.update {
-                    it.copy(
-                        loadingOperation = null,
-                        errorMessage = "Couldn't reach the room. Please check your connection and try again."
-                    )
-                }
+                _uiState.update { it.copy(loadingOperation = null, admissionTimedOut = true) }
                 onlineRepository.disconnect()
             }
         }
     }
 
     fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
+        _uiState.update { it.copy(errorMessage = null, admissionTimedOut = false) }
     }
 
     fun clearFatalError() {

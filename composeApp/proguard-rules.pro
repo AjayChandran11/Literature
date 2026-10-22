@@ -13,13 +13,16 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
-# Ktor — kept whole: it's the online transport (WebSocket + serialization + OkHttp engine), and
-# R8 stripping its reflectively-touched internals has broken client networking in the past.
--keep class io.ktor.** { *; }
+# Ktor and Koin used to be kept whole (`-keep class io.ktor.** { *; }`, same for org.koin), which
+# switched R8 off for the two biggest libraries in the app. Neither needs it: the engine is passed
+# explicitly (HttpClient(OkHttp)), the WebSocket frames are decoded by kotlinx.serialization's
+# generated serializers (kept above), and Koin resolves its graph through constructor lambdas,
+# not reflection. The one reflective seam Ktor has is engine discovery: HttpClient() with no
+# engine walks ServiceLoader and instantiates a container by its no-arg constructor, which AGP 9's
+# R8 no longer keeps for a bare `-keep class` (the same shape that lost Firebase its registrars).
+# Keep that constructor so a future engine-less HttpClient() can't fail the same way.
+-keep class * implements io.ktor.client.HttpClientEngineContainer { <init>(); }
 -dontwarn io.ktor.**
-
-# Koin — kept: the DI graph is resolved at startup; a wrongly-stripped definition crashes on launch.
--keep class org.koin.** { *; }
 -dontwarn org.koin.**
 
 # App classes: polymorphic serialization has NO @SerialName anywhere, so the sealed ServerMessage/

@@ -2,6 +2,9 @@ package com.cards.game.literature.ui.navigation
 
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
+import com.cards.game.literature.deeplink.InviteLink
+import com.cards.game.literature.isWebPlatform
+import androidx.compose.ui.platform.LocalUriHandler
 import com.cards.game.literature.ui.common.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -108,18 +111,35 @@ fun OnlineGameScreen(
             FatalSessionError.SEAT_LOST -> stringResource(Res.string.error_seat_lost)
             FatalSessionError.UPDATE_REQUIRED -> stringResource(Res.string.error_update_required)
         }
+        val uriHandler = LocalUriHandler.current
+        val leave = {
+            onlineRepository.leaveRoomAndReset()
+            onQuit()
+        }
+        // The update message asks for an update, so its primary button goes to the store. Not on
+        // the web build, where the fix is a refresh and there is no store to open.
+        val offerUpdate = fatal == FatalSessionError.UPDATE_REQUIRED && !isWebPlatform()
         AlertDialog(
             onDismissRequest = { },
             title = { Text(stringResource(Res.string.dialog_session_ended_title), fontWeight = FontWeight.Bold) },
             text = { Text(message) },
             confirmButton = {
-                Button(onClick = {
-                    onlineRepository.leaveRoomAndReset()
-                    onQuit()
-                }) {
-                    Text(stringResource(Res.string.button_ok))
+                if (offerUpdate) {
+                    Button(onClick = {
+                        runCatching { uriHandler.openUri(InviteLink.PLAY_STORE) }
+                        leave()
+                    }) {
+                        Text(stringResource(Res.string.button_update))
+                    }
+                } else {
+                    Button(onClick = leave) {
+                        Text(stringResource(Res.string.button_ok))
+                    }
                 }
-            }
+            },
+            dismissButton = if (offerUpdate) {
+                { TextButton(onClick = leave) { Text(stringResource(Res.string.button_ok)) } }
+            } else null
         )
     }
 
