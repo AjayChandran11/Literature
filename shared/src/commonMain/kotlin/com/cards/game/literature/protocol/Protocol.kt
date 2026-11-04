@@ -17,7 +17,7 @@ package com.cards.game.literature.protocol
  *      claimers keep the deterministic auto-pass.
  */
 object Protocol {
-    const val VERSION: Int = 3
+    const val VERSION: Int = 4
 
     /**
      * Oldest client protocol version the server still accepts. Set to 2 on

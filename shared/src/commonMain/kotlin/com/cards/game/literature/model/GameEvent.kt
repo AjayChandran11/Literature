@@ -69,6 +69,17 @@ sealed class GameEvent {
         override val timestamp: Long = currentTimeMillis()
     ) : GameEvent()
 
+    /** v4: someone arrived by code or invite link and took over [replacedName]'s seat at a
+     *  running table. Clients before v4 receive a [PlayerReconnected] in its place. */
+    @Serializable
+    @SerialName("com.cards.game.literature.model.GameEvent.PlayerJoined")
+    data class PlayerJoined(
+        val playerId: String,
+        val playerName: String,
+        val replacedName: String,
+        override val timestamp: Long = currentTimeMillis()
+    ) : GameEvent()
+
     @Serializable
     @SerialName("com.cards.game.literature.model.GameEvent.PlayerReconnected")
     data class PlayerReconnected(
