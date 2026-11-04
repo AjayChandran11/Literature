@@ -7,7 +7,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyColumn
@@ -658,17 +668,15 @@ private fun StartCountdown(startsAtMs: Long) {
             secondsLeft = secondsUntil(startsAtMs)
         }
     }
-    val urgent = secondsLeft <= 10
+    // Same treatment as the HOST badge in the list below: the accent on a 20% wash of itself.
+    val accent = if (secondsLeft <= 10) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
     Text(
         text = stringResource(Res.string.waiting_room_starts_in, secondsLeft),
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Bold,
-        color = if (urgent) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+        color = accent,
         modifier = Modifier
-            .background(
-                if (urgent) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
-                RoundedCornerShape(8.dp)
-            )
+            .background(accent.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 2.dp)
     )
 }
@@ -797,6 +805,38 @@ private fun PlayerList(
     }
 }
 
+/** Material's checkbox is fixed at 2dp corners; this one matches the rounded cards around it. */
+@Composable
+private fun RoundedCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val accent = MaterialTheme.colorScheme.secondary
+    val fill by animateColorAsState(if (checked) accent else Color.Transparent)
+    val outline by animateColorAsState(if (checked) accent else MaterialTheme.colorScheme.onSurfaceVariant)
+    Box(
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .toggleable(
+                value = checked,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = false, radius = 20.dp),
+                role = Role.Checkbox,
+                onValueChange = onCheckedChange
+            )
+            .size(20.dp)
+            .background(fill, RoundedCornerShape(6.dp))
+            .border(2.dp, outline, RoundedCornerShape(6.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedVisibility(visible = checked, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
 /** Host setup that lives in the scrollable body: the fill-with-bots toggle, difficulty selector,
  *  and the uneven-teams warning. The Start button is separate ([StartGameButton]) so it can be
  *  pinned to the bottom of the landscape pane. */
@@ -821,12 +861,7 @@ private fun HostSetupControls(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(0.8f)
         ) {
-            Checkbox(
-                checked = fillWithBots,
-                onCheckedChange = onFillWithBots,
-                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+            RoundedCheckbox(checked = fillWithBots, onCheckedChange = onFillWithBots)
             Text(
                 text = stringResource(Res.string.waiting_room_fill_bots),
                 style = MaterialTheme.typography.bodyLarge,
