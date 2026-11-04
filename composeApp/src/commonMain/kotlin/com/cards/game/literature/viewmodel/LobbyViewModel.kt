@@ -8,12 +8,13 @@ import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.repository.ConnectionState
 import com.cards.game.literature.repository.OnlineGameRepository
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import com.cards.game.literature.repository.FatalSessionError
 
-enum class LoadingOperation { CREATE, JOIN }
+enum class LoadingOperation { CREATE, JOIN, QUICK_PLAY }
 
 // Give up waiting for room admission after this long. Without it, a graceful close before
 // admission (e.g. hitting the per-IP connection rate limit on a crowded Wi-Fi) emits neither an
@@ -51,6 +52,10 @@ class LobbyViewModel(
     // Completes (even on warmUp failure) so createRoom/joinRoom know when to proceed
     private val serverReadyDeferred = CompletableDeferred<Unit>()
 
+    // The request currently waiting to be seated. One at a time: a second tap supersedes the
+    // first, so a late admission can never navigate twice.
+    private var admission: Job? = null
+
     init {
         Analytics.log(AnalyticsEvent.LobbyOpened)
 
@@ -74,57 +79,69 @@ class LobbyViewModel(
                 if (fatal != null) _uiState.update { it.copy(loadingOperation = null, fatalError = fatal) }
             }
         }
-
-        viewModelScope.launch {
-            val room = onlineRepository.roomState.filterNotNull().first()
-            if (_uiState.value.loadingOperation == LoadingOperation.JOIN) {
-                Analytics.log(AnalyticsEvent.RoomJoined(pendingJoinSource, room.targetPlayerCount))
-            }
-            _uiState.update { it.copy(loadingOperation = null) }
-            _navigateToWaitingRoom.emit(onlineRepository.roomCode)
-        }
     }
 
     // How the pending join was initiated, reported on admission (see AnalyticsEvent.RoomJoined).
     private var pendingJoinSource = "code"
 
-    fun createRoom(playerName: String, playerCount: Int) {
-        viewModelScope.launch {
-            log.i { "Creating room: player=$playerName, count=$playerCount" }
-            Analytics.log(AnalyticsEvent.RoomCreated(playerCount))
-            _uiState.update { it.copy(loadingOperation = LoadingOperation.CREATE, errorMessage = null, admissionTimedOut = false) }
-            serverReadyDeferred.await() // waits only if warmUp is still in progress
-            onlineRepository.createRoom(playerName, playerCount)
-            guardAdmissionTimeout()
-        }
+    fun quickPlay(playerName: String) = seat(LoadingOperation.QUICK_PLAY) {
+        log.i { "Quick Play: player=$playerName" }
+        onlineRepository.quickPlay(playerName)
+    }
+
+    fun createRoom(playerName: String, playerCount: Int, isPublic: Boolean = false) = seat(LoadingOperation.CREATE) {
+        log.i { "Creating room: player=$playerName, count=$playerCount, public=$isPublic" }
+        Analytics.log(AnalyticsEvent.RoomCreated(playerCount, isPublic))
+        onlineRepository.createRoom(playerName, playerCount, isPublic)
     }
 
     /** [source] is "code" (typed) or "invite" (deep link / referrer auto-join), for analytics. */
     fun joinRoom(roomCode: String, playerName: String, source: String = "code") {
         pendingJoinSource = source
-        viewModelScope.launch {
+        seat(LoadingOperation.JOIN) {
             log.i { "Joining room: code=$roomCode, player=$playerName" }
-            _uiState.update { it.copy(loadingOperation = LoadingOperation.JOIN, errorMessage = null, admissionTimedOut = false) }
-            serverReadyDeferred.await()
             onlineRepository.joinRoom(roomCode, playerName)
-            guardAdmissionTimeout()
         }
     }
 
     /**
-     * Fails the pending create/join if the server never admits us into a room. Only acts while
-     * still loading, so a room state (navigates away) or an error (shown normally) that arrives
-     * first wins the race and this becomes a no-op — it can't disconnect a live session.
+     * Sends one request and waits for ITS admission: the room state the server sends once we
+     * hold a seat. Waiting per request, not once per screen, is the point. A single listener
+     * armed at start-up was spent by whatever room state was still lying around from the table
+     * the player had just left, and the next Quick Play then spun forever on a seat it had in
+     * fact been given. The repository forgets the old table before it connects, so the state
+     * seen here is always the new room's.
      */
-    private fun guardAdmissionTimeout() {
-        viewModelScope.launch {
-            val admitted = withTimeoutOrNull(ADMISSION_TIMEOUT_MS) {
+    private fun seat(operation: LoadingOperation, request: suspend () -> Unit) {
+        admission?.cancel()
+        admission = viewModelScope.launch {
+            _uiState.update { it.copy(loadingOperation = operation, errorMessage = null, admissionTimedOut = false) }
+            serverReadyDeferred.await() // waits only if warmUp is still in progress
+            request()
+            val room = withTimeoutOrNull(ADMISSION_TIMEOUT_MS) {
                 onlineRepository.roomState.filterNotNull().first()
             }
-            if (admitted == null && _uiState.value.loadingOperation != null) {
-                _uiState.update { it.copy(loadingOperation = null, admissionTimedOut = true) }
-                onlineRepository.disconnect()
+            if (room == null) {
+                // An error or a fatal has already stopped the spinner; otherwise a graceful close
+                // before admission emitted neither, and only this stops it from running on.
+                if (_uiState.value.loadingOperation != null) {
+                    _uiState.update { it.copy(loadingOperation = null, admissionTimedOut = true) }
+                    onlineRepository.disconnect()
+                }
+                return@launch
             }
+            when (operation) {
+                // A join into a running table delivers the board before the room state.
+                LoadingOperation.JOIN -> Analytics.log(AnalyticsEvent.RoomJoined(
+                    pendingJoinSource, room.targetPlayerCount, inProgress = onlineRepository.gameState.value != null
+                ))
+                LoadingOperation.QUICK_PLAY -> Analytics.log(AnalyticsEvent.QuickPlay(
+                    outcome = if (room.hostPlayerId == onlineRepository.myPlayerId) "created" else "joined"
+                ))
+                LoadingOperation.CREATE -> {}
+            }
+            _uiState.update { it.copy(loadingOperation = null) }
+            _navigateToWaitingRoom.emit(onlineRepository.roomCode)
         }
     }
 

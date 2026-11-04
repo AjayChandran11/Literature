@@ -59,6 +59,10 @@
     <!-- Lobby Screen -->
     <string name="lobby_playing_as">Playing as %1$s</string>
     <string name="lobby_create_room">Create Room</string>
+    <string name="lobby_quick_play">Quick Play</string>
+    <string name="create_room_public_title">Open to anyone</string>
+    <string name="create_room_public_subtitle">Quick Play can seat strangers here until the game starts</string>
+    <string name="waiting_room_starts_in">Starts in %1$d s</string>
     <string name="lobby_join_with_code">or join with a code</string>
     <string name="lobby_room_code_hint">Room Code</string>
     <string name="lobby_join_room">Join Room</string>
@@ -136,6 +140,7 @@
     <string name="game_log_timed_out">%1$s ran out of time</string>
     <string name="game_log_replaced_by_bot">%1$s is away — a bot is playing for them</string>
     <string name="game_log_player_back">%1$s is back</string>
+    <string name="game_log_player_joined">%1$s joined, taking %2$s's seat</string>
 
     <!-- Deck Tracker -->
     <string name="deck_tracker_ours">Ours</string>

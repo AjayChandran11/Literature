@@ -6,7 +6,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +38,7 @@ fun LobbyScreen(
     val uiState by viewModel.uiState.collectAsState()
     val isNetworkAvailable by NetworkMonitor.isNetworkAvailable.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
+    var createPublic by rememberSaveable { mutableStateOf(false) }
     // Prefill the code from a deep-link invite so it stays visible if the auto-join fails.
     var joinRoomCode by remember { mutableStateOf(initialRoomCode.orEmpty()) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -130,9 +134,10 @@ fun LobbyScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Create Room
+            // Quick Play: a table in seconds, every time. The server seats you at a public table
+            // that has not dealt yet or opens one that deals itself shortly; never a running game.
             Button(
-                onClick = { showCreateDialog = true },
+                onClick = { viewModel.quickPlay(playerName) },
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
                     .height(56.dp),
@@ -140,10 +145,37 @@ fun LobbyScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 enabled = !uiState.isLoading && isNetworkAvailable
             ) {
-                if (uiState.loadingOperation == LoadingOperation.CREATE) {
+                if (uiState.loadingOperation == LoadingOperation.QUICK_PLAY) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.5.dp
+                    )
+                } else {
+                    Icon(Icons.Filled.Bolt, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(Res.string.lobby_quick_play),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Create Room (with friends): tonal now that Quick Play is the primary action.
+            FilledTonalButton(
+                onClick = { showCreateDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                enabled = !uiState.isLoading && isNetworkAvailable
+            ) {
+                if (uiState.loadingOperation == LoadingOperation.CREATE) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                         strokeWidth = 2.5.dp
                     )
                 } else {
@@ -230,11 +262,37 @@ fun LobbyScreen(
             onDismiss = { showCreateDialog = false },
             onConfirm = { playerCount, _ ->
                 showCreateDialog = false
-                viewModel.createRoom(playerName, playerCount)
+                viewModel.createRoom(playerName, playerCount, createPublic)
             },
             confirmLabel = stringResource(Res.string.lobby_create_room),
             allowEightPlayers = true,
-            showDifficulty = false
+            showDifficulty = false,
+            extraContent = { PublicTableSwitch(checked = createPublic, onChecked = { createPublic = it }) }
         )
+    }
+}
+
+/** Lets Quick Play seat strangers at this room while it waits to deal. Off by default: a room made from here is usually for friends. */
+@Composable
+private fun PublicTableSwitch(checked: Boolean, onChecked: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(Res.string.create_room_public_title),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = stringResource(Res.string.create_room_public_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onChecked)
     }
 }

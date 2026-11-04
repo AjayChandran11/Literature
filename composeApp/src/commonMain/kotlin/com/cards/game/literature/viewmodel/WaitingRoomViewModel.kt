@@ -6,6 +6,7 @@ import co.touchlab.kermit.Logger
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.bot.BotDifficulty
+import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.protocol.RoomPhase
 import com.cards.game.literature.protocol.RoomState
 import com.cards.game.literature.repository.ConnectionState
@@ -24,7 +25,9 @@ data class WaitingRoomUiState(
     val targetPlayerCount: Int = 6,
     val errorMessage: String? = null,
     val isStarting: Boolean = false,
-    val isStartGameTimedOut: Boolean = false
+    val isStartGameTimedOut: Boolean = false,
+    /** When a Quick Play table starts itself, on THIS device's clock; null when no countdown runs. */
+    val autoStartAtMs: Long? = null,
 )
 
 data class WaitingRoomPlayer(
@@ -145,7 +148,8 @@ class WaitingRoomViewModel(
             },
             isHost = onlineRepository.myPlayerId == room.hostPlayerId,
             myPlayerId = onlineRepository.myPlayerId,
-            targetPlayerCount = room.targetPlayerCount
+            targetPlayerCount = room.targetPlayerCount,
+            autoStartAtMs = room.autoStartInMs?.let { currentTimeMillis() + it },
         )
     }
 }

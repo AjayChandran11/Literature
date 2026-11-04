@@ -276,7 +276,7 @@ fun WaitingRoomScreen(
                         .weight(0.58f)
                         .fillMaxHeight()
                 ) {
-                    PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount)
+                    PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount, startsAtMs = uiState.autoStartAtMs)
                     Spacer(modifier = Modifier.height(12.dp))
                     PlayerList(
                         players = uiState.players,
@@ -311,7 +311,7 @@ fun WaitingRoomScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount)
+                PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount, startsAtMs = uiState.autoStartAtMs)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Portrait budget is tight: as a fixed sibling the primer starved the
@@ -628,15 +628,53 @@ private fun WaitingRoomHeroNarrowPreview() {
 }
 
 @Composable
-private fun PlayersCountHeader(count: Int, target: Int, modifier: Modifier = Modifier) {
+private fun PlayersCountHeader(count: Int, target: Int, modifier: Modifier = Modifier, startsAtMs: Long? = null) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = stringResource(Res.string.waiting_room_players_count, count, target),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (startsAtMs != null) StartCountdown(startsAtMs)
+    }
+}
+
+/**
+ * A Quick Play table starts itself at [startsAtMs]: a small pill beside the players count rather
+ * than a line of its own, since every fixed line here is taken from the players list. Ticks
+ * off the server's deadline, so it survives recomposition and a rejoin without drifting.
+ */
+@Composable
+private fun StartCountdown(startsAtMs: Long) {
+    var secondsLeft by remember(startsAtMs) { mutableStateOf(secondsUntil(startsAtMs)) }
+    LaunchedEffect(startsAtMs) {
+        while (secondsLeft > 0) {
+            kotlinx.coroutines.delay(250)
+            secondsLeft = secondsUntil(startsAtMs)
+        }
+    }
+    val urgent = secondsLeft <= 10
     Text(
-        text = stringResource(Res.string.waiting_room_players_count, count, target),
-        style = MaterialTheme.typography.titleLarge,
+        text = stringResource(Res.string.waiting_room_starts_in, secondsLeft),
+        style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = modifier
+        color = if (urgent) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = Modifier
+            .background(
+                if (urgent) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 2.dp)
     )
 }
+
+private fun secondsUntil(deadlineMs: Long): Int =
+    ((deadlineMs - com.cards.game.literature.model.currentTimeMillis() + 999) / 1000).coerceAtLeast(0).toInt()
 
 @Composable
 private fun PlayerList(
