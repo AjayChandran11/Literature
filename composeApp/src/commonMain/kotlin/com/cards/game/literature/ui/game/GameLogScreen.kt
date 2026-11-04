@@ -55,6 +55,7 @@ import org.jetbrains.compose.resources.stringResource
 import com.cards.game.literature.ui.common.displayEmoji
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PersonAdd
 
 /**
  * Full-screen game log — a proper page (top bar + back), not a bottom sheet. The moves render as a
@@ -68,7 +69,8 @@ fun GameLogScreen(events: List<GameEvent>, onClose: () -> Unit) {
         events.filter {
             it is GameEvent.CardAsked || it is GameEvent.DeckClaimed ||
                 it is GameEvent.GameEnded || it is GameEvent.TurnTimedOut ||
-                it is GameEvent.PlayerReplacedByBot || it is GameEvent.PlayerReconnected
+                it is GameEvent.PlayerReplacedByBot || it is GameEvent.PlayerReconnected ||
+                it is GameEvent.PlayerJoined
         }
     }
     // Same Scaffold + TopAppBar as the Settings / Stats screens, so the header is consistent across
@@ -119,6 +121,9 @@ private fun GameLogRow(event: GameEvent) {
         )
         is GameEvent.PlayerReconnected -> NoteRow(
             Icons.Filled.Refresh, stringResource(Res.string.game_log_player_back, event.playerName)
+        )
+        is GameEvent.PlayerJoined -> NoteRow(
+            Icons.Filled.PersonAdd, stringResource(Res.string.game_log_player_joined, event.playerName, event.replacedName)
         )
         is GameEvent.GameEnded -> EndRow()
         else -> {}
