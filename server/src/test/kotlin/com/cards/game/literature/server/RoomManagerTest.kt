@@ -105,4 +105,25 @@ class RoomManagerTest {
             manager.shutdown()
         }
     }
+
+    @Test
+    fun quickPlayFindsTheFullestWaitingPublicTableAndNeverARunningOne() = runBlocking {
+        val manager = RoomManager()
+        try {
+            val (one, _) = manager.createRoom("A", 4, isPublic = true)
+            val (two, _) = manager.createRoom("B", 4, isPublic = true)
+            two.addPlayer("B2")
+            manager.createRoom("C", 4, isPublic = false)
+
+            assertEquals(two, manager.findOpenPublicTable(), "two people waiting beats one; private tables never appear")
+
+            assertTrue(two.startGame(fillWithBots = true))
+            assertEquals(one, manager.findOpenPublicTable(), "a running table is never offered")
+
+            assertTrue(one.startGame(fillWithBots = true))
+            assertNull(manager.findOpenPublicTable(), "no waiting public table means Quick Play opens a new one")
+        } finally {
+            manager.shutdown()
+        }
+    }
 }

@@ -6,6 +6,14 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 class RoomManager {
+    companion object {
+        /** Quick Play tables are small so they deal soon and the games stay short. */
+        const val QUICK_PLAY_PLAYER_COUNT = 4
+        /** How long a fresh Quick Play table waits for company before dealing with bots. The host
+         *  can start sooner from the button, so this only bounds the wait, never the game. */
+        const val QUICK_START_DELAY_MS = 60_000L
+    }
+
     private val log = LoggerFactory.getLogger("RoomManager")
     private val rooms = ConcurrentHashMap<String, GameRoom>()
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -19,9 +27,9 @@ class RoomManager {
         }
     }
 
-    fun createRoom(hostName: String, playerCount: Int): Pair<GameRoom, String> {
+    fun createRoom(hostName: String, playerCount: Int, isPublic: Boolean = false): Pair<GameRoom, String> {
         val roomCode = generateRoomCode()
-        val room = GameRoom(roomCode, playerCount)
+        val room = GameRoom(roomCode, playerCount, isPublic)
         rooms[roomCode] = room
         val playerId = room.addPlayer(hostName, isHost = true)
         log.info("Room {} created for {} players", roomCode, playerCount)
@@ -29,6 +37,15 @@ class RoomManager {
     }
 
     fun getRoom(roomCode: String): GameRoom? = rooms[roomCode.uppercase()]
+
+    /**
+     * The public table a Quick Play should sit down at: still waiting to deal, with a seat free.
+     * The fullest first, so one table fills and deals rather than two half-empty ones waiting on
+     * each other. Never a running game, whatever seats it has.
+     */
+    fun findOpenPublicTable(): GameRoom? =
+        rooms.values.filter { it.isPublic && !it.isClosed && it.isJoinable() }
+            .maxByOrNull { it.getHumanPlayerCount() }
 
     fun removeRoom(roomCode: String) {
         val room = rooms.remove(roomCode) ?: return

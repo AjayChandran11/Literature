@@ -17,7 +17,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class GameRoom(
     val roomCode: String,
-    val targetPlayerCount: Int
+    val targetPlayerCount: Int,
+    /** Quick Play may seat strangers here while the room is still waiting to deal. */
+    val isPublic: Boolean = false,
 ) {
     private val log = LoggerFactory.getLogger("GameRoom")
     private val engine = GameEngine()
@@ -69,6 +71,12 @@ class GameRoom(
     private var lastAskerId: String? = null
     // Per-player reaction rate limiting
     private val lastReactionTime = ConcurrentHashMap<String, Long>()
+    /** Pre-game housekeeping (the Quick Play countdown); [botScope] only exists once a game runs. */
+    private val roomScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var autoStartJob: Job? = null
+    /** When this table will deal itself (epoch ms); null when no countdown runs. */
+    var autoStartAtMs: Long? = null
+        private set
 
     var phase: RoomPhase = RoomPhase.WAITING
         private set
@@ -91,6 +99,7 @@ class GameRoom(
     internal var waitingWindowMs: Long = WAITING_RECONNECT_WINDOW_MS
     // How long a seat must have been absent before it can be given up.
     internal var evictableAfterMs: Long = EVICTABLE_AFTER_MS
+    internal var takeoverAfterMs: Long = TAKEOVER_AFTER_MS
 
     companion object {
         private const val TURN_TIMEOUT_MS = 60_000L
@@ -109,6 +118,8 @@ class GameRoom(
         // Without it, two players on a flaky network in a full room could take turns evicting
         // each other; a momentary drop now keeps your seat outright.
         private const val EVICTABLE_AFTER_MS = 60_000L
+        /** A held seat at a running table may be given to a newcomer after this long away. */
+        private const val TAKEOVER_AFTER_MS = 10 * 60_000L
         // How many consecutive rejected bot moves to tolerate before giving up the
         // turn. A bot with cards always has a legal move, so this should never be
         // hit; it's a backstop so a wedged decision can never spin forever.
@@ -150,6 +161,89 @@ class GameRoom(
         data class Seated(val playerId: String, val reclaimed: Boolean) : SeatResult()
         data object RoomFull : SeatResult()
         data object NotWaiting : SeatResult()
+        /** A running table with no seat a newcomer may take (every bot seat is on hold). */
+        data object NoSeat : SeatResult()
+    }
+
+    /**
+     * A seat at a RUNNING table for someone arriving by code or invite link. Only a seat a bot
+     * has played from the deal, or one whose human has been gone past [takeoverAfterMs], is
+     * given away: a seat on hold is its owner's. Prefers the team with fewer people present.
+     * Seat bookkeeping only; [completeSeatInGame] does the game-state part under the mutex.
+     */
+    fun claimSeatInGame(name: String, now: Long = System.currentTimeMillis()): SeatResult = synchronized(seatLock) {
+        if (phase != RoomPhase.IN_PROGRESS) return@synchronized SeatResult.NotWaiting
+        val state = gameState ?: return@synchronized SeatResult.NotWaiting
+        val candidates = state.players.filter { seat ->
+            seat.isBot && (players[seat.id]?.let { held ->
+                !held.isConnected && now - held.lastSeen >= takeoverAfterMs
+            } ?: true)
+        }
+        if (candidates.isEmpty()) return@synchronized SeatResult.NoSeat
+        val presentByTeam = players.values.filter { it.isConnected }
+            .groupingBy { playerTeams[it.playerId] ?: "team_1" }.eachCount()
+        val seat = candidates.minByOrNull { presentByTeam[it.teamId] ?: 0 }!!
+        if (players.remove(seat.id) != null) {
+            // The previous owner was gone past the hold; their Reconnect now gets "Player not
+            // found in room", which the app shows as "your seat was taken".
+            disconnectJobs.remove(seat.id)?.cancel()
+            pendingReclaims.remove(seat.id)
+        }
+        players[seat.id] = PlayerSession(
+            playerId = seat.id,
+            playerName = name,
+            session = null,
+            reconnectToken = generateReconnectToken()
+        )
+        playerTeams[seat.id] = seat.teamId
+        SeatResult.Seated(seat.id, reclaimed = false)
+    }
+
+    /**
+     * Second half of a takeover, once the socket is wired: the seat takes the newcomer's name
+     * and becomes human, the newcomer gets the board, and the table hears who arrived. If the
+     * seat is on turn right now the bot loop may be mid-decision for it, so the turn boundary
+     * hands it over instead (the same path a reconnecting player takes).
+     */
+    suspend fun completeSeatInGame(seatId: String) {
+        val session = players[seatId] ?: return
+        var replacedName = ""
+        mutex.withLock {
+            val state = gameState ?: return
+            val seat = state.getPlayer(seatId) ?: return
+            replacedName = seat.name
+            val onTurn = state.currentPlayer.id == seatId
+            gameState = state.copy(players = state.players.map {
+                if (it.id == seatId) it.copy(name = session.playerName, isBot = onTurn) else it
+            })
+            if (onTurn) pendingReclaims[seatId] = true
+            log.info("[{}] {} took over a seat at the running table", roomCode, seatId)
+            val view = gameState!!.toPlayerView(seatId, getConnectionStatus(), getDisconnectDeadlines(), passSelectionDeadline, turnDeadlineMs)
+            session.send(ServerMessage.GameUpdate(view))
+        }
+        broadcastEvents(listOf(GameEvent.PlayerJoined(seatId, session.playerName, replacedName)))
+        broadcastGameViews()
+        broadcastRoomUpdate()
+    }
+
+    /**
+     * Quick Play: deal in [delayMs] unless someone starts the game first, so the next Quick
+     * Player still has a table to find. Declines if everyone has left by then.
+     */
+    fun scheduleAutoStart(delayMs: Long) {
+        autoStartJob?.cancel()
+        autoStartAtMs = System.currentTimeMillis() + delayMs
+        autoStartJob = roomScope.launch {
+            delay(delayMs)
+            autoStartJob = null
+            autoStartAtMs = null
+            if (phase != RoomPhase.WAITING || closed) return@launch
+            if (players.values.none { it.isConnected }) {
+                log.info("[{}] Auto-start skipped: nobody left at the table", roomCode)
+                return@launch
+            }
+            if (!startGame(fillWithBots = true)) log.info("[{}] Auto-start declined", roomCode)
+        }
     }
 
     /**
@@ -312,12 +406,17 @@ class GameRoom(
             phase = phase,
             players = roomPlayers,
             hostPlayerId = hostPlayerId ?: "",
-            targetPlayerCount = targetPlayerCount
+            targetPlayerCount = targetPlayerCount,
+            isPublic = isPublic,
+            autoStartInMs = autoStartAtMs?.let { (it - System.currentTimeMillis()).coerceAtLeast(0L) },
         )
     }
 
     suspend fun startGame(fillWithBots: Boolean, botDifficultyName: String = "MEDIUM"): Boolean {
         if (phase != RoomPhase.WAITING) return false
+        autoStartJob?.cancel()
+        autoStartJob = null
+        autoStartAtMs = null
 
         val difficulty = runCatching { BotDifficulty.valueOf(botDifficultyName) }.getOrDefault(BotDifficulty.MEDIUM)
         botPlayer = BotPlayer(difficulty = difficulty)
@@ -1052,9 +1151,15 @@ class GameRoom(
     private suspend fun broadcastEvents(events: List<GameEvent>) {
         players.values.filter { it.isConnected }.forEach { session ->
             events.forEach { event ->
-                session.send(ServerMessage.GameEventOccurred(event))
+                session.send(ServerMessage.GameEventOccurred(event.forProtocol(session.protocolVersion)))
             }
         }
+    }
+
+    /** A client cannot decode an event type it never knew; say the nearest thing it can show. */
+    private fun GameEvent.forProtocol(version: Int): GameEvent = when {
+        this is GameEvent.PlayerJoined && version < 4 -> GameEvent.PlayerReconnected(playerId, playerName, timestamp)
+        else -> this
     }
 
     /**
@@ -1207,6 +1312,9 @@ class GameRoom(
     }
 
     fun cleanup() {
+        autoStartJob?.cancel()
+        autoStartAtMs = null
+        roomScope.cancel()
         turnTimeoutJob?.cancel()
         passSelectionJob?.cancel()
         passSelectionDeadline = null

@@ -1,6 +1,7 @@
 package com.cards.game.literature.server
 
 import com.cards.game.literature.protocol.ClientMessage
+import com.cards.game.literature.protocol.RoomPhase
 import com.cards.game.literature.protocol.Protocol
 import com.cards.game.literature.protocol.ServerMessage
 import io.ktor.server.routing.*
@@ -170,7 +171,8 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             }
                             val (room, playerId) = roomManager.createRoom(
                                 name,
-                                message.playerCount
+                                message.playerCount,
+                                message.isPublic
                             )
                             currentRoom = room
                             currentPlayerId = playerId
@@ -184,6 +186,40 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             sendMessage(ServerMessage.RoomCreated(
                                 room.roomCode, playerId, Protocol.VERSION,
                                 created?.reconnectToken ?: ""
+                            ))
+                            room.broadcastRoomUpdate()
+                        }
+
+                        is ClientMessage.QuickPlay -> {
+                            if (currentRoom != null) {
+                                sendError("Already in a room")
+                                continue
+                            }
+                            val name = message.playerName.asPlayerName()
+                            if (name.isBlank()) {
+                                sendError("Player name cannot be empty")
+                                continue
+                            }
+                            // The fullest public table still waiting to deal; otherwise a new one
+                            // that deals itself shortly, so the next Quick Player can still find it.
+                            // Never a running game.
+                            var seated: Pair<GameRoom, String>? = null
+                            roomManager.findOpenPublicTable()?.let { table ->
+                                (table.trySeat(name) as? GameRoom.SeatResult.Seated)?.let { seated = table to it.playerId }
+                            }
+                            val (room, playerId) = seated ?: roomManager
+                                .createRoom(name, RoomManager.QUICK_PLAY_PLAYER_COUNT, isPublic = true)
+                                .also { (fresh, _) -> fresh.scheduleAutoStart(RoomManager.QUICK_START_DELAY_MS) }
+                            currentRoom = room
+                            currentPlayerId = playerId
+                            val seat = room.getPlayerSession(playerId)
+                            seat?.let {
+                                it.session = this
+                                it.protocolVersion = clientVersion
+                            }
+                            sendMessage(ServerMessage.RoomCreated(
+                                room.roomCode, playerId, Protocol.VERSION,
+                                seat?.reconnectToken ?: ""
                             ))
                             room.broadcastRoomUpdate()
                         }
@@ -203,6 +239,29 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Room not found")
                                 continue
                             }
+                            if (room.phase == RoomPhase.IN_PROGRESS) {
+                                // Arriving by code or invite link while the game runs: take a
+                                // bot's seat. Quick Play never reaches here, by design.
+                                when (val taken = room.claimSeatInGame(joinName)) {
+                                    is GameRoom.SeatResult.Seated -> {
+                                        currentRoom = room
+                                        currentPlayerId = taken.playerId
+                                        val seat = room.getPlayerSession(taken.playerId)
+                                        seat?.let {
+                                            it.session = this
+                                            it.protocolVersion = clientVersion
+                                        }
+                                        sendMessage(ServerMessage.RoomCreated(
+                                            room.roomCode, taken.playerId, Protocol.VERSION,
+                                            seat?.reconnectToken ?: ""
+                                        ))
+                                        room.completeSeatInGame(taken.playerId)
+                                    }
+                                    is GameRoom.SeatResult.NoSeat -> sendError("No free seat at this table")
+                                    else -> sendError("Game already started")
+                                }
+                                continue
+                            }
                             // One atomic step: still waiting, own seat to reclaim, room full,
                             // evict, new seat. As separate calls this was a check-then-act race —
                             // simultaneous joins collided on a seat id, and two could both pass
@@ -215,7 +274,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                     sendError("Game already started")
                                     continue
                                 }
-                                is GameRoom.SeatResult.RoomFull -> {
+                                is GameRoom.SeatResult.RoomFull, is GameRoom.SeatResult.NoSeat -> {
                                     sendError("Room is full")
                                     continue
                                 }
