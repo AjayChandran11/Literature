@@ -260,7 +260,7 @@ fun WaitingRoomScreen(
                                 onDifficulty = { selectedDifficulty = it }
                             )
                         } else {
-                            WaitingForHostText()
+                            WaitingForHostText(countingDown = uiState.autoStartAtMs != null)
                         }
                     }
                     if (uiState.isHost) {
@@ -360,7 +360,7 @@ fun WaitingRoomScreen(
                         onStartGame = { viewModel.startGame(fillWithBots, selectedDifficulty) }
                     )
                 } else {
-                    WaitingForHostText()
+                    WaitingForHostText(countingDown = uiState.autoStartAtMs != null)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -966,9 +966,11 @@ private fun StartGameButton(
 }
 
 @Composable
-private fun WaitingForHostText(modifier: Modifier = Modifier) {
+private fun WaitingForHostText(countingDown: Boolean, modifier: Modifier = Modifier) {
     Text(
-        text = stringResource(Res.string.waiting_room_waiting_for_host),
+        text = stringResource(
+            if (countingDown) Res.string.waiting_room_waiting_for_players else Res.string.waiting_room_waiting_for_host
+        ),
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
