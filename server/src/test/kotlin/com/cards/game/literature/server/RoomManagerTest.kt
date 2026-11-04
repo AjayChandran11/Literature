@@ -3,8 +3,15 @@ package com.cards.game.literature.server
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -117,12 +124,82 @@ class RoomManagerTest {
 
             assertEquals(two, manager.findOpenPublicTable(), "two people waiting beats one; private tables never appear")
 
+            two.getPlayerSession("player_1")!!.isConnected = false
+            assertEquals(one, manager.findOpenPublicTable(), "people present count, not seats held")
+            two.getPlayerSession("player_0")!!.isConnected = false
+            one.getPlayerSession("player_0")!!.isConnected = false
+            assertNull(manager.findOpenPublicTable(), "a table where everyone is away is not offered to anyone")
+            listOf(one, two).forEach { room -> room.toRoomState().players.forEach { room.getPlayerSession(it.id)!!.isConnected = true } }
+
             assertTrue(two.startGame(fillWithBots = true))
             assertEquals(one, manager.findOpenPublicTable(), "a running table is never offered")
 
             assertTrue(one.startGame(fillWithBots = true))
             assertNull(manager.findOpenPublicTable(), "no waiting public table means Quick Play opens a new one")
         } finally {
+            manager.shutdown()
+        }
+    }
+
+    @Test
+    fun quickPlayStartsTheClockAtATableThatHadNone() {
+        val manager = RoomManager()
+        try {
+            // "Open to anyone": the host decides when to deal, so the room has no countdown of its own.
+            val (open, host) = manager.createRoom("Host", 4, isPublic = true)
+            assertNull(open.autoStartAtMs)
+
+            val (table, seat) = manager.seatQuickPlayer("Stranger")
+            assertEquals(open, table, "the stranger sits down at the open room")
+            assertFalse(table.isHost(seat))
+            assertTrue(table.isHost(host))
+            assertNotNull(table.autoStartAtMs, "and it deals itself from here: a stranger never waits on a host they do not know")
+        } finally {
+            manager.shutdown()
+        }
+    }
+
+    @Test
+    fun quickPlayNeverHandsAStrangerAHeldSeat() {
+        val manager = RoomManager()
+        try {
+            val (table, sam) = manager.seatQuickPlayer("Sam")
+            manager.seatQuickPlayer("Tara")
+            val samToken = table.getPlayerSession(sam)!!.reconnectToken
+            table.getPlayerSession(sam)!!.isConnected = false // Sam's app is in the background; the seat is held
+
+            val (again, stranger) = manager.seatQuickPlayer("sam")
+            assertEquals(table, again)
+            assertNotEquals(sam, stranger, "the same display name earns a new seat on a public table, not Sam's")
+            assertNotEquals(samToken, table.getPlayerSession(stranger)!!.reconnectToken, "and its own token")
+            assertEquals("Sam", table.getPlayerSession(sam)!!.playerName, "Sam's seat is still Sam's")
+            assertEquals(3, table.getHumanPlayerCount())
+
+            // By room code it is still a return: there the code is the secret.
+            val back = table.trySeat("sam")
+            assertIs<GameRoom.SeatResult.Seated>(back)
+            assertEquals(sam, back.playerId)
+            assertTrue(back.reclaimed)
+        } finally {
+            manager.shutdown()
+        }
+    }
+
+    @Test
+    fun simultaneousQuickPlaysFillOneTable() {
+        val manager = RoomManager()
+        val pool = Executors.newFixedThreadPool(4)
+        try {
+            val go = CountDownLatch(1)
+            val presses = (1..4).map { i -> pool.submit<Pair<GameRoom, String>> { go.await(); manager.seatQuickPlayer("P$i") } }
+            go.countDown()
+            val tables = presses.map { it.get(5, TimeUnit.SECONDS).first }.toSet()
+
+            assertEquals(1, tables.size, "four presses in the same instant share one table rather than opening three")
+            assertEquals(4, tables.single().getHumanPlayerCount())
+            assertNotEquals(tables.single(), manager.seatQuickPlayer("P5").first, "the fifth opens the next table")
+        } finally {
+            pool.shutdownNow()
             manager.shutdown()
         }
     }

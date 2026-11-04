@@ -14,11 +14,13 @@ import kotlinx.coroutines.runBlocking
 import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.withTimeout
 
 /**
  * Tables: the rules that let strangers and late friends sit down without spoiling anyone's game.
@@ -130,7 +132,63 @@ class GameRoomTablesTest {
         room.scheduleAutoStart(100)
         delay(500)
         assertEquals(RoomPhase.WAITING, room.phase, "nobody is here to play")
+        assertNull(room.autoStartAtMs)
         room.cleanup()
+    }
+
+    @Test
+    fun aDeclinedAutoStartTellsTheTableAndKeepsTheClockRunning() = runBlocking {
+        val room = GameRoom("QP4", 4, isPublic = true)
+        val (_, aSocket) = seated(room, "A")
+        val (b, _) = seated(room, "B")
+        val (c, _) = seated(room, "C")
+        room.switchTeam(b) // three on team_1: no bot can make that 2v2
+        room.scheduleAutoStart(100)
+        delay(450)
+        assertEquals(RoomPhase.WAITING, room.phase, "a 3v1 table cannot deal")
+        assertNotNull(room.autoStartAtMs, "but the clock is re-armed, never left off")
+        assertTrue(aSocket.sentText().contains("Both teams must have the same number of players"), "and the table is told why")
+
+        room.switchTeam(c)
+        withTimeout(2_000) { while (room.phase == RoomPhase.WAITING) delay(20) }
+        assertEquals(RoomPhase.IN_PROGRESS, room.phase, "even teams again: the next tick deals")
+        room.cleanup()
+    }
+
+    @Test
+    fun aRefusedStartLeavesTheCountdownAlone() = runBlocking {
+        val room = GameRoom("QP5", 4, isPublic = true)
+        seated(room, "A")
+        room.scheduleAutoStart(5_000)
+        assertFalse(room.startGame(fillWithBots = false), "one person, no bots: nothing to deal")
+        assertNotNull(room.autoStartAtMs, "the table still deals itself later")
+        room.cleanup()
+    }
+
+    @Test
+    fun nobodyIsSeatedInTheRoomButNotInTheGame() = runBlocking {
+        repeat(25) { round ->
+            val room = GameRoom("RACE$round", 8)
+            seated(room, "A"); seated(room, "B")
+            val joins = java.util.concurrent.ConcurrentLinkedQueue<GameRoom.SeatResult>()
+            val joiner = Thread {
+                var i = 0
+                while (true) {
+                    val r = room.trySeat("J${i++}")
+                    joins += r
+                    if (r is GameRoom.SeatResult.NotWaiting) break
+                }
+            }
+            joiner.start()
+            assertTrue(room.startGame(fillWithBots = true))
+            joiner.join(2_000)
+
+            // Every seat the room handed out before the deal is in the game; after it, none.
+            joins.filterIsInstance<GameRoom.SeatResult.Seated>().forEach { seat ->
+                assertNotNull(room.isBotSeatForTest(seat.playerId), "round $round: ${seat.playerId} is on the roster but not in the game")
+            }
+            room.cleanup()
+        }
     }
 
     /** Minimal WebSocketSession that records outgoing frames so tests can see what a player got. */

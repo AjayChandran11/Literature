@@ -16,6 +16,9 @@ class RoomManager {
 
     private val log = LoggerFactory.getLogger("RoomManager")
     private val rooms = ConcurrentHashMap<String, GameRoom>()
+    /** Quick Play's find-or-create runs under this: as two steps, four people pressing the button
+     *  in the same instant opened three tables instead of filling one. */
+    private val quickPlayLock = Any()
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     init {
@@ -39,13 +42,37 @@ class RoomManager {
     fun getRoom(roomCode: String): GameRoom? = rooms[roomCode.uppercase()]
 
     /**
-     * The public table a Quick Play should sit down at: still waiting to deal, with a seat free.
-     * The fullest first, so one table fills and deals rather than two half-empty ones waiting on
-     * each other. Never a running game, whatever seats it has.
+     * The public tables a Quick Play may sit down at, fullest first so one table fills and deals
+     * rather than two half-empty ones waiting on each other: still waiting to deal, a seat free
+     * (or freeable), and someone actually there. "Fullest" counts people present, not held
+     * seats, and a table where everyone is away is not offered at all — its countdown has
+     * already declined to deal, and whoever sat down there waited as the guest of a host who
+     * was gone. Never a running game, whatever seats it has.
      */
-    fun findOpenPublicTable(): GameRoom? =
-        rooms.values.filter { it.isPublic && !it.isClosed && it.isJoinable() }
-            .maxByOrNull { it.getHumanPlayerCount() }
+    fun openPublicTables(): List<GameRoom> =
+        rooms.values.filter { it.isPublic && !it.isClosed && it.isJoinable() && it.connectedPlayerCount() > 0 }
+            .sortedByDescending { it.connectedPlayerCount() }
+
+    fun findOpenPublicTable(): GameRoom? = openPublicTables().firstOrNull()
+
+    /**
+     * Quick Play as one step: the fullest open table that will have them, else a fresh one. The
+     * table counts down from here if it was not already — an "Open to anyone" room or a rematch
+     * lobby has no clock of its own, and a stranger must never be left waiting on a host they
+     * do not know. Held seats are not reclaimed by name here (see [GameRoom.trySeat]).
+     */
+    fun seatQuickPlayer(name: String): Pair<GameRoom, String> = synchronized(quickPlayLock) {
+        val seated = openPublicTables().firstNotNullOfOrNull { table ->
+            (table.trySeat(name, reclaimByName = false) as? GameRoom.SeatResult.Seated)
+                ?.let { table to it.playerId }
+        }
+        if (seated != null) {
+            if (seated.first.autoStartAtMs == null) seated.first.scheduleAutoStart(QUICK_START_DELAY_MS)
+            return@synchronized seated
+        }
+        createRoom(name, QUICK_PLAY_PLAYER_COUNT, isPublic = true)
+            .also { (fresh, _) -> fresh.scheduleAutoStart(QUICK_START_DELAY_MS) }
+    }
 
     fun removeRoom(roomCode: String) {
         val room = rooms.remove(roomCode) ?: return

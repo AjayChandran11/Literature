@@ -200,16 +200,10 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 sendError("Player name cannot be empty")
                                 continue
                             }
-                            // The fullest public table still waiting to deal; otherwise a new one
-                            // that deals itself shortly, so the next Quick Player can still find it.
-                            // Never a running game.
-                            var seated: Pair<GameRoom, String>? = null
-                            roomManager.findOpenPublicTable()?.let { table ->
-                                (table.trySeat(name) as? GameRoom.SeatResult.Seated)?.let { seated = table to it.playerId }
-                            }
-                            val (room, playerId) = seated ?: roomManager
-                                .createRoom(name, RoomManager.QUICK_PLAY_PLAYER_COUNT, isPublic = true)
-                                .also { (fresh, _) -> fresh.scheduleAutoStart(RoomManager.QUICK_START_DELAY_MS) }
+                            // The fullest public table still waiting to deal, else a new one; either
+                            // way it counts down from here, so the next Quick Player can still find
+                            // it. Never a running game. One step, see RoomManager.seatQuickPlayer.
+                            val (room, playerId) = roomManager.seatQuickPlayer(name)
                             currentRoom = room
                             currentPlayerId = playerId
                             val seat = room.getPlayerSession(playerId)
