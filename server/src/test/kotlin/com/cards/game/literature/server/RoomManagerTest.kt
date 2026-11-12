@@ -142,6 +142,21 @@ class RoomManagerTest {
     }
 
     @Test
+    fun quickPlayFillsTheTableAboutToDealFirstAndThenTheOldest() {
+        val manager = RoomManager()
+        try {
+            val (older, _) = manager.createRoom("A", 4, isPublic = true)
+            val (newer, _) = manager.createRoom("B", 4, isPublic = true)
+            assertEquals(older, manager.findOpenPublicTable(), "one person each: the table that has waited longest fills first")
+
+            newer.scheduleAutoStart(60_000)
+            assertEquals(newer, manager.findOpenPublicTable(), "a countdown beats age: that table is about to deal")
+        } finally {
+            manager.shutdown()
+        }
+    }
+
+    @Test
     fun quickPlayStartsTheClockAtATableThatHadNone() {
         val manager = RoomManager()
         try {

@@ -47,11 +47,17 @@ class RoomManager {
      * (or freeable), and someone actually there. "Fullest" counts people present, not held
      * seats, and a table where everyone is away is not offered at all — its countdown has
      * already declined to deal, and whoever sat down there waited as the guest of a host who
-     * was gone. Never a running game, whatever seats it has.
+     * was gone. Never a running game, whatever seats it has. Ties go to the table about to
+     * deal, then to the one that has waited longest; as a plain sort they went to hash order,
+     * which also made the ranking test a coin flip.
      */
     fun openPublicTables(): List<GameRoom> =
         rooms.values.filter { it.isPublic && !it.isClosed && it.isJoinable() && it.connectedPlayerCount() > 0 }
-            .sortedByDescending { it.connectedPlayerCount() }
+            .sortedWith(
+                compareByDescending<GameRoom> { it.connectedPlayerCount() }
+                    .thenBy { it.autoStartAtMs ?: Long.MAX_VALUE }
+                    .thenBy { it.createdSeq }
+            )
 
     fun findOpenPublicTable(): GameRoom? = openPublicTables().firstOrNull()
 
