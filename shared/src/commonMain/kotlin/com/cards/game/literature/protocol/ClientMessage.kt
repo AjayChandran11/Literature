@@ -77,4 +77,12 @@ sealed class ClientMessage {
     @Serializable
     @SerialName("com.cards.game.literature.protocol.ClientMessage.Rematch")
     data object Rematch : ClientMessage()
+
+    /** v5: this phone's push token, for the seat on this socket, so the server can still reach the
+     *  player once Android has killed the connection (minutes after the app leaves the screen).
+     *  Sent right after the seat request and again whenever the token changes; the server keeps
+     *  it only as long as the seat. Platforms without a push service never send one. */
+    @Serializable
+    @SerialName("com.cards.game.literature.protocol.ClientMessage.RegisterPush")
+    data class RegisterPush(val token: String) : ClientMessage()
 }

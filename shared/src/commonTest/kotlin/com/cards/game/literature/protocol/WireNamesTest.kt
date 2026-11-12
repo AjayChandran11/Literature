@@ -27,7 +27,7 @@ class WireNamesTest {
             setOf(
                 "$p.CreateRoom", "$p.JoinRoom", "$p.StartGame", "$p.AskCards", "$p.ClaimDeck",
                 "$p.SelectPassTarget", "$p.LeaveRoom", "$p.Reconnect", "$p.LeaveGame", "$p.SwitchTeam",
-                "$p.SendReaction", "$p.Rematch", "$p.QuickPlay",
+                "$p.SendReaction", "$p.Rematch", "$p.QuickPlay", "$p.RegisterPush",
             ),
             wireNames(ClientMessage.serializer()),
         )

@@ -15,9 +15,17 @@ package com.cards.game.literature.protocol
  *      [ClientMessage.SelectPassTarget]. The server only suspends a claim for
  *      selection when the claimer's session reports version >= 3; older
  *      claimers keep the deterministic auto-pass.
+ *  4 — Quick Play and public tables ([ClientMessage.QuickPlay],
+ *      [ClientMessage.CreateRoom.isPublic], [RoomState.autoStartInMs]) and the
+ *      [com.cards.game.literature.model.GameEvent.PlayerJoined] event; older
+ *      clients are sent PlayerReconnected in its place.
+ *  5 — [ClientMessage.RegisterPush]: a client may hand the server a push
+ *      token for its seat. The server pushes only to a seat whose socket is
+ *      gone, and never gates anything on this version — the message is a
+ *      hint, not a capability.
  */
 object Protocol {
-    const val VERSION: Int = 4
+    const val VERSION: Int = 5
 
     /**
      * Oldest client protocol version the server still accepts. Set to 2 on
