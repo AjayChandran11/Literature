@@ -5,6 +5,8 @@ import com.cards.game.literature.bot.BotDifficulty
 import com.cards.game.literature.model.*
 import com.cards.game.literature.rethrowIfPlatformFatal
 import com.cards.game.literature.network.NetworkMonitor
+import com.cards.game.literature.notifications.PushTokens
+import com.cards.game.literature.notifications.requestPushToken
 import com.cards.game.literature.preferences.GamePrefs
 import com.cards.game.literature.preferences.OnlineSessionBackup
 import com.cards.game.literature.protocol.*
@@ -419,6 +421,7 @@ class OnlineGameRepository(
                     // Send the initial message
                     val text = json.encodeToString(firstMessage)
                     send(Frame.Text(text))
+                    registerPushToken()
 
                     // Listen for messages
                     for (frame in incoming) {
@@ -489,6 +492,22 @@ class OnlineGameRepository(
                 rethrowIfPlatformFatal(e)
                 log.w { "Keepalive ping failed (${e.message})" }
             }
+        }
+    }
+
+    /**
+     * Hands the server this phone's push token for the seat on this socket, and again whenever
+     * Firebase rotates it, so the server can still reach the player once Android has killed the
+     * connection (minutes after the app leaves the screen). Sent behind the seat request on the
+     * same socket, so it always finds the seat already taken; a refused seat simply has nothing
+     * to attach it to. Platforms without a push service never report a token, so nothing goes out
+     * there, and a player who has turned notifications off hands over nothing either.
+     */
+    private fun CoroutineScope.registerPushToken() = launch {
+        if (!runCatching { GamePrefs.isNotificationsEnabled() }.getOrDefault(true)) return@launch
+        requestPushToken()
+        PushTokens.token.filterNotNull().collect { token ->
+            sendMessage(ClientMessage.RegisterPush(token))
         }
     }
 

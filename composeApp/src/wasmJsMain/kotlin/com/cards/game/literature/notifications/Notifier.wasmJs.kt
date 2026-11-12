@@ -26,6 +26,10 @@ actual object Notifier {
 
     actual fun notifyGameOver(won: Boolean) = clearYourTurn()
 
+    actual fun notifyPlayerJoined(name: String) {}
+
+    actual fun notifyRematch() {}
+
     actual fun clearYourTurn() = setTitle(baseTitle)
 
     actual fun clearAll() = clearYourTurn()

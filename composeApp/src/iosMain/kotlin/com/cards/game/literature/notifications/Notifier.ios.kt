@@ -13,6 +13,8 @@ actual object Notifier {
     private const val ID_YOUR_TURN = "lit_your_turn"
     private const val ID_GAME_STARTING = "lit_game_starting"
     private const val ID_GAME_OVER = "lit_game_over"
+    private const val ID_PLAYER_JOINED = "lit_player_joined"
+    private const val ID_REMATCH = "lit_rematch"
 
     private fun post(id: String, title: String, body: String, silent: Boolean = false) {
         val content = UNMutableNotificationContent().apply {
@@ -42,6 +44,14 @@ actual object Notifier {
         post(ID_GAME_OVER, "Game over", body, silent = true)
     }
 
+    actual fun notifyPlayerJoined(name: String) {
+        post(ID_PLAYER_JOINED, "$name joined your table", "Tap to go back to your room")
+    }
+
+    actual fun notifyRematch() {
+        post(ID_REMATCH, "Rematch!", "Your table is waiting for another game")
+    }
+
     actual fun clearYourTurn() {
         UNUserNotificationCenter.currentNotificationCenter()
             .removeDeliveredNotificationsWithIdentifiers(listOf(ID_YOUR_TURN))
@@ -50,7 +60,7 @@ actual object Notifier {
     actual fun clearAll() {
         UNUserNotificationCenter.currentNotificationCenter()
             .removeDeliveredNotificationsWithIdentifiers(
-                listOf(ID_YOUR_TURN, ID_GAME_STARTING, ID_GAME_OVER)
+                listOf(ID_YOUR_TURN, ID_GAME_STARTING, ID_GAME_OVER, ID_PLAYER_JOINED, ID_REMATCH)
             )
     }
 

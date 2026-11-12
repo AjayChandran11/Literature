@@ -19,6 +19,10 @@
     <string name="notif_game_over_title">Game over</string>
     <string name="notif_game_over_won">Your team won — tap to see results</string>
     <string name="notif_game_over_lost">Your team lost — tap to see results</string>
+    <string name="notif_player_joined_title">%1$s joined your table</string>
+    <string name="notif_player_joined_body">Tap to go back to your room</string>
+    <string name="notif_rematch_title">Rematch!</string>
+    <string name="notif_rematch_body">Your table is waiting for another game</string>
     <string name="notif_puzzle_title">Today\'s puzzle is ready ⭐</string>
     <string name="notif_puzzle_body">A fresh Literature puzzle is waiting — keep your streak alive.</string>
 </resources>

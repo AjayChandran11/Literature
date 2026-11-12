@@ -24,6 +24,8 @@ actual object Notifier {
     private const val ID_GAME_STARTING = 1002
     private const val ID_GAME_OVER = 1003
     private const val ID_PUZZLE_READY = 1004
+    private const val ID_PLAYER_JOINED = 1005
+    private const val ID_REMATCH = 1006
 
     const val EXTRA_FROM_NOTIFICATION = "from_notification"
     const val EXTRA_NAVIGATE_TO = "navigate_to"
@@ -142,6 +144,16 @@ actual object Notifier {
         post(ID_GAME_OVER, CHANNEL_RESULT, ctx.getString(R.string.notif_game_over_title), body)
     }
 
+    actual fun notifyPlayerJoined(name: String) {
+        val ctx = appContext ?: return
+        post(ID_PLAYER_JOINED, CHANNEL_GAME_STATE, ctx.getString(R.string.notif_player_joined_title, name), ctx.getString(R.string.notif_player_joined_body))
+    }
+
+    actual fun notifyRematch() {
+        val ctx = appContext ?: return
+        post(ID_REMATCH, CHANNEL_GAME_STATE, ctx.getString(R.string.notif_rematch_title), ctx.getString(R.string.notif_rematch_body))
+    }
+
     /** Daily re-engagement nudge, fired by [PuzzleReminderReceiver] (not in the common contract). */
     fun notifyPuzzleReady() {
         val ctx = appContext ?: return
@@ -167,6 +179,8 @@ actual object Notifier {
         manager.cancel(ID_GAME_STARTING)
         manager.cancel(ID_GAME_OVER)
         manager.cancel(ID_PUZZLE_READY)
+        manager.cancel(ID_PLAYER_JOINED)
+        manager.cancel(ID_REMATCH)
     }
 
     /** Dismiss only the daily reminder (e.g. when the player turns the setting off). */
