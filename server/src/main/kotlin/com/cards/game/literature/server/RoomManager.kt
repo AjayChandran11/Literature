@@ -5,7 +5,10 @@ import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
-class RoomManager {
+class RoomManager(
+    /** Reaches a seat whose socket is gone; [PushSender.None] when the server holds no FCM key. */
+    private val pushSender: PushSender = PushSender.None,
+) {
     companion object {
         /** Quick Play tables are small so they deal soon and the games stay short. */
         const val QUICK_PLAY_PLAYER_COUNT = 4
@@ -32,7 +35,7 @@ class RoomManager {
 
     fun createRoom(hostName: String, playerCount: Int, isPublic: Boolean = false): Pair<GameRoom, String> {
         val roomCode = generateRoomCode()
-        val room = GameRoom(roomCode, playerCount, isPublic)
+        val room = GameRoom(roomCode, playerCount, isPublic, pushSender)
         rooms[roomCode] = room
         val playerId = room.addPlayer(hostName, isHost = true)
         log.info("Room {} created for {} players", roomCode, playerCount)

@@ -109,6 +109,12 @@ The game engine, move validator, and bot logic live in `shared/` and run identic
 **For multiplayer on emulator:** server runs at `10.0.2.2:8080` by default.
 **For multiplayer on a physical device:** update `serverUrl` in `AppModule.kt` to your machine's local IP.
 
+**Push notifications (optional):** the server reaches a player whose socket is gone (your turn,
+table started, a friend arrived, result, rematch) through Firebase Cloud Messaging. Set
+`FCM_SERVICE_ACCOUNT_JSON` to the contents of a Firebase service-account key (Firebase console →
+Project settings → Service accounts → Generate new private key). Without it the server runs with
+push off and logs that once at startup. Tokens live in memory with the seat and are never stored.
+
 APK output: `composeApp/build/outputs/apk/debug/composeApp-debug.apk`
 
 ---

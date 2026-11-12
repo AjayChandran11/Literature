@@ -216,6 +216,8 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 seat?.reconnectToken ?: ""
                             ))
                             room.broadcastRoomUpdate()
+                            // A fresh table has nobody else to tell; an existing one may have a host who stepped away.
+                            room.notifyArrival(playerId)
                         }
 
                         is ClientMessage.JoinRoom -> {
@@ -262,8 +264,7 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                             // the capacity test and over-fill the room (see GameRoom.seatLock).
                             // The invite link keeps working after the host starts; a late friend
                             // used to be seated on a live board with no hand and no turn.
-                            val seat = room.trySeat(joinName)
-                            val playerId = when (seat) {
+                            val seat = when (val result = room.trySeat(joinName)) {
                                 is GameRoom.SeatResult.NotWaiting -> {
                                     sendError("Game already started")
                                     continue
@@ -272,8 +273,9 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                     sendError("Room is full")
                                     continue
                                 }
-                                is GameRoom.SeatResult.Seated -> seat.playerId
+                                is GameRoom.SeatResult.Seated -> result
                             }
+                            val playerId = seat.playerId
                             currentRoom = room
                             currentPlayerId = playerId
 
@@ -288,6 +290,8 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 joined?.reconnectToken ?: ""
                             ))
                             room.broadcastRoomUpdate()
+                            // A newcomer, not a returning player: whoever stepped away hears who arrived.
+                            if (!seat.reclaimed) room.notifyArrival(playerId)
                         }
 
                         is ClientMessage.StartGame -> {
@@ -434,6 +438,16 @@ fun Routing.gameWebSocket(roomManager: RoomManager, rateLimiter: RateLimiter) {
                                 continue
                             }
                             room.processReaction(playerId, message.reaction)
+                        }
+
+                        is ClientMessage.RegisterPush -> {
+                            // Attaches to whatever seat this socket holds. The app sends it right
+                            // behind its seat request, so it finds the seat already taken; after a
+                            // refused request there is nothing to attach it to, and that is not an
+                            // error the player needs to hear about.
+                            val room = currentRoom
+                            val playerId = currentPlayerId
+                            if (room != null && playerId != null) room.registerPushToken(playerId, message.token)
                         }
 
                         is ClientMessage.Rematch -> {

@@ -50,7 +50,7 @@ fun Application.configureServer() {
         allowMethod(HttpMethod.Get)
     }
 
-    val roomManager = RoomManager()
+    val roomManager = RoomManager(FcmPushSender.fromEnvironment())
     val rateLimiter = RateLimiter()
     // Sweep stale per-address records; without this the map only ever grows.
     rateLimiter.startCleanup()

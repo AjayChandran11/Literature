@@ -19,7 +19,10 @@ data class PlayerSession(
     val reconnectToken: String = "",
     /** Set when this seat was kept through a Rematch while disconnected: the one-shot
      *  RematchStarted was missed, so handleReconnect re-sends it whatever the room phase. */
-    var missedRematch: Boolean = false
+    var missedRematch: Boolean = false,
+    /** The phone's push token (protocol v5), for the moments its socket is gone. Memory only;
+     *  it goes with the seat, and is dropped the first time the push service calls it dead. */
+    var pushToken: String? = null,
 ) {
     suspend fun send(message: ServerMessage) {
         val ws = session ?: return

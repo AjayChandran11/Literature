@@ -20,6 +20,8 @@ class GameRoom(
     val targetPlayerCount: Int,
     /** Quick Play may seat strangers here while the room is still waiting to deal. */
     val isPublic: Boolean = false,
+    /** Reaches a seat whose socket is gone; [PushSender.None] when the server holds no FCM key. */
+    private val pushSender: PushSender = PushSender.None,
 ) {
     private val log = LoggerFactory.getLogger("GameRoom")
     private val engine = GameEngine()
@@ -74,6 +76,8 @@ class GameRoom(
     /** Pre-game housekeeping (the Quick Play countdown); [botScope] only exists once a game runs. */
     private val roomScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var autoStartJob: Job? = null
+    /** Whose turn the last move reported, so "your turn" is pushed once per turn, not once per move. */
+    private var pushedTurnHolderId: String? = null
     /** When this table will deal itself (epoch ms); null when no countdown runs. */
     var autoStartAtMs: Long? = null
         private set
@@ -122,6 +126,8 @@ class GameRoom(
         private const val EVICTABLE_AFTER_MS = 60_000L
         /** A held seat at a running table may be given to a newcomer after this long away. */
         private const val TAKEOVER_AFTER_MS = 10 * 60_000L
+        /** An FCM token is a couple of hundred characters; this is only a sanity ceiling. */
+        private const val PUSH_TOKEN_MAX = 4096
         // How many consecutive rejected bot moves to tolerate before giving up the
         // turn. A bot with cards always has a legal move, so this should never be
         // hit; it's a backstop so a wedged decision can never spin forever.
@@ -227,6 +233,7 @@ class GameRoom(
         broadcastEvents(listOf(GameEvent.PlayerJoined(seatId, session.playerName, replacedName)))
         broadcastGameViews()
         broadcastRoomUpdate()
+        notifyArrival(seatId)
     }
 
     /**
@@ -512,6 +519,7 @@ class GameRoom(
 
         botScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         botTurnActive.set(false) // fresh scope → no loop can be running yet
+        pushedTurnHolderId = null
         val seatedHumans = humanPlayers.count { it.isConnected }
         log.info("[{}] Game started with {} players ({} human, {} bots)",
             roomCode, targetPlayerCount, seatedHumans, targetPlayerCount - seatedHumans)
@@ -524,6 +532,10 @@ class GameRoom(
         // Say so in the game log: otherwise a human name plays at bot pace from move one and
         // nobody at the table knows why. Same event a mid-game replacement broadcasts.
         broadcastEvents(absent.map { GameEvent.PlayerReplacedByBot(it.playerId, it.playerName) })
+        // Anyone who sat down and then switched away — the host pasting the code into WhatsApp,
+        // a Quick Player waiting out the minute — hears that the deal happened; their seat plays
+        // as a bot until they tap back in.
+        absent.forEach { pushIfAway(it, PushType.GAME_STARTED) }
 
         // Start turn management
         checkNextTurn()
@@ -646,6 +658,18 @@ class GameRoom(
             roomCode,
             t1?.name ?: "Team1", t1?.score ?: 0,
             t2?.score ?: 0, t2?.name ?: "Team2")
+
+        // Whoever is away hears how it ended; anyone connected is looking at it. A draw has no
+        // side to tell it from, so the result screen says that one.
+        val winnerId = when {
+            (t1?.score ?: 0) > (t2?.score ?: 0) -> t1?.id
+            (t2?.score ?: 0) > (t1?.score ?: 0) -> t2?.id
+            else -> null
+        }
+        if (winnerId != null) players.values.forEach { seat ->
+            val result = if (state.getPlayer(seat.playerId)?.teamId == winnerId) PushMessage.RESULT_WON else PushMessage.RESULT_LOST
+            pushIfAway(seat, PushType.GAME_OVER, mapOf(PushMessage.KEY_RESULT to result))
+        }
     }
 
     /** Entry for ClientMessage.SelectPassTarget: only the claimer may choose,
@@ -723,6 +747,14 @@ class GameRoom(
             // left as a human nobody would ever replace. Don't skip the turn immediately
             // though: the running turn timer keeps going, and skipTurn handles the timeout.
             armInProgressReplacement(playerSession)
+
+            // Dropped on their own turn: it began while the socket still looked alive, so no push
+            // went out for it. Say so now; the clock gives them the rest of the minute.
+            gameState?.let { s ->
+                if (s.phase == GamePhase.IN_PROGRESS && s.pendingPass == null &&
+                    s.currentPlayer.id == playerId && !s.currentPlayer.isBot
+                ) pushIfAway(playerSession, PushType.YOUR_TURN)
+            }
 
             broadcastEvents(listOf(
                 GameEvent.PlayerDisconnected(playerId, playerSession.playerName)
@@ -827,6 +859,7 @@ class GameRoom(
      * next startGame() refills them.
      */
     suspend fun resetForRematch(): Boolean {
+        var keptSeats: List<PlayerSession> = emptyList()
         mutex.withLock {
             if (phase != RoomPhase.FINISHED) return false
 
@@ -851,9 +884,11 @@ class GameRoom(
             val (kept, gone) = players.values.filter { !it.isConnected }
                 .partition { s -> s.disconnectDeadline?.let { now < it } == true }
             gone.map { it.playerId }.forEach { removePlayer(it) }
+            keptSeats = kept
 
             phase = RoomPhase.WAITING
             createdAt = now
+            pushedTurnHolderId = null
             kept.forEach { s ->
                 s.missedRematch = true
                 val remaining = (s.disconnectDeadline ?: now) - now
@@ -864,6 +899,9 @@ class GameRoom(
             }
         }
         log.info("[{}] Rematch — room reset to waiting with {} player(s)", roomCode, players.size)
+        // A seat kept through the rematch belongs to someone who switched away on the result
+        // screen; tell them the table is going again before their hold runs out.
+        keptSeats.forEach { pushIfAway(it, PushType.REMATCH) }
 
         // v2+ clients get the navigation signal; old clients can't decode
         // unknown message types, so they only get the RoomUpdate below.
@@ -1161,6 +1199,7 @@ class GameRoom(
     private suspend fun broadcastAfterMove() {
         stampTurnDeadline()
         broadcastGameViews()
+        pushTurnIfAway()
     }
 
     /** Matches what [startTurnTimer] will arm: a deadline only while a human is on the clock. */
@@ -1194,6 +1233,49 @@ class GameRoom(
     private fun GameEvent.forProtocol(version: Int): GameEvent = when {
         this is GameEvent.PlayerJoined && version < 4 -> GameEvent.PlayerReconnected(playerId, playerName, timestamp)
         else -> this
+    }
+
+    /** Protocol v5: keep the phone's push token with its seat. Memory only; it goes with the seat. */
+    fun registerPushToken(playerId: String, token: String) {
+        val session = players[playerId] ?: return
+        val clean = token.trim()
+        // Anything that is not a few hundred URL-safe characters is not a token.
+        if (clean.isEmpty() || clean.length > PUSH_TOKEN_MAX || !clean.all { it.isLetterOrDigit() || it in "-_:." }) return
+        if (session.pushToken == null) log.info("[{}] {} can be reached by push", roomCode, playerId)
+        session.pushToken = clean
+    }
+
+    /**
+     * Tells every seat whose owner has switched away that [newPlayerId] sat down. The host who
+     * went to WhatsApp to share the code is exactly who needs to hear it.
+     */
+    fun notifyArrival(newPlayerId: String) {
+        val name = players[newPlayerId]?.playerName ?: return
+        players.values.filter { it.playerId != newPlayerId }.forEach {
+            pushIfAway(it, PushType.PLAYER_JOINED, mapOf(PushMessage.KEY_PLAYER_NAME to name))
+        }
+    }
+
+    /** Once per turn, when the turn lands on a human who is not here to see it. */
+    private fun pushTurnIfAway() {
+        val state = gameState ?: return
+        val current = state.currentPlayer
+        if (current.id == pushedTurnHolderId) return // the same turn, kept by a successful ask
+        pushedTurnHolderId = current.id
+        if (state.phase != GamePhase.IN_PROGRESS || state.pendingPass != null || current.isBot) return
+        pushIfAway(players[current.id], PushType.YOUR_TURN)
+    }
+
+    /**
+     * A push to one seat, but only when its socket is gone: anyone connected is looking at the
+     * table, and the app raises its own cue if they have merely switched away for a moment.
+     * Someone who left on purpose is told nothing more.
+     */
+    private fun pushIfAway(session: PlayerSession?, type: PushType, extra: Map<String, String> = emptyMap()) {
+        if (session == null || session.isConnected || session.intentionalLeave) return
+        val token = session.pushToken ?: return
+        val data = mapOf(PushMessage.KEY_TYPE to type.wire, PushMessage.KEY_ROOM_CODE to roomCode) + extra
+        pushSender.send(token, type, data) { if (session.pushToken == token) session.pushToken = null }
     }
 
     /**
