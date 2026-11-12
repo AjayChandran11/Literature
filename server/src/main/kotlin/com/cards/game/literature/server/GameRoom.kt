@@ -84,6 +84,8 @@ class GameRoom(
     // measure from the room's original creation
     var createdAt: Long = System.currentTimeMillis()
         private set
+    /** Creation order, for ranking ties: [createdAt] is only millisecond-precise. */
+    val createdSeq: Long = creationCounter.getAndIncrement()
     var finishedAt: Long = 0L
         private set
 
@@ -125,6 +127,7 @@ class GameRoom(
         // hit; it's a backstop so a wedged decision can never spin forever.
         private const val MAX_BOT_MOVE_FAILURES = 3
         private val secureRandom = java.security.SecureRandom()
+        private val creationCounter = java.util.concurrent.atomic.AtomicLong()
 
         /** 128-bit random hex token — proof of identity for reconnects. */
         private fun generateReconnectToken(): String {
