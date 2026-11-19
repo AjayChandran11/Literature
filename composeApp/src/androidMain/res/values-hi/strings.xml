@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">Literature</string>
+
+    <!-- Notification channels (shown in the system's notification settings) -->
+    <string name="notif_channel_turn_name">आपकी बारी</string>
+    <string name="notif_channel_turn_desc">ऑनलाइन खेल में आपकी बारी आने पर बताता है।</string>
+    <string name="notif_channel_game_state_name">खेल शुरू</string>
+    <string name="notif_channel_game_state_desc">आपका ऑनलाइन खेल शुरू होने पर बताता है।</string>
+    <string name="notif_channel_result_name">खेल का नतीजा</string>
+    <string name="notif_channel_result_desc">आपका ऑनलाइन खेल खत्म होने पर चुपचाप बताता है।</string>
+    <string name="notif_channel_reminder_name">रोज़ की पहेली की याद</string>
+    <string name="notif_channel_reminder_desc">दिन में एक बार याद दिलाता है कि नई पहेली तैयार है।</string>
+
+    <!-- Notification copy -->
+    <string name="notif_turn_title">आपकी बारी</string>
+    <string name="notif_turn_body">चाल चलने के लिए टैप करें</string>
+    <string name="notif_game_starting_title">खेल शुरू हो रहा है</string>
+    <string name="notif_game_starting_body">आपका रूम तैयार है</string>
+    <string name="notif_game_over_title">खेल खत्म</string>
+    <string name="notif_game_over_won">आपकी टीम जीती — नतीजे देखने के लिए टैप करें</string>
+    <string name="notif_game_over_lost">आपकी टीम हारी — नतीजे देखने के लिए टैप करें</string>
+    <string name="notif_player_joined_title">%1$s आपकी टेबल पर आ गए</string>
+    <string name="notif_player_joined_body">अपने रूम में लौटने के लिए टैप करें</string>
+    <string name="notif_rematch_title">रीमैच!</string>
+    <string name="notif_rematch_body">आपकी टेबल अगले खेल का इंतज़ार कर रही है</string>
+    <string name="notif_puzzle_title">आज की पहेली तैयार है ⭐</string>
+    <string name="notif_puzzle_body">नई Literature पहेली इंतज़ार में है — अपनी स्ट्रीक बनाए रखें।</string>
+</resources>

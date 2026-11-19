@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The languages the app ships. Lets a player on an English phone pick Tamil or Hindi for this
+     app alone (Android 13+: Settings → Apps → Literature → Language), and keeps the per-app
+     choice across updates. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="ta" />
+    <locale android:name="hi" />
+</locale-config>

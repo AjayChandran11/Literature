@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">Literature</string>
+
+    <!-- Common buttons -->
+    <string name="button_cancel">रद्द करें</string>
+    <string name="button_ok">ठीक है</string>
+    <string name="button_back">वापस</string>
+    <string name="button_leave">छोड़ें</string>
+    <string name="button_stay">रुकें</string>
+    <string name="button_start_game">खेल शुरू करें</string>
+    <string name="button_play_again">फिर से खेलें</string>
+    <string name="button_rematch">रीमैच</string>
+    <string name="button_home">होम</string>
+    <string name="button_quit">बाहर निकलें</string>
+    <string name="button_keep_playing">खेलते रहें</string>
+    <string name="button_leave_room">रूम छोड़ें</string>
+    <string name="button_review">देखें</string>
+    <string name="button_claim">क्लेम!</string>
+    <string name="button_share">शेयर करें</string>
+
+    <!-- Common labels -->
+    <string name="label_your_team">आपकी टीम</string>
+    <string name="label_opponents">विरोधी</string>
+    <string name="player_card_count">%1$d पत्ते</string>
+    <string name="player_out_of_cards">पत्ते खत्म</string>
+    <string name="hand_empty_title">आपके पत्ते खत्म हो गए</string>
+    <string name="hand_empty_subtitle">आपकी टीम आपकी ओर से खेलती रहेगी</string>
+
+    <!-- Suit symbols -->
+    <string name="suit_spades">♠&#xFE0F;</string>
+    <string name="suit_hearts">♥&#xFE0F;</string>
+    <string name="suit_diamonds">♦&#xFE0F;</string>
+    <string name="suit_clubs">♣&#xFE0F;</string>
+    <string name="suits_display">♠&#xFE0F; ♥&#xFE0F; ♦&#xFE0F; ♣&#xFE0F;</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">Literature</string>
+    <string name="home_subtitle">क्लासिक ताश का खेल</string>
+    <string name="home_player_name_hint">आपका नाम</string>
+    <string name="home_new_game">नया खेल</string>
+    <string name="home_play_online">ऑनलाइन खेलें</string>
+    <string name="home_daily_puzzle">रोज़ की पहेली</string>
+
+    <!-- Room invite (deep link) -->
+    <string name="home_invite_title">आपको न्योता मिला है!</string>
+    <string name="home_invite_room_code">रूम %1$s</string>
+    <string name="home_invite_hint">जुड़ने के लिए अपना नाम लिखें</string>
+    <string name="home_invite_join">खेल में जुड़ें</string>
+    <string name="cd_dismiss_invite">न्योता हटाएँ</string>
+
+    <!-- Game Setup Dialog -->
+    <string name="game_setup_title">खेल की सेटिंग</string>
+    <string name="game_setup_players_question">कितने खिलाड़ी?</string>
+    <string name="game_setup_players_label">खिलाड़ी</string>
+    <string name="game_setup_teams_format">%1$dv%2$d</string>
+
+    <!-- Lobby Screen -->
+    <string name="lobby_playing_as">%1$s के नाम से खेल रहे हैं</string>
+    <string name="lobby_create_room">रूम बनाएँ</string>
+    <string name="lobby_quick_play">Quick Play</string>
+    <string name="create_room_public_title">सबके लिए खुला</string>
+    <string name="create_room_public_subtitle">खेल शुरू होने तक Quick Play यहाँ अनजान खिलाड़ियों को बिठा सकता है</string>
+    <string name="waiting_room_starts_in">%1$d सेकंड में शुरू</string>
+    <string name="lobby_join_with_code">या कोड से जुड़ें</string>
+    <string name="lobby_room_code_hint">रूम कोड</string>
+    <string name="lobby_join_room">रूम में जुड़ें</string>
+    <string name="lobby_offline_notice">आप ऑफ़लाइन हैं। ऑनलाइन खेलने के लिए इंटरनेट चाहिए।</string>
+    <string name="lobby_error_admission_timeout">रूम तक नहीं पहुँच सके। कनेक्शन जाँचकर फिर कोशिश करें।</string>
+    <string name="lobby_server_warming_up">सर्वर तैयार हो रहा है, कृपया रुकें…</string>
+
+    <!-- Waiting Room Screen -->
+    <string name="dialog_leave_room_title">रूम छोड़ें?</string>
+    <string name="dialog_leave_room_message">क्या आप सच में रूम छोड़ना चाहते हैं?</string>
+    <string name="waiting_room_title">वेटिंग रूम</string>
+    <string name="waiting_room_code_label">रूम कोड</string>
+    <string name="cd_copy_room_code">रूम कोड कॉपी करें</string>
+    <string name="resume_rejoining">आपके खेल में वापस जोड़ रहे हैं…</string>
+    <string name="resume_failed_title">वापस नहीं जुड़ सके</string>
+    <string name="resume_failed_message">हम आपको रूम %1$s में वापस नहीं पहुँचा सके। सर्वर शायद अभी जाग रहा है।</string>
+    <string name="button_dismiss">बंद करें</string>
+    <string name="waiting_room_invite">दोस्तों को बुलाएँ</string>
+    <string name="waiting_room_invite_whatsapp">WhatsApp पर बुलाएँ</string>
+    <string name="cd_invite_other_apps">दूसरे ऐप से बुलाएँ</string>
+    <string name="invite_share_text">मेरे Literature खेल में जुड़ो! 🃏\nरूम कोड: %1$s\n%2$s</string>
+    <string name="invite_app_share_text">चलो Literature खेलते हैं 🃏 — टीम वाला ताश खेल, जिसमें विरोधियों से पत्ते माँगकर हाफ़-सूट ढूँढ़ने होते हैं।\n\nइंस्टॉल करो, मैं रूम कोड भेजता हूँ:\n%1$s</string>
+    <string name="waiting_room_players_count">खिलाड़ी (%1$d/%2$d)</string>
+    <string name="waiting_room_team_1">टीम 1</string>
+    <string name="waiting_room_team_2">टीम 2</string>
+    <string name="player_badge_host">होस्ट</string>
+    <string name="waiting_room_fill_bots">खाली जगहें बॉट से भरें</string>
+    <string name="waiting_room_switch_team">बदलें</string>
+    <string name="waiting_room_teams_uneven_warning">दोनों टीमों में बराबर खिलाड़ी होने चाहिए</string>
+    <string name="waiting_room_waiting_for_host">होस्ट के शुरू करने का इंतज़ार…</string>
+    <string name="waiting_room_waiting_for_players">और खिलाड़ियों का इंतज़ार…</string>
+    <string name="error_start_game_timeout">खेल शुरू नहीं हो सका। वापस जाकर फिर कोशिश करें।</string>
+    <string name="snackbar_player_disconnected">%1$s का कनेक्शन टूट गया</string>
+    <string name="snackbar_player_reconnected">%1$s फिर से जुड़ गए</string>
+    <string name="snackbar_host_changed">%1$s अब होस्ट हैं</string>
+    <string name="snackbar_replaced_by_bot">%1$s की जगह बॉट खेल रहा है</string>
+
+    <!-- Game Board Screen -->
+    <string name="dialog_quit_game_title">खेल छोड़ें?</string>
+    <string name="dialog_quit_game_message">क्या आप सच में छोड़ना चाहते हैं? आपकी प्रगति खो जाएगी।</string>
+    <string name="dialog_leave_online_game_title">खेल छोड़ें?</string>
+    <string name="dialog_leave_online_game_message">क्या आप सच में छोड़ना चाहते हैं? एक बॉट तुरंत आपकी जगह ले लेगा।</string>
+    <string name="button_leave_game">छोड़ें</string>
+    <string name="dialog_session_ended_title">खेल खत्म</string>
+    <string name="error_seat_lost">आप अब इस रूम में नहीं हैं — आप बहुत देर तक दूर रहे। रूम कोड से फिर जुड़ें।</string>
+    <string name="error_room_gone">यह खेल अब उपलब्ध नहीं है — रूम बंद हो गया होगा या सर्वर दोबारा शुरू हुआ होगा।</string>
+    <string name="button_update">अपडेट करें</string>
+    <string name="error_update_required">ऑनलाइन खेलते रहने के लिए नया वर्ज़न इंस्टॉल करें।</string>
+    <string name="reconnect_waiting">%1$s के फिर जुड़ने का इंतज़ार… (%2$d से)</string>
+    <string name="game_your_turn">✦ आपकी बारी!</string>
+    <string name="game_timer_seconds">%1$d से</string>
+    <string name="game_bot_thinking">%1$s सोच रहे हैं…</string>
+    <string name="game_player_turn">%1$s की बारी</string>
+
+    <!-- Score Bar -->
+    <string name="score_vs">VS</string>
+
+    <!-- Game Tabs -->
+    <string name="tab_table">टेबल</string>
+    <string name="tab_hand">हाथ</string>
+    <string name="label_opponents_section">विरोधी</string>
+    <string name="label_teammates_section">साथी</string>
+    <string name="label_half_suits_section">हाफ़-सूट</string>
+    <string name="label_your_hand">आपका हाथ</string>
+
+    <!-- Action Buttons -->
+    <string name="action_ask_card">पत्ता माँगें</string>
+    <string name="action_claim_deck">क्लेम करें</string>
+
+    <!-- Game Log / Event Strip -->
+    <string name="game_log_got_card">%1$s को %3$s से %2$s मिला</string>
+    <string name="game_log_asked_no_strip">%1$s ने %2$s से %3$s माँगा — नहीं!</string>
+    <string name="game_log_claimed_correctly">%1$s ने %2$s सही क्लेम किया!</string>
+    <string name="game_log_claimed_incorrectly">%1$s ने %2$s गलत क्लेम किया!</string>
+    <string name="game_log_game_over">खेल खत्म!</string>
+    <string name="game_log_timed_out">%1$s का समय खत्म</string>
+    <string name="game_log_replaced_by_bot">%1$s दूर हैं — उनकी जगह बॉट खेल रहा है</string>
+    <string name="game_log_player_back">%1$s वापस आ गए</string>
+    <string name="game_log_player_joined">%1$s जुड़े, %2$s की सीट ली</string>
+
+    <!-- Deck Tracker -->
+    <string name="deck_tracker_ours">हमारे</string>
+    <string name="deck_tracker_theirs">उनके</string>
+    <string name="deck_tracker_open">खुले</string>
+
+    <!-- Ask Bottom Sheet -->
+    <string name="ask_sheet_title">पत्ता माँगें</string>
+    <string name="ask_filter_low">लो</string>
+    <string name="ask_filter_high">हाई</string>
+    <string name="ask_select_suit_hint">पत्ते देखने के लिए सूट चुनें</string>
+    <string name="ask_select_range_hint">लो या हाई चुनें</string>
+    <string name="ask_queue_label">माँग की सूची:</string>
+    <string name="ask_label">माँगें:</string>
+    <string name="ask_confirm_button">पक्का (%1$d) ✓</string>
+
+    <!-- Claim Bottom Sheet -->
+    <string name="claim_step1_title">चरण 1: क्लेम के लिए हाफ़-सूट चुनें</string>
+    <string name="claim_step2_title">चरण 2: पत्ते खिलाड़ियों को सौंपें</string>
+    <string name="claim_confirm_title">अपना क्लेम पक्का करें</string>
+    <string name="claim_assign_instruction">हर पत्ता उस साथी को सौंपें जिसके पास वह है:</string>
+    <string name="claim_you">आप</string>
+    <string name="claim_unassigned">बिना सौंपा</string>
+    <string name="claim_you_assigned">आप ✓</string>
+    <string name="claim_claiming">%1$s क्लेम कर रहे हैं</string>
+    <string name="claim_warning">⚠️ अगर कोई भी गलत हुआ, तो पॉइंट विरोधी को मिलेगा!</string>
+
+    <!-- Option C: pass-target picker (claimer chooses who plays next) -->
+    <string name="pass_select_title">चुनें कि अगला कौन खेलेगा</string>
+    <string name="pass_select_subtitle">आपके पत्ते खत्म हो गए — बारी लेने के लिए एक साथी चुनें।</string>
+    <string name="pass_select_subtitle_claimed">✓ आपने %1$s क्लेम किया और पत्ते खत्म हो गए — बारी लेने के लिए एक साथी चुनें।</string>
+    <string name="pass_cards_left">%1$d पत्ते</string>
+    <string name="pass_waiting">%1$s चुन रहे हैं कि अगला कौन खेलेगा…</string>
+
+    <!-- Connection Banner -->
+    <string name="connection_reconnecting">फिर से जुड़ रहे हैं…</string>
+    <string name="connection_reconnected">फिर से जुड़ गए</string>
+    <string name="connection_disconnected">कनेक्शन टूट गया</string>
+    <string name="connection_retry">फिर कोशिश करें</string>
+
+    <!-- Result Screen -->
+    <string name="result_draw">बराबरी!</string>
+    <string name="result_win">आप जीते!</string>
+    <string name="result_lose">आप हारे!</string>
+    <string name="result_breakdown_title">हाफ़-सूट का ब्योरा</string>
+    <string name="result_waiting_rematch">%1$s के रीमैच शुरू करने का इंतज़ार…</string>
+    <string name="result_waiting_rematch_no_host">होस्ट के रीमैच शुरू करने का इंतज़ार…</string>
+    <string name="result_steal_hint">गलत क्लेम पर छीना गया</string>
+    <string name="result_show_log">खेल का लॉग देखें</string>
+    <string name="result_log_title">खेल का लॉग</string>
+    <string name="result_share">नतीजा शेयर करें</string>
+    <string name="result_card_tagline">सोचो. माँगो. क्लेम करो. जीतो.</string>
+    <string name="result_card_cta">Google Play पर पाएँ</string>
+    <string name="share_result_caption">मैंने अभी Literature खेला ♠&#xFE0F;♥&#xFE0F;♦&#xFE0F;♣&#xFE0F; — मेरा स्कोर तोड़कर दिखाओ! ऐप यहाँ है: %1$s</string>
+
+    <!-- Daily Claim Puzzle -->
+    <string name="daily_puzzle_number">पहेली #%1$d</string>
+    <string name="daily_puzzle_move_got">%1$s को %2$s से मिला</string>
+    <string name="daily_puzzle_move_missed">%1$s ने %2$s से माँगा — नहीं</string>
+    <string name="daily_puzzle_loading">आज की पहेली लोड हो रही है…</string>
+    <string name="daily_puzzle_load_error">आज की पहेली लोड नहीं हो सकी।</string>
+    <!-- Case Board redesign -->
+    <string name="daily_puzzle_case_line">आपकी टीम एक हाफ़-सूट क्लेम कर सकती है। वह पत्ता ढूँढ़ें जो %1$s ने छिपाया है।</string>
+    <string name="daily_puzzle_evidence">सबूत</string>
+    <string name="daily_puzzle_evidence_collapsed">%1$d चालें · देखने के लिए टैप करें</string>
+    <string name="daily_puzzle_step1_q">एक हाफ़-सूट पूरा आपकी टीम के पास है। कौन सा?</string>
+    <string name="daily_puzzle_board_title">%1$s किसके पास है?</string>
+    <string name="daily_puzzle_ruled_out">%1$s और %2$s ने नहीं कहा — तो यह %3$s ही होगा।</string>
+    <string name="daily_puzzle_rail_prompt">%1$s ने इनमें से एक छिपाया है — कौन सा?</string>
+    <string name="daily_puzzle_streak_chip">%1$d दिन की स्ट्रीक</string>
+    <string name="daily_puzzle_badge_alert">!</string>
+    <string name="daily_puzzle_claiming">%1$s क्लेम कर रहे हैं</string>
+    <string name="daily_puzzle_change">बदलें</string>
+    <string name="daily_puzzle_you_badge">आप</string>
+    <string name="daily_puzzle_attempt">कोशिश %1$d / %2$d</string>
+    <string name="daily_puzzle_submit">क्लेम</string>
+    <string name="daily_puzzle_feedback_halfsuit">ये सब आपकी टीम के पास नहीं हैं — कोई और हाफ़-सूट आज़माएँ।</string>
+    <string name="daily_puzzle_feedback_card">छिपा पत्ता यह नहीं — चालें फिर से देखें।</string>
+    <string name="daily_puzzle_solved">हल हो गई!</string>
+    <string name="daily_puzzle_failed">कोशिशें खत्म</string>
+    <string name="daily_puzzle_answer">जवाब: %1$s</string>
+    <string name="daily_puzzle_come_back">नई पहेली के लिए कल फिर आएँ।</string>
+    <string name="daily_puzzle_share_solved">Literature Daily #%1$d — %2$d/%3$d में हल%4$s</string>
+    <string name="daily_puzzle_share_failed">Literature Daily #%1$d — आज हल नहीं कर पाया</string>
+    <string name="daily_puzzle_howto_title">कैसे खेलें</string>
+    <string name="daily_puzzle_howto_intro">हर दिन आपकी टीम ठीक एक हाफ़-सूट पूरा क्लेम कर सकती है।</string>
+    <string name="daily_puzzle_howto_s1">1. चालें और अपना हाथ पढ़ें।</string>
+    <string name="daily_puzzle_howto_s2">2. वह हाफ़-सूट चुनें जिसके सभी छह पत्ते आपकी टीम के पास हैं।</string>
+    <string name="daily_puzzle_howto_s3">3. आपके साथी ने उनमें से एक पत्ता छिपाया है — वह ढूँढ़ें जिसे आपने कभी हाथ बदलते नहीं देखा।</string>
+    <string name="daily_puzzle_howto_outro">कम कोशिशों में ज़्यादा स्टार। स्ट्रीक बढ़ाने के लिए रोज़ हल करें।</string>
+    <!-- Puzzle variety: Locate the Card + The Wasted Ask (1-tap seat picks) -->
+    <string name="daily_puzzle_submit_seat">पक्का करें</string>
+    <string name="daily_puzzle_feedback_seat">वह नहीं — चालें फिर से पढ़ें।</string>
+    <string name="daily_puzzle_locate_case_line">टेबल पर नज़र रखें। नीचे एक पत्ते का नाम है — पता लगाएँ कि वह किसके पास है।</string>
+    <string name="daily_puzzle_locate_q">यह पत्ता किसके पास होना चाहिए?</string>
+    <string name="daily_puzzle_locate_pick">उस एक खिलाड़ी पर टैप करें जिसके पास यह होना ही चाहिए।</string>
+    <string name="daily_puzzle_locate_answer">%1$s %2$s के पास है।</string>
+    <string name="daily_puzzle_wasted_case_line">एक विरोधी पहले ही अपनी पोल खोल चुका है। कौन सी माँग बेकार जाएगी?</string>
+    <string name="daily_puzzle_wasted_q">आपको यह पत्ता चाहिए। किस विरोधी के पास यह पक्का नहीं है?</string>
+    <string name="daily_puzzle_wasted_pick">उस विरोधी पर टैप करें जिससे माँगना बेकार होगा।</string>
+    <string name="daily_puzzle_wasted_answer">%1$s के पास %2$s हो ही नहीं सकता — उनसे माँगना बेकार है।</string>
+    <string name="daily_puzzle_howto_locate_title">पत्ता ढूँढ़ें</string>
+    <string name="daily_puzzle_howto_locate_intro">"आप" यानी आप ही। एक पत्ते का नाम दिया है — पता लगाएँ कि वह किसके पास होना चाहिए।</string>
+    <string name="daily_puzzle_howto_locate_s1">1. चालें पढ़ें: सफल माँग बताती है कि पत्ता कहाँ गया; नाकाम माँग एक खिलाड़ी को बाहर करती है।</string>
+    <string name="daily_puzzle_howto_locate_s2">2. जब हाफ़-सूट के छह में से पाँच पत्तों की जगह पता हो, तो छठा वहीं है जहाँ किसी को बाहर नहीं किया गया।</string>
+    <string name="daily_puzzle_howto_locate_outro">उस एक खिलाड़ी पर टैप करें जिसके पास यह होना ही चाहिए। कम कोशिशों में ज़्यादा स्टार।</string>
+    <string name="daily_puzzle_howto_wasted_title">बेकार माँग</string>
+    <string name="daily_puzzle_howto_wasted_intro">आपको एक पत्ता चाहिए। एक विरोधी पक्का मदद नहीं कर सकता — उससे माँगने पर बारी बेकार जाती है।</string>
+    <string name="daily_puzzle_howto_wasted_s1">1. पत्ता माँगना साबित करता है कि वह आपके पास नहीं है; नाकाम माँग साबित करती है कि जिससे माँगा उसके पास भी नहीं है।</string>
+    <string name="daily_puzzle_howto_wasted_s2">2. वह विरोधी ढूँढ़ें जिसके बारे में पहले ही साबित हो चुका है कि पत्ता उसके पास नहीं है।</string>
+    <string name="daily_puzzle_howto_wasted_outro">उस विरोधी पर टैप करें — दूसरे के पास यह अब भी हो सकता है।</string>
+    <string name="cd_back">वापस</string>
+    <string name="cd_how_to_play">कैसे खेलें</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_skip">छोड़ें</string>
+    <string name="onboarding_next">आगे  →</string>
+    <string name="onboarding_swipe_hint">खेलना सीखने के लिए स्वाइप करें →</string>
+    <string name="onboarding_welcome_title">Literature</string>
+    <string name="onboarding_ultimate_card_game">ताश का बेहतरीन खेल</string>
+    <string name="onboarding_description">4, 6 या 8 खिलाड़ी  ·  2 टीमें  ·  48 पत्ते\nमाँगो, रणनीति बनाओ, और हाफ़ सूट क्लेम करो</string>
+    <string name="onboarding_deck_title">गड्डी</string>
+    <string name="onboarding_deck_subtitle">48 पत्ते — 6-6 पत्तों के 8 हाफ़ सूट में बँटे</string>
+    <string name="onboarding_no_eights">✕  Literature में 8 नहीं होते!</string>
+    <string name="onboarding_teams_title">दो टीमें</string>
+    <string name="onboarding_teams_subtitle">सबसे ज़्यादा हाफ़ सूट क्लेम करने के लिए अपने साथियों के साथ मिलकर खेलें</string>
+    <string name="onboarding_team_a">टीम A</string>
+    <string name="onboarding_team_b">टीम B</string>
+    <string name="onboarding_strategy_tip">💡  आपकी हर माँग पूरी टीम को जानकारी देती है — माँगने से पहले सोचें!</string>
+    <string name="onboarding_ask_title">माँग</string>
+    <string name="onboarding_ask_subtitle">अपनी बारी पर किसी विरोधी से पत्ता माँगें — उस हाफ़ सूट का एक पत्ता पहले से आपके पास होना चाहिए</string>
+    <string name="onboarding_label_opponent">विरोधी</string>
+    <string name="onboarding_label_you">आप</string>
+    <string name="onboarding_asking_spade7">♠&#xFE0F;7 माँग रहे हैं…</string>
+    <string name="onboarding_got_it">✓  मिल गया! फिर से माँग सकते हैं</string>
+    <string name="onboarding_asking_spade6">♠&#xFE0F;6 माँग रहे हैं…</string>
+    <string name="onboarding_denied">✗  नहीं — बारी चली गई</string>
+    <string name="onboarding_your_turn_to_ask">माँगने की आपकी बारी</string>
+    <string name="onboarding_rule_icon_success">✓</string>
+    <string name="onboarding_rule_icon_denied">✗</string>
+    <string name="onboarding_rule_icon_must_hold">⚠</string>
+    <string name="onboarding_rule_success">मिला → पत्ता लें और फिर माँगें</string>
+    <string name="onboarding_rule_denied">नहीं मिला → बारी उस विरोधी की</string>
+    <string name="onboarding_rule_must_hold">उस हाफ़ सूट का एक पत्ता आपके पास होना चाहिए</string>
+    <string name="onboarding_claim_title">क्लेम करें और जीतें</string>
+    <string name="onboarding_claim_subtitle">जब हाफ़ सूट के सभी 6 पत्ते आपकी टीम के पास हों — क्लेम करके पॉइंट लें!</string>
+    <string name="onboarding_claim_badge">♠&#xFE0F; लो हुकुम — क्लेम हुआ!</string>
+    <string name="onboarding_your_team">आपकी टीम</string>
+    <string name="onboarding_half_suits_claimed">हाफ़ सूट क्लेम हुए</string>
+    <string name="onboarding_most_wins">सबसे ज़्यादा हाफ़ सूट वाला जीतता है!</string>
+    <string name="onboarding_lets_play">चलो खेलें!  ♠&#xFE0F;♥&#xFE0F;♦&#xFE0F;♣&#xFE0F;</string>
+
+    <!-- Onboarding card demo labels -->
+    <string name="onboarding_card_spade7">♠&#xFE0F;7</string>
+    <string name="onboarding_card_spade6">♠&#xFE0F;6</string>
+    <string name="onboarding_card_spade">♠&#xFE0F;</string>
+
+    <!-- Half Suit tile names (DeckPage) -->
+    <string name="half_suit_low_spades">लो हुकुम</string>
+    <string name="half_suit_high_spades">हाई हुकुम</string>
+    <string name="half_suit_low_hearts">लो पान</string>
+    <string name="half_suit_high_hearts">हाई पान</string>
+    <string name="half_suit_low_diamonds">लो ईंट</string>
+    <string name="half_suit_high_diamonds">हाई ईंट</string>
+    <string name="half_suit_low_clubs">लो चिड़ी</string>
+    <string name="half_suit_high_clubs">हाई चिड़ी</string>
+
+    <!-- Card ranges (DeckPage) -->
+    <string name="card_range_low">2  3  4  5  6  7</string>
+    <string name="card_range_high">9  10  J  Q  K  A</string>
+
+    <!-- How to Play -->
+    <string name="help_button_description">कैसे खेलें</string>
+    <string name="help_title">कैसे खेलें</string>
+    <string name="help_objective_title">लक्ष्य</string>
+    <string name="help_objective_body">जीतने के लिए दूसरी टीम से ज़्यादा हाफ़-सूट क्लेम करें — कुल 8 होते हैं।</string>
+    <string name="help_deck_title">गड्डी</string>
+    <string name="help_deck_body">4 सूट में 48 पत्ते (♠&#xFE0F; ♥&#xFE0F; ♦&#xFE0F; ♣&#xFE0F;)। 8 नहीं होते।\n\nहर सूट दो हाफ़-सूट में बँटता है:\n• लो: 2, 3, 4, 5, 6, 7\n• हाई: 9, 10, J, Q, K, A\n\nयानी 6-6 पत्तों के 8 हाफ़-सूट।</string>
+    <string name="help_teams_title">टीमें</string>
+    <string name="help_teams_body">दो बराबर टीमें (2v2 या 3v3)। पत्ते सिर्फ़ विरोधियों से माँग सकते हैं — अपने साथियों से कभी नहीं।</string>
+    <string name="help_asking_title">पत्ते माँगना</string>
+    <string name="help_asking_body">अपनी बारी पर एक सूट चुनें, जो पत्ते चाहिए वे चुनें, और किसी विरोधी से माँगें।\n\nपत्ता मिला? फिर माँगें।\nनहीं मिला? अब उनकी बारी।\n\nमाँगने के लिए उस हाफ़-सूट का कम से कम एक पत्ता आपके पास होना चाहिए।</string>
+    <string name="help_claiming_title">हाफ़-सूट क्लेम करना</string>
+    <string name="help_claiming_body">लगता है पूरा हाफ़-सूट आपकी टीम के पास है? क्लेम करें — हर पत्ता सही साथी को सौंपें।\n\nसही हुआ तो आपकी टीम को पॉइंट।\nगलत हुआ तो दूसरी टीम को पॉइंट।</string>
+    <string name="help_no_cards_title">पत्ते खत्म</string>
+    <string name="help_no_cards_body">पत्ते खत्म हो गए? कोई बात नहीं — आपके साथी खेलते रहते हैं। आप अब भी क्लेम का हिस्सा बन सकते हैं।</string>
+    <string name="help_winning_title">जीत</string>
+    <string name="help_winning_body">जो टीम ज़्यादा हाफ़-सूट क्लेम करती है, वह जीतती है। 4–4 हुआ तो बराबरी।</string>
+    <string name="help_tip_title">रणनीति टिप</string>
+    <string name="help_tip_body">हर माँग सबको दिखती है। सोचें कि आपकी चालें क्या बताती हैं — आपके साथियों को भी, विरोधियों को भी।</string>
+
+    <!-- Tutorial tooltips -->
+    <string name="tutorial_score_bar">देखें कि विरोधियों के मुकाबले आपकी टीम कैसा खेल रही है।</string>
+    <string name="tutorial_turn_banner">मौजूदा बारी और बचा हुआ समय दिखाता है।\n आखिरी 15 सेकंड में टाइमर दिखेगा।</string>
+    <string name="tutorial_players">सभी खिलाड़ी और उनके पत्तों की गिनती देखें।</string>
+    <string name="tutorial_half_suits">देखें कौन से हाफ़-सूट क्लेम हो चुके हैं या लिए जा चुके हैं।</string>
+    <string name="tutorial_hand_tab">अपने हाथ के पत्ते देखने के लिए यहाँ टैप करें।</string>
+    <string name="tutorial_your_hand">ये आपके पत्ते हैं, हाफ़-सूट के हिसाब से। इनसे माँगें और क्लेम करें!</string>
+    <string name="tutorial_action_buttons">अपनी बारी पर इनसे पत्ते माँगें या हाफ़-सूट क्लेम करें।</string>
+    <string name="tutorial_tap_continue">आगे बढ़ने के लिए कहीं भी टैप करें</string>
+    <string name="tutorial_tap_hand_tab">↓  नीचे हाथ टैब पर टैप करें  ↓</string>
+    <string name="tutorial_skip">ट्यूटोरियल छोड़ें</string>
+    <string name="waiting_room_primer_title">Literature में नए हैं?</string>
+    <string name="waiting_room_primer_cta">खेलना सीखें</string>
+    <string name="cd_dismiss">बंद करें</string>
+    <string name="festival_independence_day">स्वतंत्रता दिवस की शुभकामनाएँ</string>
+    <string name="result_debrief_title">यह आपका पहला खेल था!</string>
+    <string name="result_debrief_body">लक्ष्य: दूसरी टीम से ज़्यादा हाफ़-सूट क्लेम करना — कुल 8 होते हैं। हाफ़-सूट पूरा करने के लिए ज़रूरी पत्ते विरोधियों से माँगें, फिर क्लेम करें।</string>
+
+    <!-- Accessibility content descriptions -->
+    <string name="cd_card">%2$s का %1$s</string>
+    <string name="cd_player_active">%1$s, %2$d पत्ते, अभी बारी</string>
+    <string name="cd_player">%1$s, %2$d पत्ते</string>
+    <string name="cd_player_out">%1$s, पत्ते खत्म</string>
+    <string name="cd_deck_open">%1$s, खुला</string>
+    <string name="cd_deck_ours">%1$s, आपकी टीम ने क्लेम किया</string>
+    <string name="cd_deck_theirs">%1$s, विरोधियों ने क्लेम किया</string>
+    <string name="cd_deck_ours_stolen">%1$s, विरोधियों के गलत क्लेम पर जीता</string>
+    <string name="cd_deck_theirs_stolen">%1$s, गलत क्लेम पर विरोधियों को गया</string>
+    <string name="cd_score">स्कोर: आपकी टीम %1$d, विरोधी %2$d</string>
+    <string name="cd_remove_card">%1$s को चयन से हटाएँ</string>
+    <string name="cd_select_card">%1$s चुनें</string>
+    <string name="cd_send_reaction">रिएक्शन भेजें</string>
+    <string name="cd_send_reaction_type">%1$s रिएक्शन भेजें</string>
+
+    <!-- In-game claim celebration banner -->
+    <string name="claim_celebration_ours">आपकी टीम ने क्लेम किया!</string>
+    <string name="claim_celebration_theirs">विरोधियों ने क्लेम किया</string>
+    <string name="claim_celebration_failed">%1$s का क्लेम गलत निकला</string>
+
+    <!-- Theme settings -->
+    <string name="settings_bot_speed">बॉट के सोचने का समय (कस्टम)</string>
+    <string name="settings_theme">थीम</string>
+    <string name="theme_system">सिस्टम</string>
+    <string name="theme_light">लाइट</string>
+    <string name="theme_dark">डार्क</string>
+    <string name="cd_assign_card">%1$s किसी साथी को सौंपें</string>
+    <string name="cd_bot_thinking">बॉट सोच रहा है</string>
+    <string name="cd_suit_spades">हुकुम</string>
+    <string name="cd_suit_hearts">पान</string>
+    <string name="cd_suit_diamonds">ईंट</string>
+    <string name="cd_suit_clubs">चिड़ी</string>
+
+    <!-- Settings -->
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="settings_sound_effects">साउंड इफ़ेक्ट</string>
+    <string name="settings_haptic_feedback">वाइब्रेशन</string>
+    <string name="settings_notifications">नोटिफ़िकेशन</string>
+    <string name="settings_daily_reminder">रोज़ की पहेली की याद</string>
+    <string name="cd_settings_back">वापस</string>
+    <string name="settings_about">ऐप के बारे में</string>
+    <string name="settings_version">वर्ज़न</string>
+    <string name="settings_privacy_policy">प्राइवेसी पॉलिसी</string>
+    <string name="settings_send_feedback">फ़ीडबैक भेजें</string>
+    <string name="settings_invite_friends">दोस्तों को बुलाएँ</string>
+    <string name="settings_licenses">फ़ॉन्ट: Playfair Display (SIL OFL 1.1)</string>
+    <string name="feedback_email_subject">Literature फ़ीडबैक (v%1$s)</string>
+    <string name="home_settings">सेटिंग्स</string>
+
+    <!-- Online gate dialog -->
+    <string name="dialog_online_gate_title">पहले ऑफ़लाइन खेलें?</string>
+    <string name="dialog_online_gate_message">बुनियादी बातें सीखने के लिए पहले एक ऑफ़लाइन खेल खेलने की सलाह है।</string>
+    <string name="dialog_online_gate_play_offline">ऑफ़लाइन खेलें</string>
+    <string name="dialog_online_gate_continue">ऑनलाइन जारी रखें</string>
+
+    <!-- Bot difficulty -->
+    <string name="game_setup_difficulty_label">बॉट की कठिनाई</string>
+    <string name="difficulty_easy">आसान</string>
+    <string name="difficulty_medium">मध्यम</string>
+    <string name="difficulty_hard">कठिन</string>
+    <string name="difficulty_easy_desc">नरम</string>
+    <string name="difficulty_medium_desc">संतुलित</string>
+    <string name="difficulty_hard_desc">माहिर</string>
+
+    <!-- Stats -->
+    <string name="stats_title">मेरे आँकड़े</string>
+    <string name="cd_stats_back">वापस</string>
+    <string name="stats_games">खेल</string>
+    <string name="stats_wins">जीत</string>
+    <string name="stats_win_rate">जीत की दर</string>
+    <string name="stats_current_streak">स्ट्रीक</string>
+    <string name="stats_best_streak">सबसे लंबी स्ट्रीक</string>
+    <string name="home_streak_best">सर्वश्रेष्ठ</string>
+    <string name="stats_ask_success">सफल माँगें</string>
+    <string name="stats_claim_accuracy">क्लेम की सटीकता</string>
+    <!-- Daily Puzzle stats (My Stats section) -->
+    <string name="stats_puzzle_title">रोज़ की पहेली</string>
+    <string name="stats_puzzle_streak">स्ट्रीक</string>
+    <string name="stats_puzzle_best">सर्वश्रेष्ठ</string>
+    <string name="stats_puzzle_solved">हल कीं</string>
+    <string name="stats_puzzle_stars">स्टार</string>
+    <string name="stats_online_title">ऑनलाइन</string>
+    <string name="stats_online_record">%2$d खेलों में %1$d जीत</string>
+    <string name="stats_vs_bots_title">बॉट्स के खिलाफ़</string>
+    <string name="stats_vs_bots_record">%1$d / %2$d जीते</string>
+    <string name="stats_history_title">मैच इतिहास</string>
+    <string name="stats_history_empty">अभी कोई खेल दर्ज नहीं — जाकर एक खेलें!</string>
+    <string name="stats_mode_online">ऑनलाइन · %1$d खिलाड़ी</string>
+    <string name="stats_mode_offline">बॉट्स के खिलाफ़ · %1$d खिलाड़ी</string>
+    <string name="stats_outcome_win">W</string>
+    <string name="stats_outcome_loss">L</string>
+    <string name="stats_outcome_draw">D</string>
+    <string name="stats_today">आज</string>
+    <string name="stats_yesterday">कल</string>
+    <string name="stats_days_ago">%1$d दिन पहले</string>
+    <string name="cd_home_stats_card">आपके खेल के आँकड़े</string>
+    <string name="home_my_stats">मेरे आँकड़े</string>
+
+    <!-- Achievements -->
+    <string name="achievements_title">उपलब्धियाँ</string>
+    <string name="achievements_progress">%1$d / %2$d</string>
+    <string name="achievement_unlocked_banner">उपलब्धि अनलॉक!</string>
+    <string name="achievement_unlocked_more">+%1$d और</string>
+    <string name="achievement_locked">लॉक</string>
+    <string name="ach_first_win">पहली जीत</string>
+    <string name="ach_first_win_desc">अपना पहला खेल जीतें</string>
+    <string name="ach_hat_trick">हैट्रिक</string>
+    <string name="ach_hat_trick_desc">लगातार 3 खेल जीतें</string>
+    <string name="ach_on_fire">आग लगा दी</string>
+    <string name="ach_on_fire_desc">लगातार 5 खेल जीतें</string>
+    <string name="ach_veteran">अनुभवी</string>
+    <string name="ach_veteran_desc">25 खेल खेलें</string>
+    <string name="ach_centurion">शतकवीर</string>
+    <string name="ach_centurion_desc">100 खेल खेलें</string>
+    <string name="ach_socialite">मिलनसार</string>
+    <string name="ach_socialite_desc">अपना पहला ऑनलाइन खेल खेलें</string>
+    <string name="ach_online_champ">ऑनलाइन चैंपियन</string>
+    <string name="ach_online_champ_desc">10 ऑनलाइन खेल जीतें</string>
+    <string name="ach_bot_slayer">बॉट संहारक</string>
+    <string name="ach_bot_slayer_desc">कठिन बॉट्स के खिलाफ़ एक खेल जीतें</string>
+    <string name="ach_sharp_caller">तेज़ नज़र</string>
+    <string name="ach_sharp_caller_desc">10 सही क्लेम करें</string>
+    <string name="ach_perfect_game">परफ़ेक्ट खेल</string>
+    <string name="ach_perfect_game_desc">ऐसा खेल जीतें जिसमें हर माँग सफल हो (कम से कम 5 माँगें)</string>
+    <string name="ach_claim_master">क्लेम मास्टर</string>
+    <string name="ach_claim_master_desc">एक ही खेल में 3 सही क्लेम करें</string>
+    <!-- Daily Puzzle achievements -->
+    <string name="ach_puzzle_rookie">नया जासूस</string>
+    <string name="ach_puzzle_rookie_desc">अपनी पहली रोज़ की पहेली हल करें</string>
+    <string name="ach_puzzle_streak_7">अक्ल का हफ़्ता</string>
+    <string name="ach_puzzle_streak_7_desc">लगातार 7 दिन रोज़ की पहेली हल करें</string>
+    <string name="ach_puzzle_streak_30">रोज़ का भक्त</string>
+    <string name="ach_puzzle_streak_30_desc">लगातार 30 दिन रोज़ की पहेली हल करें</string>
+    <string name="ach_puzzle_fifty">केस मास्टर</string>
+    <string name="ach_puzzle_fifty_desc">50 रोज़ की पहेलियाँ हल करें</string>
+    <string name="ach_puzzle_flawless">पहली नज़र</string>
+    <string name="ach_puzzle_flawless_desc">रोज़ की पहेली पहले ही अंदाज़े में हल करें</string>
+
+    <!-- Match ceremony: pre-game intro + game-over stinger -->
+    <string name="match_intro_you">आप</string>
+    <string name="match_intro_vs">vs</string>
+    <string name="match_intro_first_move_you">पहली चाल आपकी</string>
+    <string name="match_intro_first_move_other">पहली चाल %1$s की</string>
+    <string name="match_intro_skip_hint">छोड़ने के लिए टैप करें</string>
+    <string name="stinger_victory">जीत!</string>
+    <string name="stinger_defeat">हार</string>
+    <string name="stinger_draw">बराबरी</string>
+</resources>

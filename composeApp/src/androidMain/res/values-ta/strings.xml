@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">Literature</string>
+
+    <!-- Notification channels (shown in the system's notification settings) -->
+    <string name="notif_channel_turn_name">உங்கள் முறை</string>
+    <string name="notif_channel_turn_desc">ஆன்லைன் ஆட்டத்தில் உங்கள் முறை வரும்போது தெரிவிக்கிறது.</string>
+    <string name="notif_channel_game_state_name">ஆட்டம் தொடங்குகிறது</string>
+    <string name="notif_channel_game_state_desc">உங்கள் ஆன்லைன் ஆட்டம் தொடங்கும்போது தெரிவிக்கிறது.</string>
+    <string name="notif_channel_result_name">ஆட்ட முடிவு</string>
+    <string name="notif_channel_result_desc">உங்கள் ஆன்லைன் ஆட்டம் முடிந்ததை அமைதியாகத் தெரிவிக்கிறது.</string>
+    <string name="notif_channel_reminder_name">தினசரி புதிர் நினைவூட்டல்</string>
+    <string name="notif_channel_reminder_desc">புதிய தினசரி புதிர் தயார் என்று நாளொன்றுக்கு ஒரு முறை நினைவூட்டல்.</string>
+
+    <!-- Notification copy -->
+    <string name="notif_turn_title">உங்கள் முறை</string>
+    <string name="notif_turn_body">ஆட தட்டுங்கள்</string>
+    <string name="notif_game_starting_title">ஆட்டம் தொடங்குகிறது</string>
+    <string name="notif_game_starting_body">உங்கள் ரூம் தயார்</string>
+    <string name="notif_game_over_title">ஆட்டம் முடிந்தது</string>
+    <string name="notif_game_over_won">உங்கள் அணி வென்றது — முடிவுகளைப் பார்க்கத் தட்டுங்கள்</string>
+    <string name="notif_game_over_lost">உங்கள் அணி தோற்றது — முடிவுகளைப் பார்க்கத் தட்டுங்கள்</string>
+    <string name="notif_player_joined_title">%1$s உங்கள் மேசையில் சேர்ந்தார்</string>
+    <string name="notif_player_joined_body">உங்கள் ரூமுக்குத் திரும்பத் தட்டுங்கள்</string>
+    <string name="notif_rematch_title">மறு ஆட்டம்!</string>
+    <string name="notif_rematch_body">உங்கள் மேசை இன்னொரு ஆட்டத்திற்குக் காத்திருக்கிறது</string>
+    <string name="notif_puzzle_title">இன்றைய புதிர் தயார் ⭐</string>
+    <string name="notif_puzzle_body">புதிய Literature புதிர் காத்திருக்கிறது — உங்கள் ஸ்ட்ரீக்கைக் காப்பாற்றுங்கள்.</string>
+</resources>

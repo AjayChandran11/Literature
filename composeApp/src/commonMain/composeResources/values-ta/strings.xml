@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">Literature</string>
+
+    <!-- Common buttons -->
+    <string name="button_cancel">ரத்து</string>
+    <string name="button_ok">சரி</string>
+    <string name="button_back">பின்</string>
+    <string name="button_leave">வெளியேறு</string>
+    <string name="button_stay">இரு</string>
+    <string name="button_start_game">ஆட்டத்தைத் தொடங்கு</string>
+    <string name="button_play_again">மீண்டும் ஆடு</string>
+    <string name="button_rematch">மறு ஆட்டம்</string>
+    <string name="button_home">முகப்பு</string>
+    <string name="button_quit">விலகு</string>
+    <string name="button_keep_playing">தொடர்ந்து ஆடு</string>
+    <string name="button_leave_room">ரூமை விட்டு வெளியேறு</string>
+    <string name="button_review">பார்</string>
+    <string name="button_claim">க்ளெய்ம்!</string>
+    <string name="button_share">பகிர்</string>
+
+    <!-- Common labels -->
+    <string name="label_your_team">உங்கள் அணி</string>
+    <string name="label_opponents">எதிரணி</string>
+    <string name="player_card_count">%1$d சீட்டுகள்</string>
+    <string name="player_out_of_cards">சீட்டுகள் தீர்ந்தன</string>
+    <string name="hand_empty_title">உங்கள் சீட்டுகள் தீர்ந்துவிட்டன</string>
+    <string name="hand_empty_subtitle">உங்கள் சார்பாக உங்கள் அணி தொடர்ந்து ஆடும்</string>
+
+    <!-- Suit symbols -->
+    <string name="suit_spades">♠&#xFE0F;</string>
+    <string name="suit_hearts">♥&#xFE0F;</string>
+    <string name="suit_diamonds">♦&#xFE0F;</string>
+    <string name="suit_clubs">♣&#xFE0F;</string>
+    <string name="suits_display">♠&#xFE0F; ♥&#xFE0F; ♦&#xFE0F; ♣&#xFE0F;</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">Literature</string>
+    <string name="home_subtitle">கிளாசிக் சீட்டாட்டம்</string>
+    <string name="home_player_name_hint">உங்கள் பெயர்</string>
+    <string name="home_new_game">புதிய ஆட்டம்</string>
+    <string name="home_play_online">ஆன்லைன்</string>
+    <string name="home_daily_puzzle">தினசரி புதிர்</string>
+
+    <!-- Room invite (deep link) -->
+    <string name="home_invite_title">உங்களுக்கு அழைப்பு!</string>
+    <string name="home_invite_room_code">ரூம் %1$s</string>
+    <string name="home_invite_hint">சேர உங்கள் பெயரை உள்ளிடுங்கள்</string>
+    <string name="home_invite_join">ஆட்டத்தில் சேர்</string>
+    <string name="cd_dismiss_invite">அழைப்பை மூடு</string>
+
+    <!-- Game Setup Dialog -->
+    <string name="game_setup_title">ஆட்ட அமைப்பு</string>
+    <string name="game_setup_players_question">எத்தனை பேர்?</string>
+    <string name="game_setup_players_label">பேர்</string>
+    <string name="game_setup_teams_format">%1$dv%2$d</string>
+
+    <!-- Lobby Screen -->
+    <string name="lobby_playing_as">%1$s ஆக ஆடுகிறீர்கள்</string>
+    <string name="lobby_create_room">ரூம் உருவாக்கு</string>
+    <string name="lobby_quick_play">Quick Play</string>
+    <string name="create_room_public_title">யாருக்கும் திறந்தது</string>
+    <string name="create_room_public_subtitle">ஆட்டம் தொடங்கும் வரை Quick Play இங்கே புதியவர்களை அமர்த்தலாம்</string>
+    <string name="waiting_room_starts_in">%1$d வினாடியில் தொடங்கும்</string>
+    <string name="lobby_join_with_code">அல்லது கோடு மூலம் சேருங்கள்</string>
+    <string name="lobby_room_code_hint">ரூம் கோடு</string>
+    <string name="lobby_join_room">ரூமில் சேர்</string>
+    <string name="lobby_offline_notice">நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். ஆன்லைன் ஆட்டத்திற்கு இணைய இணைப்பு தேவை.</string>
+    <string name="lobby_error_admission_timeout">ரூமை அடைய முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயலுங்கள்.</string>
+    <string name="lobby_server_warming_up">சர்வர் தயாராகிறது, காத்திருங்கள்…</string>
+
+    <!-- Waiting Room Screen -->
+    <string name="dialog_leave_room_title">ரூமை விட்டு வெளியேறவா?</string>
+    <string name="dialog_leave_room_message">நிச்சயமாக ரூமை விட்டு வெளியேற வேண்டுமா?</string>
+    <string name="waiting_room_title">காத்திருப்பு அறை</string>
+    <string name="waiting_room_code_label">ரூம் கோடு</string>
+    <string name="cd_copy_room_code">ரூம் கோடை நகலெடு</string>
+    <string name="resume_rejoining">உங்கள் ஆட்டத்தில் மீண்டும் சேர்கிறது…</string>
+    <string name="resume_failed_title">மீண்டும் சேர முடியவில்லை</string>
+    <string name="resume_failed_message">%1$s ரூமுக்கு உங்களை மீண்டும் சேர்க்க முடியவில்லை. சர்வர் இன்னும் தயாராகிக் கொண்டிருக்கலாம்.</string>
+    <string name="button_dismiss">மூடு</string>
+    <string name="waiting_room_invite">நண்பர்களை அழை</string>
+    <string name="waiting_room_invite_whatsapp">WhatsApp-ல் அழை</string>
+    <string name="cd_invite_other_apps">பிற ஆப்கள் மூலம் அழை</string>
+    <string name="invite_share_text">என் Literature ஆட்டத்தில் சேருங்கள்! 🃏\nரூம் கோடு: %1$s\n%2$s</string>
+    <string name="invite_app_share_text">Literature ஆடலாம் வாங்க 🃏 — எதிரணியிடம் சீட்டுகளைக் கேட்டு ஹாஃப்-சூட்களைக் கண்டுபிடிக்கும் அணி சீட்டாட்டம்.\n\nஇன்ஸ்டால் செய்யுங்கள், ரூம் கோடு அனுப்புகிறேன்:\n%1$s</string>
+    <string name="waiting_room_players_count">வீரர்கள் (%1$d/%2$d)</string>
+    <string name="waiting_room_team_1">அணி 1</string>
+    <string name="waiting_room_team_2">அணி 2</string>
+    <string name="player_badge_host">ஹோஸ்ட்</string>
+    <string name="waiting_room_fill_bots">காலி இடங்களில் போட்களை நிரப்பு</string>
+    <string name="waiting_room_switch_team">மாற்று</string>
+    <string name="waiting_room_teams_uneven_warning">இரு அணிகளிலும் சம எண்ணிக்கையில் வீரர்கள் இருக்க வேண்டும்</string>
+    <string name="waiting_room_waiting_for_host">ஹோஸ்ட் தொடங்கக் காத்திருக்கிறது…</string>
+    <string name="waiting_room_waiting_for_players">மேலும் வீரர்களுக்காகக் காத்திருக்கிறது…</string>
+    <string name="error_start_game_timeout">ஆட்டத்தைத் தொடங்க முடியவில்லை. பின் சென்று மீண்டும் முயலுங்கள்.</string>
+    <string name="snackbar_player_disconnected">%1$s இணைப்பு துண்டிக்கப்பட்டது</string>
+    <string name="snackbar_player_reconnected">%1$s மீண்டும் இணைந்தார்</string>
+    <string name="snackbar_host_changed">%1$s இப்போது ஹோஸ்ட்</string>
+    <string name="snackbar_replaced_by_bot">%1$s இடத்தில் போட் ஆடுகிறது</string>
+
+    <!-- Game Board Screen -->
+    <string name="dialog_quit_game_title">ஆட்டத்தை விட்டு விலகவா?</string>
+    <string name="dialog_quit_game_message">நிச்சயமாக விலக வேண்டுமா? உங்கள் முன்னேற்றம் இழக்கப்படும்.</string>
+    <string name="dialog_leave_online_game_title">ஆட்டத்தை விட்டு வெளியேறவா?</string>
+    <string name="dialog_leave_online_game_message">நிச்சயமாக வெளியேற வேண்டுமா? உடனே ஒரு போட் உங்கள் இடத்தை எடுத்துக்கொள்ளும்.</string>
+    <string name="button_leave_game">வெளியேறு</string>
+    <string name="dialog_session_ended_title">ஆட்டம் முடிந்தது</string>
+    <string name="error_seat_lost">நீங்கள் இந்த ரூமில் இல்லை — நீண்ட நேரம் இல்லாமல் இருந்தீர்கள். ரூம் கோடு மூலம் மீண்டும் சேருங்கள்.</string>
+    <string name="error_room_gone">இந்த ஆட்டம் இப்போது இல்லை — ரூம் மூடப்பட்டிருக்கலாம் அல்லது சர்வர் மறுதொடக்கம் ஆகியிருக்கலாம்.</string>
+    <string name="button_update">அப்டேட்</string>
+    <string name="error_update_required">ஆன்லைனில் தொடர்ந்து ஆட சமீபத்திய பதிப்புக்கு அப்டேட் செய்யுங்கள்.</string>
+    <string name="reconnect_waiting">%1$s மீண்டும் இணையக் காத்திருக்கிறது… (%2$d வி)</string>
+    <string name="game_your_turn">✦ உங்கள் முறை!</string>
+    <string name="game_timer_seconds">%1$d வி</string>
+    <string name="game_bot_thinking">%1$s யோசிக்கிறார்…</string>
+    <string name="game_player_turn">%1$s முறை</string>
+
+    <!-- Score Bar -->
+    <string name="score_vs">VS</string>
+
+    <!-- Game Tabs -->
+    <string name="tab_table">மேசை</string>
+    <string name="tab_hand">கை</string>
+    <string name="label_opponents_section">எதிரணி</string>
+    <string name="label_teammates_section">அணியினர்</string>
+    <string name="label_half_suits_section">ஹாஃப்-சூட்கள்</string>
+    <string name="label_your_hand">உங்கள் கை</string>
+
+    <!-- Action Buttons -->
+    <string name="action_ask_card">சீட்டு கேள்</string>
+    <string name="action_claim_deck">க்ளெய்ம் செய்</string>
+
+    <!-- Game Log / Event Strip -->
+    <string name="game_log_got_card">%3$s இடமிருந்து %1$s %2$s பெற்றார்</string>
+    <string name="game_log_asked_no_strip">%2$s இடம் %1$s %3$s கேட்டார் — இல்லை!</string>
+    <string name="game_log_claimed_correctly">%1$s %2$s சரியாகக் க்ளெய்ம் செய்தார்!</string>
+    <string name="game_log_claimed_incorrectly">%1$s %2$s தவறாகக் க்ளெய்ம் செய்தார்!</string>
+    <string name="game_log_game_over">ஆட்டம் முடிந்தது!</string>
+    <string name="game_log_timed_out">%1$s நேரம் தீர்ந்தது</string>
+    <string name="game_log_replaced_by_bot">%1$s இல்லை — அவருக்காக ஒரு போட் ஆடுகிறது</string>
+    <string name="game_log_player_back">%1$s திரும்பி வந்தார்</string>
+    <string name="game_log_player_joined">%1$s சேர்ந்தார், %2$s இடத்தை எடுத்தார்</string>
+
+    <!-- Deck Tracker -->
+    <string name="deck_tracker_ours">நம்முடையது</string>
+    <string name="deck_tracker_theirs">அவர்களுடையது</string>
+    <string name="deck_tracker_open">திறந்தது</string>
+
+    <!-- Ask Bottom Sheet -->
+    <string name="ask_sheet_title">சீட்டு கேளுங்கள்</string>
+    <string name="ask_filter_low">லோ</string>
+    <string name="ask_filter_high">ஹை</string>
+    <string name="ask_select_suit_hint">சீட்டுகளைப் பார்க்க ஒரு சூட்டைத் தேர்வு செய்யுங்கள்</string>
+    <string name="ask_select_range_hint">லோ அல்லது ஹை தேர்வு செய்யுங்கள்</string>
+    <string name="ask_queue_label">கேட்கும் வரிசை:</string>
+    <string name="ask_label">கேள்:</string>
+    <string name="ask_confirm_button">உறுதி (%1$d) ✓</string>
+
+    <!-- Claim Bottom Sheet -->
+    <string name="claim_step1_title">படி 1: க்ளெய்ம் செய்ய ஹாஃப்-சூட்டைத் தேர்வு செய்</string>
+    <string name="claim_step2_title">படி 2: சீட்டுகளை வீரர்களுக்கு ஒதுக்கு</string>
+    <string name="claim_confirm_title">க்ளெய்மை உறுதி செய்</string>
+    <string name="claim_assign_instruction">ஒவ்வொரு சீட்டையும் அதை வைத்திருக்கும் அணியினருக்கு ஒதுக்குங்கள்:</string>
+    <string name="claim_you">நீங்கள்</string>
+    <string name="claim_unassigned">ஒதுக்கப்படவில்லை</string>
+    <string name="claim_you_assigned">நீங்கள் ✓</string>
+    <string name="claim_claiming">%1$s க்ளெய்ம் செய்கிறீர்கள்</string>
+    <string name="claim_warning">⚠️ ஏதேனும் ஒன்று தவறானால், எதிரணிக்குப் புள்ளி கிடைக்கும்!</string>
+
+    <!-- Option C: pass-target picker (claimer chooses who plays next) -->
+    <string name="pass_select_title">அடுத்து யார் ஆடுவது என்று தேர்வு செய்யுங்கள்</string>
+    <string name="pass_select_subtitle">உங்கள் சீட்டுகள் தீர்ந்துவிட்டன — முறையை எடுக்க ஒரு அணியினரைத் தேர்வு செய்யுங்கள்.</string>
+    <string name="pass_select_subtitle_claimed">✓ %1$s க்ளெய்ம் செய்தீர்கள், சீட்டுகள் தீர்ந்துவிட்டன — முறையை எடுக்க ஒரு அணியினரைத் தேர்வு செய்யுங்கள்.</string>
+    <string name="pass_cards_left">%1$d சீட்டுகள்</string>
+    <string name="pass_waiting">அடுத்து யார் ஆடுவது என்று %1$s தேர்வு செய்கிறார்…</string>
+
+    <!-- Connection Banner -->
+    <string name="connection_reconnecting">மீண்டும் இணைகிறது…</string>
+    <string name="connection_reconnected">மீண்டும் இணைந்தது</string>
+    <string name="connection_disconnected">இணைப்பு துண்டிக்கப்பட்டது</string>
+    <string name="connection_retry">மீண்டும் முயல்</string>
+
+    <!-- Result Screen -->
+    <string name="result_draw">சமன்!</string>
+    <string name="result_win">நீங்கள் வென்றீர்கள்!</string>
+    <string name="result_lose">நீங்கள் தோற்றீர்கள்!</string>
+    <string name="result_breakdown_title">ஹாஃப்-சூட் விவரம்</string>
+    <string name="result_waiting_rematch">%1$s மறு ஆட்டத்தைத் தொடங்கக் காத்திருக்கிறது…</string>
+    <string name="result_waiting_rematch_no_host">ஹோஸ்ட் மறு ஆட்டத்தைத் தொடங்கக் காத்திருக்கிறது…</string>
+    <string name="result_steal_hint">தவறான க்ளெய்மில் கைப்பற்றப்பட்டது</string>
+    <string name="result_show_log">ஆட்டப் பதிவைக் காட்டு</string>
+    <string name="result_log_title">ஆட்டப் பதிவு</string>
+    <string name="result_share">முடிவைப் பகிர்</string>
+    <string name="result_card_tagline">யோசி. கேள். க்ளெய்ம் செய். வெல்.</string>
+    <string name="result_card_cta">Google Play-ல் பெறுங்கள்</string>
+    <string name="share_result_caption">நான் இப்போது Literature ஆடினேன் ♠&#xFE0F;♥&#xFE0F;♦&#xFE0F;♣&#xFE0F; — என் ஸ்கோரை முறியடியுங்கள்! ஆப்: %1$s</string>
+
+    <!-- Daily Claim Puzzle -->
+    <string name="daily_puzzle_number">புதிர் #%1$d</string>
+    <string name="daily_puzzle_move_got">%2$s இடமிருந்து %1$s பெற்றார்</string>
+    <string name="daily_puzzle_move_missed">%2$s இடம் %1$s கேட்டார் — இல்லை</string>
+    <string name="daily_puzzle_loading">இன்றைய புதிர் ஏற்றப்படுகிறது…</string>
+    <string name="daily_puzzle_load_error">இன்றைய புதிரை ஏற்ற முடியவில்லை.</string>
+    <!-- Case Board redesign -->
+    <string name="daily_puzzle_case_line">உங்கள் அணி ஒரு ஹாஃப்-சூட்டைக் க்ளெய்ம் செய்யலாம். %1$s மறைத்து வைத்திருக்கும் சீட்டைக் கண்டுபிடியுங்கள்.</string>
+    <string name="daily_puzzle_evidence">சான்றுகள்</string>
+    <string name="daily_puzzle_evidence_collapsed">%1$d நகர்வுகள் · பார்க்கத் தட்டுங்கள்</string>
+    <string name="daily_puzzle_step1_q">ஒரு ஹாஃப்-சூட் முழுவதும் உங்கள் அணியிடம் உள்ளது. எது?</string>
+    <string name="daily_puzzle_board_title">%1$s யாரிடம் உள்ளது?</string>
+    <string name="daily_puzzle_ruled_out">%1$s மற்றும் %2$s இல்லை என்றனர் — அது %3$s ஆகத்தான் இருக்க வேண்டும்.</string>
+    <string name="daily_puzzle_rail_prompt">%1$s இவற்றில் ஒன்றை மறைத்துள்ளார் — எது?</string>
+    <string name="daily_puzzle_streak_chip">%1$d-நாள் ஸ்ட்ரீக்</string>
+    <string name="daily_puzzle_badge_alert">!</string>
+    <string name="daily_puzzle_claiming">%1$s க்ளெய்ம் செய்கிறீர்கள்</string>
+    <string name="daily_puzzle_change">மாற்று</string>
+    <string name="daily_puzzle_you_badge">நீங்கள்</string>
+    <string name="daily_puzzle_attempt">முயற்சி %1$d / %2$d</string>
+    <string name="daily_puzzle_submit">க்ளெய்ம்</string>
+    <string name="daily_puzzle_feedback_halfsuit">அவை எல்லாம் உங்கள் அணியிடம் இல்லை — வேறு ஹாஃப்-சூட்டை முயலுங்கள்.</string>
+    <string name="daily_puzzle_feedback_card">மறைந்த சீட்டு இதுவல்ல — நகர்வுகளை மீண்டும் பாருங்கள்.</string>
+    <string name="daily_puzzle_solved">தீர்த்துவிட்டீர்கள்!</string>
+    <string name="daily_puzzle_failed">முயற்சிகள் தீர்ந்தன</string>
+    <string name="daily_puzzle_answer">விடை: %1$s</string>
+    <string name="daily_puzzle_come_back">புதிய புதிருக்கு நாளை வாருங்கள்.</string>
+    <string name="daily_puzzle_share_solved">Literature Daily #%1$d — %2$d/%3$d இல் தீர்த்தேன்%4$s</string>
+    <string name="daily_puzzle_share_failed">Literature Daily #%1$d — இன்று தீர்க்க முடியவில்லை</string>
+    <string name="daily_puzzle_howto_title">ஆடுவது எப்படி</string>
+    <string name="daily_puzzle_howto_intro">ஒவ்வொரு நாளும் உங்கள் அணி சரியாக ஒரு ஹாஃப்-சூட்டை முழுமையாகக் க்ளெய்ம் செய்யலாம்.</string>
+    <string name="daily_puzzle_howto_s1">1. நகர்வுகளையும் உங்கள் கையையும் படியுங்கள்.</string>
+    <string name="daily_puzzle_howto_s2">2. உங்கள் அணியிடம் ஆறு சீட்டுகளும் உள்ள ஹாஃப்-சூட்டைத் தேர்வு செய்யுங்கள்.</string>
+    <string name="daily_puzzle_howto_s3">3. உங்கள் அணியினர் அவற்றில் ஒன்றை மறைத்துள்ளார் — கை மாறியதை நீங்கள் பார்க்காத சீட்டைக் கண்டுபிடியுங்கள்.</string>
+    <string name="daily_puzzle_howto_outro">குறைவான முயற்சிகளில் அதிக நட்சத்திரங்கள். ஸ்ட்ரீக்கை வளர்க்க தினமும் தீர்க்கவும்.</string>
+    <!-- Puzzle variety: Locate the Card + The Wasted Ask (1-tap seat picks) -->
+    <string name="daily_puzzle_submit_seat">உறுதி செய்</string>
+    <string name="daily_puzzle_feedback_seat">அது அல்ல — நகர்வுகளை மீண்டும் படியுங்கள்.</string>
+    <string name="daily_puzzle_locate_case_line">மேசையைக் கவனியுங்கள். கீழே ஒரு சீட்டு குறிப்பிடப்பட்டுள்ளது — அது யாரிடம் உள்ளது என்று கண்டுபிடியுங்கள்.</string>
+    <string name="daily_puzzle_locate_q">இந்தச் சீட்டு யாரிடம் இருக்க வேண்டும்?</string>
+    <string name="daily_puzzle_locate_pick">அது இருக்கக்கூடிய ஒரே வீரரைத் தட்டுங்கள்.</string>
+    <string name="daily_puzzle_locate_answer">%1$s %2$s இடம் உள்ளது.</string>
+    <string name="daily_puzzle_wasted_case_line">ஒரு எதிராளி ஏற்கனவே தன்னைக் காட்டிக்கொடுத்துவிட்டார். எந்தக் கேள்வி வீணாகும்?</string>
+    <string name="daily_puzzle_wasted_q">உங்களுக்கு இந்தச் சீட்டு வேண்டும். எந்த எதிராளியிடம் இது நிச்சயமாக இல்லை?</string>
+    <string name="daily_puzzle_wasted_pick">கேட்பது வீணாகும் எதிராளியைத் தட்டுங்கள்.</string>
+    <string name="daily_puzzle_wasted_answer">%1$s இடம் %2$s இருக்க முடியாது — அவரிடம் கேட்பது வீண்.</string>
+    <string name="daily_puzzle_howto_locate_title">சீட்டைக் கண்டுபிடி</string>
+    <string name="daily_puzzle_howto_locate_intro">நீங்கள்தான் "நீங்கள்". ஒரு சீட்டு குறிப்பிடப்பட்டுள்ளது — அது யாரிடம் இருக்க வேண்டும் என்று கண்டுபிடியுங்கள்.</string>
+    <string name="daily_puzzle_howto_locate_s1">1. நகர்வுகளைப் படியுங்கள்: கிடைத்த கேள்வி சீட்டு எங்கே சென்றது என்று காட்டும்; தவறிய கேள்வி ஒரு வீரரை நீக்கும்.</string>
+    <string name="daily_puzzle_howto_locate_s2">2. ஒரு ஹாஃப்-சூட்டின் ஆறில் ஐந்து சீட்டுகள் இடம் தெரிந்தால், ஆறாவது யாரும் நீக்கப்படாத இடத்தில் இருக்கும்.</string>
+    <string name="daily_puzzle_howto_locate_outro">அது இருக்க வேண்டிய ஒரே வீரரைத் தட்டுங்கள். குறைவான முயற்சிகளில் அதிக நட்சத்திரங்கள்.</string>
+    <string name="daily_puzzle_howto_wasted_title">வீணான கேள்வி</string>
+    <string name="daily_puzzle_howto_wasted_intro">உங்களுக்கு ஒரு சீட்டு தேவை. ஒரு எதிராளியால் நிச்சயமாக உதவ முடியாது — அவரிடம் கேட்பது முறையை வீணாக்கும்.</string>
+    <string name="daily_puzzle_howto_wasted_s1">1. ஒரு சீட்டைக் கேட்பது அது உங்களிடம் இல்லை என்பதை நிரூபிக்கும்; தவறிய கேள்வி அது கேட்கப்பட்டவரிடமும் இல்லை என்பதை நிரூபிக்கும்.</string>
+    <string name="daily_puzzle_howto_wasted_s2">2. அந்தச் சீட்டு இல்லை என்று ஏற்கனவே நிரூபிக்கப்பட்ட எதிராளியைக் கண்டுபிடியுங்கள்.</string>
+    <string name="daily_puzzle_howto_wasted_outro">அந்த எதிராளியைத் தட்டுங்கள் — மற்றவரிடம் அது இன்னும் இருக்கலாம்.</string>
+    <string name="cd_back">பின்</string>
+    <string name="cd_how_to_play">ஆடுவது எப்படி</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_skip">தவிர்</string>
+    <string name="onboarding_next">அடுத்து  →</string>
+    <string name="onboarding_swipe_hint">ஆடுவது எப்படி என்று அறிய ஸ்வைப் செய்யுங்கள் →</string>
+    <string name="onboarding_welcome_title">Literature</string>
+    <string name="onboarding_ultimate_card_game">சிறந்த சீட்டாட்டம்</string>
+    <string name="onboarding_description">4, 6 அல்லது 8 பேர்  ·  2 அணிகள்  ·  48 சீட்டுகள்\nகேளுங்கள், திட்டமிடுங்கள், ஹாஃப் சூட்களைக் க்ளெய்ம் செய்யுங்கள்</string>
+    <string name="onboarding_deck_title">சீட்டுக் கட்டு</string>
+    <string name="onboarding_deck_subtitle">48 சீட்டுகள் — தலா 6 சீட்டுகள் கொண்ட 8 ஹாஃப் சூட்கள்</string>
+    <string name="onboarding_no_eights">✕  Literature-ல் 8 இல்லை!</string>
+    <string name="onboarding_teams_title">2 அணிகள்</string>
+    <string name="onboarding_teams_subtitle">அதிக ஹாஃப் சூட்களைக் க்ளெய்ம் செய்ய உங்கள் அணியினருடன் இணைந்து ஆடுங்கள்</string>
+    <string name="onboarding_team_a">அணி A</string>
+    <string name="onboarding_team_b">அணி B</string>
+    <string name="onboarding_strategy_tip">💡  உங்கள் கேள்விகள் உங்கள் அணி முழுவதற்கும் தகவல் தரும் — கேட்பதற்கு முன் யோசியுங்கள்!</string>
+    <string name="onboarding_ask_title">கேள்வி</string>
+    <string name="onboarding_ask_subtitle">உங்கள் முறையில், ஒரு எதிராளியிடம் சீட்டு கேளுங்கள் — அந்த ஹாஃப் சூட்டில் ஒரு சீட்டு ஏற்கனவே உங்களிடம் இருக்க வேண்டும்</string>
+    <string name="onboarding_label_opponent">எதிராளி</string>
+    <string name="onboarding_label_you">நீங்கள்</string>
+    <string name="onboarding_asking_spade7">♠&#xFE0F;7 கேட்கிறீர்கள்…</string>
+    <string name="onboarding_got_it">✓  கிடைத்தது! மீண்டும் கேட்கலாம்</string>
+    <string name="onboarding_asking_spade6">♠&#xFE0F;6 கேட்கிறீர்கள்…</string>
+    <string name="onboarding_denied">✗  இல்லை — முறை மாறுகிறது</string>
+    <string name="onboarding_your_turn_to_ask">கேட்க உங்கள் முறை</string>
+    <string name="onboarding_rule_icon_success">✓</string>
+    <string name="onboarding_rule_icon_denied">✗</string>
+    <string name="onboarding_rule_icon_must_hold">⚠</string>
+    <string name="onboarding_rule_success">கிடைத்தால் → சீட்டை எடுத்து மீண்டும் கேளுங்கள்</string>
+    <string name="onboarding_rule_denied">இல்லையென்றால் → முறை அந்த எதிராளிக்குச் செல்லும்</string>
+    <string name="onboarding_rule_must_hold">அந்த ஹாஃப் சூட்டில் ஒரு சீட்டு உங்களிடம் இருக்க வேண்டும்</string>
+    <string name="onboarding_claim_title">க்ளெய்ம் செய்து வெல்லுங்கள்</string>
+    <string name="onboarding_claim_subtitle">ஒரு ஹாஃப் சூட்டின் 6 சீட்டுகளும் உங்கள் அணியிடம் இருந்தால் — க்ளெய்ம் செய்து புள்ளி பெறுங்கள்!</string>
+    <string name="onboarding_claim_badge">♠&#xFE0F; லோ ஸ்பேட்ஸ் — க்ளெய்ம் ஆனது!</string>
+    <string name="onboarding_your_team">உங்கள் அணி</string>
+    <string name="onboarding_half_suits_claimed">ஹாஃப் சூட்கள் க்ளெய்ம் ஆனவை</string>
+    <string name="onboarding_most_wins">அதிக ஹாஃப் சூட்கள் பெற்றவர் வெல்வார்!</string>
+    <string name="onboarding_lets_play">ஆடலாம்!  ♠&#xFE0F;♥&#xFE0F;♦&#xFE0F;♣&#xFE0F;</string>
+
+    <!-- Onboarding card demo labels -->
+    <string name="onboarding_card_spade7">♠&#xFE0F;7</string>
+    <string name="onboarding_card_spade6">♠&#xFE0F;6</string>
+    <string name="onboarding_card_spade">♠&#xFE0F;</string>
+
+    <!-- Half Suit tile names (DeckPage) -->
+    <string name="half_suit_low_spades">லோ ஸ்பேட்ஸ்</string>
+    <string name="half_suit_high_spades">ஹை ஸ்பேட்ஸ்</string>
+    <string name="half_suit_low_hearts">லோ ஹார்ட்ஸ்</string>
+    <string name="half_suit_high_hearts">ஹை ஹார்ட்ஸ்</string>
+    <string name="half_suit_low_diamonds">லோ டைமண்ட்ஸ்</string>
+    <string name="half_suit_high_diamonds">ஹை டைமண்ட்ஸ்</string>
+    <string name="half_suit_low_clubs">லோ க்ளப்ஸ்</string>
+    <string name="half_suit_high_clubs">ஹை க்ளப்ஸ்</string>
+
+    <!-- Card ranges (DeckPage) -->
+    <string name="card_range_low">2  3  4  5  6  7</string>
+    <string name="card_range_high">9  10  J  Q  K  A</string>
+
+    <!-- How to Play -->
+    <string name="help_button_description">ஆடுவது எப்படி</string>
+    <string name="help_title">ஆடுவது எப்படி</string>
+    <string name="help_objective_title">நோக்கம்</string>
+    <string name="help_objective_body">எதிரணியை விட அதிக ஹாஃப்-சூட்களைக் க்ளெய்ம் செய்து வெல்லுங்கள் — மொத்தம் 8 உள்ளன.</string>
+    <string name="help_deck_title">சீட்டுக் கட்டு</string>
+    <string name="help_deck_body">4 சூட்களில் 48 சீட்டுகள் (♠&#xFE0F; ♥&#xFE0F; ♦&#xFE0F; ♣&#xFE0F;). 8 இல்லை.\n\nஒவ்வொரு சூட்டும் இரண்டு ஹாஃப்-சூட்களாகப் பிரிகிறது:\n• லோ: 2, 3, 4, 5, 6, 7\n• ஹை: 9, 10, J, Q, K, A\n\nஅதாவது தலா 6 சீட்டுகள் கொண்ட 8 ஹாஃப்-சூட்கள்.</string>
+    <string name="help_teams_title">அணிகள்</string>
+    <string name="help_teams_body">சம அளவிலான இரண்டு அணிகள் (2v2 அல்லது 3v3). எதிரணியிடம் மட்டுமே சீட்டு கேட்கலாம் — உங்கள் அணியினரிடம் கேட்கக் கூடாது.</string>
+    <string name="help_asking_title">சீட்டு கேட்பது</string>
+    <string name="help_asking_body">உங்கள் முறையில், ஒரு சூட்டைத் தேர்வு செய்து, வேண்டிய சீட்டுகளைத் தேர்ந்தெடுத்து, ஒரு எதிராளியிடம் கேளுங்கள்.\n\nசீட்டு கிடைத்ததா? மீண்டும் கேளுங்கள்.\nஇல்லையா? இப்போது அவர் முறை.\n\nகேட்க அந்த ஹாஃப்-சூட்டில் குறைந்தது ஒரு சீட்டு உங்களிடம் இருக்க வேண்டும்.</string>
+    <string name="help_claiming_title">ஹாஃப்-சூட்டைக் க்ளெய்ம் செய்வது</string>
+    <string name="help_claiming_body">ஒரு ஹாஃப்-சூட் முழுவதும் உங்கள் அணியிடம் உள்ளதா? க்ளெய்ம் செய்யுங்கள் — ஒவ்வொரு சீட்டையும் சரியான அணியினருக்கு ஒதுக்குங்கள்.\n\nசரியாகச் செய்தால் உங்கள் அணிக்குப் புள்ளி.\nதவறானால் எதிரணிக்குப் புள்ளி.</string>
+    <string name="help_no_cards_title">சீட்டுகள் தீர்ந்தால்</string>
+    <string name="help_no_cards_body">சீட்டுகள் தீர்ந்துவிட்டதா? கவலை வேண்டாம் — உங்கள் அணியினர் தொடர்ந்து ஆடுவார்கள். க்ளெய்ம்களில் நீங்கள் இன்னும் பங்கு பெறலாம்.</string>
+    <string name="help_winning_title">வெற்றி</string>
+    <string name="help_winning_body">அதிக ஹாஃப்-சூட்களைக் க்ளெய்ம் செய்யும் அணி வெல்லும். 4–4 என்றால் சமன்.</string>
+    <string name="help_tip_title">உத்தி குறிப்பு</string>
+    <string name="help_tip_body">ஒவ்வொரு கேள்வியும் எல்லோருக்கும் தெரியும் தகவல். உங்கள் நகர்வுகள் என்ன வெளிப்படுத்துகின்றன என்று யோசியுங்கள் — உங்கள் அணியினருக்கும், எதிராளிகளுக்கும்.</string>
+
+    <!-- Tutorial tooltips -->
+    <string name="tutorial_score_bar">எதிரணிக்கு எதிராக உங்கள் அணி எப்படி ஆடுகிறது என்று பாருங்கள்.</string>
+    <string name="tutorial_turn_banner">தற்போதைய முறையையும் மீதமுள்ள நேரத்தையும் காட்டுகிறது.\n கடைசி 15 வினாடிகளுக்கு டைமர் தெரியும்.</string>
+    <string name="tutorial_players">எல்லா வீரர்களையும் அவர்களின் சீட்டு எண்ணிக்கையையும் பாருங்கள்.</string>
+    <string name="tutorial_half_suits">எந்த ஹாஃப்-சூட்கள் க்ளெய்ம் ஆயின அல்லது எடுக்கப்பட்டன என்று கண்காணியுங்கள்.</string>
+    <string name="tutorial_hand_tab">உங்கள் கையில் உள்ள சீட்டுகளைப் பார்க்க இங்கே தட்டுங்கள்.</string>
+    <string name="tutorial_your_hand">இவை உங்கள் சீட்டுகள், ஹாஃப்-சூட் வாரியாக. கேட்கவும் க்ளெய்ம் செய்யவும் இவற்றைப் பயன்படுத்துங்கள்!</string>
+    <string name="tutorial_action_buttons">உங்கள் முறையில், சீட்டு கேட்கவோ ஹாஃப்-சூட்டைக் க்ளெய்ம் செய்யவோ இவற்றைப் பயன்படுத்துங்கள்.</string>
+    <string name="tutorial_tap_continue">தொடர எங்கேனும் தட்டுங்கள்</string>
+    <string name="tutorial_tap_hand_tab">↓  கீழே உள்ள கை டேபைத் தட்டுங்கள்  ↓</string>
+    <string name="tutorial_skip">டுடோரியலைத் தவிர்</string>
+    <string name="waiting_room_primer_title">Literature புதிதா?</string>
+    <string name="waiting_room_primer_cta">ஆடுவது எப்படி என்று பாருங்கள்</string>
+    <string name="cd_dismiss">மூடு</string>
+    <string name="festival_independence_day">சுதந்திர தின வாழ்த்துகள்</string>
+    <string name="result_debrief_title">அது உங்கள் முதல் ஆட்டம்!</string>
+    <string name="result_debrief_body">நோக்கம்: எதிரணியை விட அதிக ஹாஃப்-சூட்களைக் க்ளெய்ம் செய்வது — மொத்தம் 8 உள்ளன. ஒரு ஹாஃப்-சூட்டை முழுமையாக்கத் தேவையான சீட்டுகளை எதிராளிகளிடம் கேட்டு, பிறகு க்ளெய்ம் செய்யுங்கள்.</string>
+
+    <!-- Accessibility content descriptions -->
+    <string name="cd_card">%2$s %1$s</string>
+    <string name="cd_player_active">%1$s, %2$d சீட்டுகள், இப்போது முறை</string>
+    <string name="cd_player">%1$s, %2$d சீட்டுகள்</string>
+    <string name="cd_player_out">%1$s, சீட்டுகள் தீர்ந்தன</string>
+    <string name="cd_deck_open">%1$s, திறந்தது</string>
+    <string name="cd_deck_ours">%1$s, உங்கள் அணி க்ளெய்ம் செய்தது</string>
+    <string name="cd_deck_theirs">%1$s, எதிரணி க்ளெய்ம் செய்தது</string>
+    <string name="cd_deck_ours_stolen">%1$s, எதிரணியின் தவறான க்ளெய்மில் கிடைத்தது</string>
+    <string name="cd_deck_theirs_stolen">%1$s, தவறான க்ளெய்மில் எதிரணிக்குப் போனது</string>
+    <string name="cd_score">ஸ்கோர்: உங்கள் அணி %1$d, எதிரணி %2$d</string>
+    <string name="cd_remove_card">%1$s தேர்விலிருந்து நீக்கு</string>
+    <string name="cd_select_card">%1$s தேர்வு செய்</string>
+    <string name="cd_send_reaction">ரியாக்‌ஷன் அனுப்பு</string>
+    <string name="cd_send_reaction_type">%1$s ரியாக்‌ஷன் அனுப்பு</string>
+
+    <!-- In-game claim celebration banner -->
+    <string name="claim_celebration_ours">உங்கள் அணி க்ளெய்ம் செய்தது!</string>
+    <string name="claim_celebration_theirs">எதிரணி க்ளெய்ம் செய்தது</string>
+    <string name="claim_celebration_failed">%1$s தவறாகக் க்ளெய்ம் செய்தார்</string>
+
+    <!-- Theme settings -->
+    <string name="settings_bot_speed">போட் யோசிக்கும் நேரம் (தனிப்பயன்)</string>
+    <string name="settings_theme">தீம்</string>
+    <string name="theme_system">சிஸ்டம்</string>
+    <string name="theme_light">லைட்</string>
+    <string name="theme_dark">டார்க்</string>
+    <string name="cd_assign_card">%1$s ஒரு அணியினருக்கு ஒதுக்கு</string>
+    <string name="cd_bot_thinking">போட் யோசிக்கிறது</string>
+    <string name="cd_suit_spades">ஸ்பேட்ஸ்</string>
+    <string name="cd_suit_hearts">ஹார்ட்ஸ்</string>
+    <string name="cd_suit_diamonds">டைமண்ட்ஸ்</string>
+    <string name="cd_suit_clubs">க்ளப்ஸ்</string>
+
+    <!-- Settings -->
+    <string name="settings_title">அமைப்புகள்</string>
+    <string name="settings_sound_effects">ஒலி விளைவுகள்</string>
+    <string name="settings_haptic_feedback">அதிர்வு</string>
+    <string name="settings_notifications">அறிவிப்புகள்</string>
+    <string name="settings_daily_reminder">தினசரி புதிர் நினைவூட்டல்</string>
+    <string name="cd_settings_back">பின்</string>
+    <string name="settings_about">பற்றி</string>
+    <string name="settings_version">பதிப்பு</string>
+    <string name="settings_privacy_policy">தனியுரிமைக் கொள்கை</string>
+    <string name="settings_send_feedback">கருத்து அனுப்பு</string>
+    <string name="settings_invite_friends">நண்பர்களை அழை</string>
+    <string name="settings_licenses">எழுத்துரு: Playfair Display (SIL OFL 1.1)</string>
+    <string name="feedback_email_subject">Literature கருத்து (v%1$s)</string>
+    <string name="home_settings">அமைப்புகள்</string>
+
+    <!-- Online gate dialog -->
+    <string name="dialog_online_gate_title">முதலில் ஆஃப்லைனில் ஆடலாமா?</string>
+    <string name="dialog_online_gate_message">அடிப்படைகளைக் கற்க முதலில் ஒரு ஆஃப்லைன் ஆட்டம் ஆடப் பரிந்துரைக்கிறோம்.</string>
+    <string name="dialog_online_gate_play_offline">ஆஃப்லைனில் ஆடு</string>
+    <string name="dialog_online_gate_continue">ஆன்லைனில் தொடர்</string>
+
+    <!-- Bot difficulty -->
+    <string name="game_setup_difficulty_label">போட் கடினநிலை</string>
+    <string name="difficulty_easy">எளிது</string>
+    <string name="difficulty_medium">மிதம்</string>
+    <string name="difficulty_hard">கடினம்</string>
+    <string name="difficulty_easy_desc">மென்மை</string>
+    <string name="difficulty_medium_desc">சமநிலை</string>
+    <string name="difficulty_hard_desc">நிபுணர்</string>
+
+    <!-- Stats -->
+    <string name="stats_title">என் புள்ளிவிவரங்கள்</string>
+    <string name="cd_stats_back">பின்</string>
+    <string name="stats_games">ஆட்டங்கள்</string>
+    <string name="stats_wins">வெற்றிகள்</string>
+    <string name="stats_win_rate">வெற்றி விகிதம்</string>
+    <string name="stats_current_streak">ஸ்ட்ரீக்</string>
+    <string name="stats_best_streak">சிறந்த ஸ்ட்ரீக்</string>
+    <string name="home_streak_best">சிறந்தது</string>
+    <string name="stats_ask_success">கேள்வி வெற்றி</string>
+    <string name="stats_claim_accuracy">க்ளெய்ம் துல்லியம்</string>
+    <!-- Daily Puzzle stats (My Stats section) -->
+    <string name="stats_puzzle_title">தினசரி புதிர்</string>
+    <string name="stats_puzzle_streak">ஸ்ட்ரீக்</string>
+    <string name="stats_puzzle_best">சிறந்தது</string>
+    <string name="stats_puzzle_solved">தீர்த்தவை</string>
+    <string name="stats_puzzle_stars">நட்சத்திரங்கள்</string>
+    <string name="stats_online_title">ஆன்லைன்</string>
+    <string name="stats_online_record">%2$d ஆட்டங்களில் %1$d வெற்றிகள்</string>
+    <string name="stats_vs_bots_title">போட்களுடன்</string>
+    <string name="stats_vs_bots_record">%1$d / %2$d வெற்றி</string>
+    <string name="stats_history_title">ஆட்ட வரலாறு</string>
+    <string name="stats_history_empty">இன்னும் ஆட்டங்கள் பதிவாகவில்லை — ஒன்று ஆடுங்கள்!</string>
+    <string name="stats_mode_online">ஆன்லைன் · %1$d பேர்</string>
+    <string name="stats_mode_offline">போட்களுடன் · %1$d பேர்</string>
+    <string name="stats_outcome_win">W</string>
+    <string name="stats_outcome_loss">L</string>
+    <string name="stats_outcome_draw">D</string>
+    <string name="stats_today">இன்று</string>
+    <string name="stats_yesterday">நேற்று</string>
+    <string name="stats_days_ago">%1$d நாட்களுக்கு முன்</string>
+    <string name="cd_home_stats_card">உங்கள் ஆட்டப் புள்ளிவிவரங்கள்</string>
+    <string name="home_my_stats">என் புள்ளிவிவரங்கள்</string>
+
+    <!-- Achievements -->
+    <string name="achievements_title">சாதனைகள்</string>
+    <string name="achievements_progress">%1$d / %2$d</string>
+    <string name="achievement_unlocked_banner">சாதனை திறக்கப்பட்டது!</string>
+    <string name="achievement_unlocked_more">+%1$d மேலும்</string>
+    <string name="achievement_locked">பூட்டியது</string>
+    <string name="ach_first_win">முதல் வெற்றி</string>
+    <string name="ach_first_win_desc">உங்கள் முதல் ஆட்டத்தில் வெல்லுங்கள்</string>
+    <string name="ach_hat_trick">ஹாட்ரிக்</string>
+    <string name="ach_hat_trick_desc">தொடர்ந்து 3 ஆட்டங்களில் வெல்லுங்கள்</string>
+    <string name="ach_on_fire">சூடான ஃபார்ம்</string>
+    <string name="ach_on_fire_desc">தொடர்ந்து 5 ஆட்டங்களில் வெல்லுங்கள்</string>
+    <string name="ach_veteran">அனுபவசாலி</string>
+    <string name="ach_veteran_desc">25 ஆட்டங்கள் ஆடுங்கள்</string>
+    <string name="ach_centurion">சதவீரர்</string>
+    <string name="ach_centurion_desc">100 ஆட்டங்கள் ஆடுங்கள்</string>
+    <string name="ach_socialite">சமூகப் பிரியர்</string>
+    <string name="ach_socialite_desc">உங்கள் முதல் ஆன்லைன் ஆட்டம் ஆடுங்கள்</string>
+    <string name="ach_online_champ">ஆன்லைன் சாம்பியன்</string>
+    <string name="ach_online_champ_desc">10 ஆன்லைன் ஆட்டங்களில் வெல்லுங்கள்</string>
+    <string name="ach_bot_slayer">போட் வீழ்த்தி</string>
+    <string name="ach_bot_slayer_desc">கடினமான போட்களுக்கு எதிராக ஒரு ஆட்டத்தில் வெல்லுங்கள்</string>
+    <string name="ach_sharp_caller">கூர்மையான க்ளெய்மர்</string>
+    <string name="ach_sharp_caller_desc">10 சரியான க்ளெய்ம்கள் செய்யுங்கள்</string>
+    <string name="ach_perfect_game">சரியான ஆட்டம்</string>
+    <string name="ach_perfect_game_desc">ஒவ்வொரு கேள்வியும் வெற்றி பெற்ற ஆட்டத்தில் வெல்லுங்கள் (குறைந்தது 5 கேள்விகள்)</string>
+    <string name="ach_claim_master">க்ளெய்ம் மாஸ்டர்</string>
+    <string name="ach_claim_master_desc">ஒரே ஆட்டத்தில் 3 சரியான க்ளெய்ம்கள் செய்யுங்கள்</string>
+    <!-- Daily Puzzle achievements -->
+    <string name="ach_puzzle_rookie">புதிய துப்பறிவாளர்</string>
+    <string name="ach_puzzle_rookie_desc">உங்கள் முதல் தினசரி புதிரைத் தீருங்கள்</string>
+    <string name="ach_puzzle_streak_7">அறிவு வாரம்</string>
+    <string name="ach_puzzle_streak_7_desc">தொடர்ந்து 7 நாட்கள் தினசரி புதிரைத் தீருங்கள்</string>
+    <string name="ach_puzzle_streak_30">தினசரி பக்தர்</string>
+    <string name="ach_puzzle_streak_30_desc">தொடர்ந்து 30 நாட்கள் தினசரி புதிரைத் தீருங்கள்</string>
+    <string name="ach_puzzle_fifty">கேஸ் மாஸ்டர்</string>
+    <string name="ach_puzzle_fifty_desc">50 தினசரி புதிர்களைத் தீருங்கள்</string>
+    <string name="ach_puzzle_flawless">முதல் பார்வை</string>
+    <string name="ach_puzzle_flawless_desc">ஒரு தினசரி புதிரை முதல் யூகத்திலேயே தீருங்கள்</string>
+
+    <!-- Match ceremony: pre-game intro + game-over stinger -->
+    <string name="match_intro_you">நீங்கள்</string>
+    <string name="match_intro_vs">vs</string>
+    <string name="match_intro_first_move_you">நீங்கள் முதலில்</string>
+    <string name="match_intro_first_move_other">%1$s முதலில்</string>
+    <string name="match_intro_skip_hint">தவிர்க்கத் தட்டுங்கள்</string>
+    <string name="stinger_victory">வெற்றி!</string>
+    <string name="stinger_defeat">தோல்வி</string>
+    <string name="stinger_draw">சமன்</string>
+</resources>
