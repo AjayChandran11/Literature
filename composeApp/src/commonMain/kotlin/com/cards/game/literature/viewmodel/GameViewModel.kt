@@ -3,6 +3,7 @@ package com.cards.game.literature.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
+import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.bot.BotDifficulty
@@ -39,10 +40,10 @@ data class PassSelectionUiState(
     // Epoch-ms deadline for the server's auto-pick, so the "choosing…" banner
     // shown to other players can count down. Null offline (no server timer).
     val deadlineMs: Long? = null,
-    // Display name of the half-suit the claimer just claimed, for a confirmation
+    // The half-suit the claimer just claimed, for a confirmation
     // line in the claimer's picker sheet — their own sheet covers the event strip,
     // so this echoes the claim result they'd otherwise miss.
-    val claimedHalfSuitLabel: String? = null
+    val claimedHalfSuit: HalfSuit? = null
 )
 
 data class GameUiState(
@@ -343,10 +344,10 @@ class GameViewModel(
                 deadlineMs = state.pendingPassDeadlineMs,
                 // The claim that triggered this pause is the claimer's most recent
                 // DeckClaimed in the event window — echo its half-suit in the sheet.
-                claimedHalfSuitLabel = if (isMine) {
+                claimedHalfSuit = if (isMine) {
                     state.events.filterIsInstance<GameEvent.DeckClaimed>()
                         .lastOrNull { it.claimerId == pending.claimerId }
-                        ?.halfSuit?.displayName
+                        ?.halfSuit
                 } else null
             )
         }

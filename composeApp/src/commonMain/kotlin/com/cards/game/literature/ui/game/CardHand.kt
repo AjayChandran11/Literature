@@ -1,5 +1,6 @@
 package com.cards.game.literature.ui.game
 
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -8,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import com.cards.game.literature.ui.common.localizedName
 import com.cards.game.literature.ui.common.webWheelScroll
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyColumn
@@ -89,9 +91,11 @@ fun CardHand(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    halfSuit.displayName,
+                    halfSuit.localizedName(),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 16.sp),
                     modifier = Modifier.width(72.dp).padding(end = 8.dp)
                 )
                 val rowScroll = rememberLazyListState()

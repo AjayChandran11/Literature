@@ -1,5 +1,6 @@
 package com.cards.game.literature.ui.game
 
+import com.cards.game.literature.ui.common.halfSuitNames
 import com.cards.game.literature.PageUnloadGuard
 import com.cards.game.literature.ui.common.BackHandler
 import com.cards.game.literature.ui.common.formatArgs
@@ -804,8 +805,8 @@ private fun consolidateEvents(
     events: List<GameEvent>,
     fmtGot: (askerName: String, cards: String, targetName: String) -> String,
     fmtDenied: (askerName: String, targetName: String, cardName: String) -> String,
-    fmtClaimedOk: (claimerName: String, halfSuit: String) -> String,
-    fmtClaimedBad: (claimerName: String, halfSuit: String) -> String,
+    fmtClaimedOk: (claimerName: String, halfSuit: HalfSuit) -> String,
+    fmtClaimedBad: (claimerName: String, halfSuit: HalfSuit) -> String,
     textGameOver: String,
     fmtTimedOut: (playerName: String) -> String,
     fmtReplaced: (playerName: String) -> String,
@@ -847,12 +848,12 @@ private fun consolidateEvents(
                 if (event.correct) {
                     messages.add(StripMessage(
                         "✓", LightGreen,
-                        fmtClaimedOk(event.claimerName, event.halfSuit.displayName)
+                        fmtClaimedOk(event.claimerName, event.halfSuit)
                     ))
                 } else {
                     messages.add(StripMessage(
                         "✗", CardRed,
-                        fmtClaimedBad(event.claimerName, event.halfSuit.displayName)
+                        fmtClaimedBad(event.claimerName, event.halfSuit)
                     ))
                 }
             }
@@ -978,6 +979,7 @@ private fun LastEventStrip(events: List<GameEvent>) {
     val fmtAskedNoStrip = stringResource(Res.string.game_log_asked_no_strip)
     val fmtClaimedOk = stringResource(Res.string.game_log_claimed_correctly)
     val fmtClaimedBad = stringResource(Res.string.game_log_claimed_incorrectly)
+    val halfSuitNames = halfSuitNames()
     val textGameOver = stringResource(Res.string.game_log_game_over)
     val fmtTimedOut = stringResource(Res.string.game_log_timed_out)
     val fmtReplaced = stringResource(Res.string.game_log_replaced_by_bot)
@@ -988,8 +990,8 @@ private fun LastEventStrip(events: List<GameEvent>) {
         events = displayEvents,
         fmtGot = { a, c, t -> fmtGotCard.formatArgs(a, c, t) },
         fmtDenied = { a, t, c -> fmtAskedNoStrip.formatArgs(a, t, c) },
-        fmtClaimedOk = { c, h -> fmtClaimedOk.formatArgs(c, h) },
-        fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, h) },
+        fmtClaimedOk = { c, h -> fmtClaimedOk.formatArgs(c, halfSuitNames.getValue(h)) },
+        fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, halfSuitNames.getValue(h)) },
         textGameOver = textGameOver,
         fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) },
         fmtReplaced = { p -> fmtReplaced.formatArgs(p) },
@@ -1276,6 +1278,7 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
     val fmtAskedNoStrip = stringResource(Res.string.game_log_asked_no_strip)
     val fmtClaimedOk = stringResource(Res.string.game_log_claimed_correctly)
     val fmtClaimedBad = stringResource(Res.string.game_log_claimed_incorrectly)
+    val halfSuitNames = halfSuitNames()
     val textGameOver = stringResource(Res.string.game_log_game_over)
     val fmtTimedOut = stringResource(Res.string.game_log_timed_out)
     val fmtReplaced = stringResource(Res.string.game_log_replaced_by_bot)
@@ -1286,8 +1289,8 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
         events = displayEvents,
         fmtGot = { a, c, t -> fmtGotCard.formatArgs(a, c, t) },
         fmtDenied = { a, t, c -> fmtAskedNoStrip.formatArgs(a, t, c) },
-        fmtClaimedOk = { c, h -> fmtClaimedOk.formatArgs(c, h) },
-        fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, h) },
+        fmtClaimedOk = { c, h -> fmtClaimedOk.formatArgs(c, halfSuitNames.getValue(h)) },
+        fmtClaimedBad = { c, h -> fmtClaimedBad.formatArgs(c, halfSuitNames.getValue(h)) },
         textGameOver = textGameOver,
         fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) },
         fmtReplaced = { p -> fmtReplaced.formatArgs(p) },

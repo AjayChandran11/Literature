@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
+import com.cards.game.literature.ui.common.localizedName
 import com.cards.game.literature.ui.common.cardAssignmentsSaver
 import com.cards.game.literature.ui.common.enumSaver
 import com.cards.game.literature.ui.common.nullableEnumSaver
@@ -107,7 +108,7 @@ fun ClaimBottomSheet(
                     }
                     availableHalfSuits.sortedBy { it.ordinal }.forEach { hs ->
                         ListItem(
-                            headlineContent = { Text(hs.displayName,
+                            headlineContent = { Text(hs.localizedName(),
                                 style = MaterialTheme.typography.titleMedium) },
                             modifier = Modifier.clickable {
                                 selectedHalfSuit = hs
@@ -285,7 +286,7 @@ fun ClaimBottomSheet(
                     val hs = selectedHalfSuit ?: return@Column
 
                     Text(
-                        stringResource(Res.string.claim_claiming, hs.displayName),
+                        stringResource(Res.string.claim_claiming, hs.localizedName()),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )

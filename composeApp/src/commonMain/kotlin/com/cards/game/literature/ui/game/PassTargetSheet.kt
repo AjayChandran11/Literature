@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cards.game.literature.ui.common.localizedName
 import com.cards.game.literature.bot.BotPersonalities
 import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.ui.theme.CardRed
@@ -72,8 +73,8 @@ fun PassTargetSheet(
             Text(
                 // Echo the claim result — the claimer's sheet covers the event
                 // strip, so this confirms what they just claimed before they pick.
-                text = passSelection.claimedHalfSuitLabel?.let {
-                    stringResource(Res.string.pass_select_subtitle_claimed, it)
+                text = passSelection.claimedHalfSuit?.let {
+                    stringResource(Res.string.pass_select_subtitle_claimed, it.localizedName())
                 } ?: stringResource(Res.string.pass_select_subtitle),
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

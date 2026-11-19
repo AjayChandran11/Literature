@@ -81,6 +81,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cards.game.literature.ui.common.localizedName
 import com.cards.game.literature.deeplink.InviteLink
 import com.cards.game.literature.logic.DeckUtils
 import com.cards.game.literature.model.Card
@@ -283,7 +284,7 @@ private fun ClaimCaseLine(uiState: DailyPuzzleUiState, puzzle: DailyPuzzle, onCh
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
-                    stringResource(Res.string.daily_puzzle_claiming, selected.displayName),
+                    stringResource(Res.string.daily_puzzle_claiming, selected.localizedName()),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -589,7 +590,7 @@ private fun StepTwo(
     val candidates = cards.filter { it !in myHand } // pulled cards + the one hidden card
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        PromptHeader(stringResource(Res.string.daily_puzzle_board_title, selected.displayName))
+        PromptHeader(stringResource(Res.string.daily_puzzle_board_title, selected.localizedName()))
 
         // The clue board: your cards placed as facts on the left, the teammate's one
         // hidden card as a glowing gap on the right.
@@ -956,7 +957,7 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
 private fun ClaimReveal(puzzle: DailyPuzzle, answer: HalfSuitClaim) {
     val seatName = puzzle.players.associate { it.id to it.name }
     Text(
-        stringResource(Res.string.daily_puzzle_answer, answer.halfSuit.displayName),
+        stringResource(Res.string.daily_puzzle_answer, answer.halfSuit.localizedName()),
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold
     )

@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalInspectionMode
+import com.cards.game.literature.ui.common.localizedName
 import com.cards.game.literature.analytics.Analytics
 import com.cards.game.literature.analytics.AnalyticsEvent
 import kotlinx.coroutines.delay
@@ -266,7 +267,7 @@ private val HalfSuitStatus.isStolen: Boolean get() = claimCorrect == false
 /** Shared accessibility label for a half-suit cell — earned/stolen aware. */
 @Composable
 private fun deckContentDescription(status: HalfSuitStatus, myTeamId: String): String {
-    val name = status.halfSuit.displayName
+    val name = status.halfSuit.localizedName()
     return when (status.owner(myTeamId)) {
         1 -> if (status.isStolen) stringResource(Res.string.cd_deck_ours_stolen, name)
              else stringResource(Res.string.cd_deck_ours, name)

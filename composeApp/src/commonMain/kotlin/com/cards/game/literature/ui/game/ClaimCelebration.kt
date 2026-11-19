@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cards.game.literature.ui.common.localizedName
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.ui.common.ConfettiBurst
 import com.cards.game.literature.ui.theme.CardRed
@@ -118,7 +119,7 @@ fun ClaimCelebrationOverlay(
                     color = if (data.halfSuit.isRedSuit) CardRed else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = data.halfSuit.displayName,
+                    text = data.halfSuit.localizedName(),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,

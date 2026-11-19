@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cards.game.literature.ui.common.localizedName
 import com.cards.game.literature.model.Card
 import com.cards.game.literature.model.CardValue
 import com.cards.game.literature.model.GameEvent
@@ -241,7 +242,7 @@ private fun HalfSuitChip(halfSuit: HalfSuit) {
         halfSuit == HalfSuit.DIAMONDS_LOW || halfSuit == HalfSuit.DIAMONDS_HIGH
     Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
         Text(
-            text = halfSuit.displayName,
+            text = halfSuit.localizedName(),
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,

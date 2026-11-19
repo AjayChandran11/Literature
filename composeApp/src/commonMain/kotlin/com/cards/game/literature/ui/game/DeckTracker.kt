@@ -1,5 +1,6 @@
 package com.cards.game.literature.ui.game
 
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cards.game.literature.ui.common.localizedName
 import com.cards.game.literature.model.HalfSuit
 import com.cards.game.literature.model.HalfSuitStatus
 import com.cards.game.literature.model.isLow
@@ -89,9 +91,9 @@ fun CompactDeckTracker(
             )
 
             val deckDesc = when {
-                status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.displayName)
-                status.claimedByTeamId == myTeamId -> stringResource(Res.string.cd_deck_ours, status.halfSuit.displayName)
-                else -> stringResource(Res.string.cd_deck_theirs, status.halfSuit.displayName)
+                status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.localizedName())
+                status.claimedByTeamId == myTeamId -> stringResource(Res.string.cd_deck_ours, status.halfSuit.localizedName())
+                else -> stringResource(Res.string.cd_deck_theirs, status.halfSuit.localizedName())
             }
             Column(
                 modifier = Modifier
@@ -103,12 +105,13 @@ fun CompactDeckTracker(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = status.halfSuit.displayName.replace(" ", "\n"),
+                    text = status.halfSuit.localizedName().replace(" ", "\n"),
                     style = MaterialTheme.typography.labelSmall,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurface,
                     minLines = 2,
                     maxLines = 2,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = 11.sp),
                 )
                 if (status.claimedByTeamId != null) {
                     val label = if (status.claimedByTeamId == myTeamId)
@@ -199,9 +202,9 @@ private fun DeckTrackerCell(status: HalfSuitStatus, myTeamId: String) {
     )
 
     val deckDesc = when {
-        status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.displayName)
-        status.claimedByTeamId == myTeamId -> stringResource(Res.string.cd_deck_ours, status.halfSuit.displayName)
-        else -> stringResource(Res.string.cd_deck_theirs, status.halfSuit.displayName)
+        status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.localizedName())
+        status.claimedByTeamId == myTeamId -> stringResource(Res.string.cd_deck_ours, status.halfSuit.localizedName())
+        else -> stringResource(Res.string.cd_deck_theirs, status.halfSuit.localizedName())
     }
     Column(
         modifier = Modifier
@@ -213,12 +216,13 @@ private fun DeckTrackerCell(status: HalfSuitStatus, myTeamId: String) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = status.halfSuit.displayName.replace(" ", "\n"),
+            text = status.halfSuit.localizedName().replace(" ", "\n"),
             style = MaterialTheme.typography.labelMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface,
             minLines = 2,
             maxLines = 2,
+            autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 12.sp),
         )
         if (status.claimedByTeamId != null) {
             val label = if (status.claimedByTeamId == myTeamId)
@@ -297,9 +301,9 @@ private fun SideBySideDeckCell(
     val suitColor = if (suit.isRed) CardRed else MaterialTheme.colorScheme.onSurface
 
     val deckDesc = when {
-        status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.displayName)
-        status.claimedByTeamId == myTeamId -> stringResource(Res.string.cd_deck_ours, status.halfSuit.displayName)
-        else -> stringResource(Res.string.cd_deck_theirs, status.halfSuit.displayName)
+        status.claimedByTeamId == null -> stringResource(Res.string.cd_deck_open, status.halfSuit.localizedName())
+        status.claimedByTeamId == myTeamId -> stringResource(Res.string.cd_deck_ours, status.halfSuit.localizedName())
+        else -> stringResource(Res.string.cd_deck_theirs, status.halfSuit.localizedName())
     }
 
     Column(
