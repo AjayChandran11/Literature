@@ -602,7 +602,9 @@ fun GameSetupDialog(
     onConfirm: (Int, BotDifficulty) -> Unit,
     confirmLabel: String = stringResource(Res.string.button_start_game),
     allowEightPlayers: Boolean = false,
-    showDifficulty: Boolean = true
+    showDifficulty: Boolean = true,
+    /** Extra controls rendered above the buttons (the lobby's "open to anyone" switch). */
+    extraContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val windowInfo = currentWindowAdaptiveInfo()
     val isCompact = windowInfo.isCompactHeight
@@ -758,6 +760,11 @@ fun GameSetupDialog(
                             }
                         }
                     }
+                }
+
+                extraContent?.let {
+                    Spacer(modifier = Modifier.height(if (isCompact) 10.dp else 20.dp))
+                    it()
                 }
 
                 Spacer(modifier = Modifier.height(if (isCompact) 12.dp else 28.dp))

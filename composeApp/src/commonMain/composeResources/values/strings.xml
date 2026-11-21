@@ -59,6 +59,10 @@
     <!-- Lobby Screen -->
     <string name="lobby_playing_as">Playing as %1$s</string>
     <string name="lobby_create_room">Create Room</string>
+    <string name="lobby_quick_play">Quick Play</string>
+    <string name="create_room_public_title">Open to anyone</string>
+    <string name="create_room_public_subtitle">Quick Play can seat strangers here until the game starts</string>
+    <string name="waiting_room_starts_in">Starts in %1$d s</string>
     <string name="lobby_join_with_code">or join with a code</string>
     <string name="lobby_room_code_hint">Room Code</string>
     <string name="lobby_join_room">Join Room</string>
@@ -89,6 +93,7 @@
     <string name="waiting_room_switch_team">Switch</string>
     <string name="waiting_room_teams_uneven_warning">Both teams must have the same number of players</string>
     <string name="waiting_room_waiting_for_host">Waiting for host to start…</string>
+    <string name="waiting_room_waiting_for_players">Waiting for more players…</string>
     <string name="error_start_game_timeout">Failed to start game. Please go back and try again.</string>
     <string name="snackbar_player_disconnected">%1$s disconnected</string>
     <string name="snackbar_player_reconnected">%1$s reconnected</string>
@@ -136,6 +141,7 @@
     <string name="game_log_timed_out">%1$s ran out of time</string>
     <string name="game_log_replaced_by_bot">%1$s is away — a bot is playing for them</string>
     <string name="game_log_player_back">%1$s is back</string>
+    <string name="game_log_player_joined">%1$s joined, taking %2$s's seat</string>
 
     <!-- Deck Tracker -->
     <string name="deck_tracker_ours">Ours</string>
@@ -218,8 +224,10 @@
     <string name="daily_puzzle_failed">Out of tries</string>
     <string name="daily_puzzle_answer">Answer: %1$s</string>
     <string name="daily_puzzle_come_back">Come back tomorrow for a new puzzle.</string>
-    <string name="daily_puzzle_share_solved">Literature Daily #%1$d — solved %2$d/%3$d%4$s</string>
-    <string name="daily_puzzle_share_failed">Literature Daily #%1$d — couldn't crack it today</string>
+    <string name="daily_puzzle_kind_claim">The claim</string>
+    <string name="daily_puzzle_share_whatsapp">Share on WhatsApp</string>
+    <string name="cd_share_other_apps">Share using other apps</string>
+    <string name="cd_copy_result">Copy result</string>
     <string name="daily_puzzle_howto_title">How to play</string>
     <string name="daily_puzzle_howto_intro">Each day, your team can fully claim exactly one half-suit.</string>
     <string name="daily_puzzle_howto_s1">1. Read the moves and your hand.</string>

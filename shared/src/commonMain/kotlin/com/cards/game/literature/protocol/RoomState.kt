@@ -25,5 +25,11 @@ data class RoomState(
     val phase: RoomPhase,
     val players: List<RoomPlayerInfo>,
     val hostPlayerId: String,
-    val targetPlayerCount: Int
+    val targetPlayerCount: Int,
+    /** v4: Quick Play may seat strangers here while the room is still waiting to deal. */
+    val isPublic: Boolean = false,
+    /** v4: how long until a Quick Play table starts itself, in ms as of this message, or null when
+     *  no countdown runs. Relative rather than a deadline so a phone whose clock is off still
+     *  counts the right number (emulators and some handsets sit tens of seconds adrift). */
+    val autoStartInMs: Long? = null,
 )

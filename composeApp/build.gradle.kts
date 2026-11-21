@@ -13,8 +13,8 @@ plugins {
     alias(libs.plugins.kover)
 }
 
-val appVersionName = "1.1.21"
-val appVersionCode = 36
+val appVersionName = "1.2.0"
+val appVersionCode = 37
 
 // Single source of truth for the version on wasm: Android reads BuildConfig, but wasm has
 // no equivalent, so generate the AppInfo actual from the Gradle version at build time.

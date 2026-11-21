@@ -7,7 +7,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyColumn
@@ -250,7 +260,7 @@ fun WaitingRoomScreen(
                                 onDifficulty = { selectedDifficulty = it }
                             )
                         } else {
-                            WaitingForHostText()
+                            WaitingForHostText(countingDown = uiState.autoStartAtMs != null)
                         }
                     }
                     if (uiState.isHost) {
@@ -276,7 +286,7 @@ fun WaitingRoomScreen(
                         .weight(0.58f)
                         .fillMaxHeight()
                 ) {
-                    PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount)
+                    PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount, startsAtMs = uiState.autoStartAtMs)
                     Spacer(modifier = Modifier.height(12.dp))
                     PlayerList(
                         players = uiState.players,
@@ -311,7 +321,7 @@ fun WaitingRoomScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount)
+                PlayersCountHeader(uiState.players.size, uiState.targetPlayerCount, startsAtMs = uiState.autoStartAtMs)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Portrait budget is tight: as a fixed sibling the primer starved the
@@ -350,7 +360,7 @@ fun WaitingRoomScreen(
                         onStartGame = { viewModel.startGame(fillWithBots, selectedDifficulty) }
                     )
                 } else {
-                    WaitingForHostText()
+                    WaitingForHostText(countingDown = uiState.autoStartAtMs != null)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -628,15 +638,51 @@ private fun WaitingRoomHeroNarrowPreview() {
 }
 
 @Composable
-private fun PlayersCountHeader(count: Int, target: Int, modifier: Modifier = Modifier) {
+private fun PlayersCountHeader(count: Int, target: Int, modifier: Modifier = Modifier, startsAtMs: Long? = null) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = stringResource(Res.string.waiting_room_players_count, count, target),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (startsAtMs != null) StartCountdown(startsAtMs)
+    }
+}
+
+/**
+ * A Quick Play table starts itself at [startsAtMs]: a small pill beside the players count rather
+ * than a line of its own, since every fixed line here is taken from the players list. Ticks
+ * off the server's deadline, so it survives recomposition and a rejoin without drifting.
+ */
+@Composable
+private fun StartCountdown(startsAtMs: Long) {
+    var secondsLeft by remember(startsAtMs) { mutableStateOf(secondsUntil(startsAtMs)) }
+    LaunchedEffect(startsAtMs) {
+        while (secondsLeft > 0) {
+            kotlinx.coroutines.delay(250)
+            secondsLeft = secondsUntil(startsAtMs)
+        }
+    }
+    // Same treatment as the HOST badge in the list below: the accent on a 20% wash of itself.
+    val accent = if (secondsLeft <= 10) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
     Text(
-        text = stringResource(Res.string.waiting_room_players_count, count, target),
-        style = MaterialTheme.typography.titleLarge,
+        text = stringResource(Res.string.waiting_room_starts_in, secondsLeft),
+        style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = modifier
+        color = accent,
+        modifier = Modifier
+            .background(accent.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
     )
 }
+
+private fun secondsUntil(deadlineMs: Long): Int =
+    ((deadlineMs - com.cards.game.literature.model.currentTimeMillis() + 999) / 1000).coerceAtLeast(0).toInt()
 
 @Composable
 private fun PlayerList(
@@ -759,6 +805,38 @@ private fun PlayerList(
     }
 }
 
+/** Material's checkbox is fixed at 2dp corners; this one matches the rounded cards around it. */
+@Composable
+private fun RoundedCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val accent = MaterialTheme.colorScheme.secondary
+    val fill by animateColorAsState(if (checked) accent else Color.Transparent)
+    val outline by animateColorAsState(if (checked) accent else MaterialTheme.colorScheme.onSurfaceVariant)
+    Box(
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .toggleable(
+                value = checked,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = false, radius = 20.dp),
+                role = Role.Checkbox,
+                onValueChange = onCheckedChange
+            )
+            .size(20.dp)
+            .background(fill, RoundedCornerShape(6.dp))
+            .border(2.dp, outline, RoundedCornerShape(6.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedVisibility(visible = checked, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
 /** Host setup that lives in the scrollable body: the fill-with-bots toggle, difficulty selector,
  *  and the uneven-teams warning. The Start button is separate ([StartGameButton]) so it can be
  *  pinned to the bottom of the landscape pane. */
@@ -783,12 +861,7 @@ private fun HostSetupControls(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(0.8f)
         ) {
-            Checkbox(
-                checked = fillWithBots,
-                onCheckedChange = onFillWithBots,
-                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+            RoundedCheckbox(checked = fillWithBots, onCheckedChange = onFillWithBots)
             Text(
                 text = stringResource(Res.string.waiting_room_fill_bots),
                 style = MaterialTheme.typography.bodyLarge,
@@ -893,9 +966,11 @@ private fun StartGameButton(
 }
 
 @Composable
-private fun WaitingForHostText(modifier: Modifier = Modifier) {
+private fun WaitingForHostText(countingDown: Boolean, modifier: Modifier = Modifier) {
     Text(
-        text = stringResource(Res.string.waiting_room_waiting_for_host),
+        text = stringResource(
+            if (countingDown) Res.string.waiting_room_waiting_for_players else Res.string.waiting_room_waiting_for_host
+        ),
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,

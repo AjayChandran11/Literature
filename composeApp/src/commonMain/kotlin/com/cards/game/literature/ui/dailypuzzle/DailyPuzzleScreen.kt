@@ -41,6 +41,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import com.cards.game.literature.isWebPlatform
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -820,15 +827,15 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
     // just happened (uiState.justSolved). Re-entering an already-solved puzzle loads justSolved=false,
     // so everything shows settled with no entrance animation (same as the @Preview panes).
     val animate = uiState.justSolved && !inPreview
-    // Spoiler-safe share line (no answer leaked) — identical across kinds.
-    val suffix = (if (solved && uiState.stars > 0) " " + "⭐".repeat(uiState.stars) else "") +
-        (if (uiState.streak > 0) " · 🔥${uiState.streak}" else "")
-    val base = if (solved) {
-        stringResource(Res.string.daily_puzzle_share_solved, uiState.puzzleNumber, uiState.attemptsUsed, uiState.attemptsMax, suffix)
-    } else {
-        stringResource(Res.string.daily_puzzle_share_failed, uiState.puzzleNumber)
-    }
-    val caption = "$base\n${InviteLink.appLink}"
+    // The spoiler-free result grid plus a link that opens the same puzzle in the browser.
+    val shareText = PuzzleShareText.format(
+        puzzleNumber = uiState.puzzleNumber,
+        solved = solved,
+        stars = uiState.stars,
+        streak = uiState.streak,
+        kindTitle = stringResource(kindTitle(uiState.puzzle?.kind)),
+        link = InviteLink.forPuzzle(uiState.puzzleNumber),
+    )
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -917,17 +924,7 @@ private fun ResultScaffold(uiState: DailyPuzzleUiState, reveal: @Composable () -
                 AchievementUnlockCard(uiState.newlyUnlocked)
             }
             Spacer(Modifier.height(16.dp))
-            OutlinedButton(
-                onClick = {
-                    Analytics.log(AnalyticsEvent.DailyPuzzleShared(solved = solved))
-                    Sharer.shareText(caption)
-                },
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(Res.string.button_share))
-            }
+            PuzzleShareRow(text = shareText, solved = solved)
             Spacer(Modifier.height(6.dp))
             Text(stringResource(Res.string.daily_puzzle_come_back), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -1036,6 +1033,86 @@ private fun HowToDialog(kind: PuzzleKind, onDismiss: () -> Unit) {
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.button_ok)) } }
     )
+}
+
+/** The kind's name as it appears in the share text; the how-to titles already name two of them. */
+private fun kindTitle(kind: PuzzleKind?) = when (kind) {
+    PuzzleKind.LOCATE -> Res.string.daily_puzzle_howto_locate_title
+    PuzzleKind.WASTED_ASK -> Res.string.daily_puzzle_howto_wasted_title
+    PuzzleKind.CLAIM, null -> Res.string.daily_puzzle_kind_claim
+}
+
+/**
+ * WhatsApp first, the share sheet second, and on the web a copy button too, since a browser has
+ * no share-sheet muscle memory. Same idiom as the waiting room's invite row.
+ */
+@Composable
+private fun PuzzleShareRow(
+    text: String,
+    solved: Boolean,
+    whatsAppAvailable: Boolean = remember { Sharer.isWhatsAppAvailable() },
+) {
+    val shareViaSystem = {
+        Analytics.log(AnalyticsEvent.DailyPuzzleShared(solved = solved, channel = "system"))
+        Sharer.shareText(text)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (whatsAppAvailable) {
+            FilledTonalButton(
+                onClick = {
+                    Analytics.log(AnalyticsEvent.DailyPuzzleShared(solved = solved, channel = "whatsapp"))
+                    if (!Sharer.shareTextToWhatsApp(text)) Sharer.shareText(text)
+                },
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.height(44.dp)
+            ) {
+                Icon(Icons.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(Res.string.daily_puzzle_share_whatsapp), fontWeight = FontWeight.Bold, maxLines = 1)
+            }
+            FilledTonalIconButton(
+                onClick = shareViaSystem,
+                shape = RoundedCornerShape(10.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(Icons.Filled.Share, contentDescription = stringResource(Res.string.cd_share_other_apps), modifier = Modifier.size(20.dp))
+            }
+        } else {
+            OutlinedButton(onClick = shareViaSystem, shape = RoundedCornerShape(10.dp), modifier = Modifier.height(44.dp)) {
+                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(Res.string.button_share))
+            }
+        }
+        if (isWebPlatform()) {
+            var copied by remember { mutableStateOf(false) }
+            LaunchedEffect(copied) { if (copied) { kotlinx.coroutines.delay(1500); copied = false } }
+            FilledTonalIconButton(
+                onClick = {
+                    if (Sharer.copyText(text)) {
+                        copied = true
+                        Analytics.log(AnalyticsEvent.DailyPuzzleShared(solved = solved, channel = "copy"))
+                    }
+                },
+                shape = RoundedCornerShape(10.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    if (copied) Icons.Filled.Check else Icons.Filled.ContentCopy,
+                    contentDescription = stringResource(Res.string.cd_copy_result),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
 }
 
 private fun howToTitle(kind: PuzzleKind) = when (kind) {

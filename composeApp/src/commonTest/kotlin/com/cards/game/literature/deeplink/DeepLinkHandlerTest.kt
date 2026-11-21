@@ -62,4 +62,31 @@ class DeepLinkHandlerTest {
     fun extract_bareCode() {
         assertEquals("ABC123", DeepLinkHandler.extractRoomCode("ABC123"))
     }
+
+    // ── Puzzle share links (the web client opens today's puzzle from ?puzzle=N) ──
+
+    @Test
+    fun puzzle_fromShareLink() {
+        assertEquals(126, DeepLinkHandler.extractPuzzleNumber("https://literature-game.pages.dev/?puzzle=126"))
+    }
+
+    @Test
+    fun puzzle_survivesOtherParams() {
+        assertEquals(7, DeepLinkHandler.extractPuzzleNumber("https://literature-game.pages.dev/?utm_source=whatsapp&puzzle=7#top"))
+    }
+
+    @Test
+    fun puzzle_absentOrMalformed() {
+        assertNull(DeepLinkHandler.extractPuzzleNumber("https://literature-game.pages.dev/"))
+        assertNull(DeepLinkHandler.extractPuzzleNumber("https://literature-game.pages.dev/?room=ABC123"))
+        assertNull(DeepLinkHandler.extractPuzzleNumber("https://literature-game.pages.dev/?puzzle=today"))
+        assertNull(DeepLinkHandler.extractPuzzleNumber("https://literature-game.pages.dev/?puzzle=0"))
+        assertNull(DeepLinkHandler.extractPuzzleNumber(null))
+    }
+
+    @Test
+    fun puzzle_doesNotReadAsARoomCode() {
+        // The two parsers must not trip over each other's parameter.
+        assertNull(DeepLinkHandler.extractRoomCode("https://literature-game.pages.dev/?puzzle=126"))
+    }
 }

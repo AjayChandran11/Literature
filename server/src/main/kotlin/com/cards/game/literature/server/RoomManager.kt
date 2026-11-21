@@ -6,8 +6,19 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 class RoomManager {
+    companion object {
+        /** Quick Play tables are small so they deal soon and the games stay short. */
+        const val QUICK_PLAY_PLAYER_COUNT = 4
+        /** How long a fresh Quick Play table waits for company before dealing with bots. The host
+         *  can start sooner from the button, so this only bounds the wait, never the game. */
+        const val QUICK_START_DELAY_MS = 60_000L
+    }
+
     private val log = LoggerFactory.getLogger("RoomManager")
     private val rooms = ConcurrentHashMap<String, GameRoom>()
+    /** Quick Play's find-or-create runs under this: as two steps, four people pressing the button
+     *  in the same instant opened three tables instead of filling one. */
+    private val quickPlayLock = Any()
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     init {
@@ -19,9 +30,9 @@ class RoomManager {
         }
     }
 
-    fun createRoom(hostName: String, playerCount: Int): Pair<GameRoom, String> {
+    fun createRoom(hostName: String, playerCount: Int, isPublic: Boolean = false): Pair<GameRoom, String> {
         val roomCode = generateRoomCode()
-        val room = GameRoom(roomCode, playerCount)
+        val room = GameRoom(roomCode, playerCount, isPublic)
         rooms[roomCode] = room
         val playerId = room.addPlayer(hostName, isHost = true)
         log.info("Room {} created for {} players", roomCode, playerCount)
@@ -29,6 +40,45 @@ class RoomManager {
     }
 
     fun getRoom(roomCode: String): GameRoom? = rooms[roomCode.uppercase()]
+
+    /**
+     * The public tables a Quick Play may sit down at, fullest first so one table fills and deals
+     * rather than two half-empty ones waiting on each other: still waiting to deal, a seat free
+     * (or freeable), and someone actually there. "Fullest" counts people present, not held
+     * seats, and a table where everyone is away is not offered at all — its countdown has
+     * already declined to deal, and whoever sat down there waited as the guest of a host who
+     * was gone. Never a running game, whatever seats it has. Ties go to the table about to
+     * deal, then to the one that has waited longest; as a plain sort they went to hash order,
+     * which also made the ranking test a coin flip.
+     */
+    fun openPublicTables(): List<GameRoom> =
+        rooms.values.filter { it.isPublic && !it.isClosed && it.isJoinable() && it.connectedPlayerCount() > 0 }
+            .sortedWith(
+                compareByDescending<GameRoom> { it.connectedPlayerCount() }
+                    .thenBy { it.autoStartAtMs ?: Long.MAX_VALUE }
+                    .thenBy { it.createdSeq }
+            )
+
+    fun findOpenPublicTable(): GameRoom? = openPublicTables().firstOrNull()
+
+    /**
+     * Quick Play as one step: the fullest open table that will have them, else a fresh one. The
+     * table counts down from here if it was not already — an "Open to anyone" room or a rematch
+     * lobby has no clock of its own, and a stranger must never be left waiting on a host they
+     * do not know. Held seats are not reclaimed by name here (see [GameRoom.trySeat]).
+     */
+    fun seatQuickPlayer(name: String): Pair<GameRoom, String> = synchronized(quickPlayLock) {
+        val seated = openPublicTables().firstNotNullOfOrNull { table ->
+            (table.trySeat(name, reclaimByName = false) as? GameRoom.SeatResult.Seated)
+                ?.let { table to it.playerId }
+        }
+        if (seated != null) {
+            if (seated.first.autoStartAtMs == null) seated.first.scheduleAutoStart(QUICK_START_DELAY_MS)
+            return@synchronized seated
+        }
+        createRoom(name, QUICK_PLAY_PLAYER_COUNT, isPublic = true)
+            .also { (fresh, _) -> fresh.scheduleAutoStart(QUICK_START_DELAY_MS) }
+    }
 
     fun removeRoom(roomCode: String) {
         val room = rooms.remove(roomCode) ?: return

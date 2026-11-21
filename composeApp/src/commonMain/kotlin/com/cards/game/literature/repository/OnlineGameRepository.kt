@@ -19,6 +19,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
+
 sealed class PlayerConnectionEvent {
     data class Disconnected(val playerId: String, val playerName: String) : PlayerConnectionEvent()
     data class Reconnected(val playerId: String, val playerName: String) : PlayerConnectionEvent()
@@ -120,6 +121,8 @@ class OnlineGameRepository(
         const val MAX_RECONNECT_DELAY_MS = 16_000L
         // How long a deliberate leave waits for the graceful close handshake before forcing it.
         const val GRACEFUL_CLOSE_MS = 1_500L
+        /** Under Render's 15-minute idle timer, with margin for a slow or retried request. */
+        const val KEEPALIVE_INTERVAL_MS = 10 * 60 * 1000L
     }
 
     var myPlayerId: String = ""
@@ -164,12 +167,14 @@ class OnlineGameRepository(
         }
     }
 
+    /** The server's HTTP address, for the plain GETs that sit beside the socket. */
+    private val httpUrl: String = when {
+        serverUrl.startsWith("wss://") -> "https://" + serverUrl.removePrefix("wss://")
+        serverUrl.startsWith("ws://") -> "http://" + serverUrl.removePrefix("ws://")
+        else -> serverUrl
+    }
+
     suspend fun warmUp() {
-        val httpUrl = when {
-            serverUrl.startsWith("wss://") -> "https://" + serverUrl.removePrefix("wss://")
-            serverUrl.startsWith("ws://") -> "http://" + serverUrl.removePrefix("ws://")
-            else -> serverUrl
-        }
         try {
             log.i { "Warming up server: $httpUrl/health" }
             client.get("$httpUrl/health") {
@@ -188,14 +193,16 @@ class OnlineGameRepository(
         }
     }
 
-    suspend fun createRoom(playerName: String, playerCount: Int) {
+    suspend fun createRoom(playerName: String, playerCount: Int, isPublic: Boolean = false) {
+        abandonPreviousSession()
         myPlayerName = playerName
         log.i { "Creating room: player=$playerName, count=$playerCount" }
         _fatalError.value = null
-        connectAndSend(ClientMessage.CreateRoom(playerName, playerCount))
+        connectAndSend(ClientMessage.CreateRoom(playerName, playerCount, isPublic))
     }
 
     suspend fun joinRoom(code: String, playerName: String) {
+        abandonPreviousSession()
         myPlayerName = playerName
         roomCode = code.uppercase()
         log.i { "Joining room: code=$roomCode, player=$playerName" }
@@ -225,6 +232,31 @@ class OnlineGameRepository(
 
     suspend fun sendReaction(reaction: ReactionType) {
         sendMessage(ClientMessage.SendReaction(reaction))
+    }
+
+    /**
+     * Quick Play: the server seats us at a public table that has not dealt yet, or opens one
+     * that deals itself shortly. Never a running game.
+     */
+    suspend fun quickPlay(playerName: String) {
+        abandonPreviousSession()
+        myPlayerName = playerName
+        log.i { "Quick Play: player=$playerName" }
+        _fatalError.value = null
+        connectAndSend(ClientMessage.QuickPlay(playerName))
+    }
+
+    /**
+     * A fresh Create / Join / Quick Play while an earlier session is still around (the player's
+     * leave never reached the server, or is still in flight) says goodbye to that table first.
+     * Otherwise the old seat is held for five minutes (and a public table keeps a ghost host for
+     * Quick Play to find), and the lobby waits for a room state that is already set and never
+     * navigates. Nothing to do when the previous session was cleanly left.
+     */
+    private suspend fun abandonPreviousSession() {
+        if (webSocketSession == null && roomCode.isEmpty() && _roomState.value == null && _gameState.value == null) return
+        log.i { "Leaving ${roomCode.ifEmpty { "the previous session" }} before starting a new one" }
+        if (_gameState.value != null) leaveGame() else leaveRoom()
     }
 
     suspend fun requestRematch() {
@@ -299,15 +331,23 @@ class OnlineGameRepository(
         autoReconnectJob = null
         val session = webSocketSession
         if (session != null) {
-            try {
-                session.send(Frame.Text(json.encodeToString(message)))
-                session.close(CloseReason(CloseReason.Codes.NORMAL, "left"))
-                withTimeoutOrNull(GRACEFUL_CLOSE_MS) { connectionJob?.join() }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) { // Throwable, not Exception — see warmUp
-                rethrowIfPlatformFatal(e)
+            // Bounded as a whole, send included: a send that never returns on a wedged socket
+            // left the leaver's whole session in place, and the next Quick Play re-took the seat.
+            val acknowledged = withTimeoutOrNull(GRACEFUL_CLOSE_MS) {
+                try {
+                    session.send(Frame.Text(json.encodeToString(message)))
+                    session.close(CloseReason(CloseReason.Codes.NORMAL, "left"))
+                    connectionJob?.join()
+                    true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) { // Throwable, not Exception — see warmUp
+                    rethrowIfPlatformFatal(e)
+                    log.w(e) { "Leave message failed" }
+                    false
+                }
             }
+            if (acknowledged != true) log.w { "Leave not acknowledged within ${GRACEFUL_CLOSE_MS}ms; dropping the socket" }
         }
         disconnect() // idempotent cleanup of whatever is left
     }
@@ -374,6 +414,7 @@ class OnlineGameRepository(
                     // lands right after this handshake succeeds, so resetting on connect kept the
                     // backoff pinned near zero and the give-up cap never tripped: the ~1Hz storm.
                     log.i { "WebSocket connected" }
+                    keepServerAwake()
 
                     // Send the initial message
                     val text = json.encodeToString(firstMessage)
@@ -423,6 +464,30 @@ class OnlineGameRepository(
                         _connectionState.value = ConnectionState.DISCONNECTED
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Render's free instance sleeps after fifteen minutes without an HTTP request and takes
+     * every room with it; an open WebSocket does not count as activity. While this client is
+     * connected it asks for /health every [KEEPALIVE_INTERVAL_MS], so the server stays up exactly
+     * as long as someone is at a table and sleeps when nobody is. Launched inside the socket
+     * session's scope, so it ends with the connection and never outlives it.
+     */
+    private fun CoroutineScope.keepServerAwake() = launch {
+        while (true) {
+            delay(KEEPALIVE_INTERVAL_MS)
+            try {
+                client.get("$httpUrl/health") {
+                    timeout { requestTimeoutMillis = 30_000; connectTimeoutMillis = 30_000; socketTimeoutMillis = 30_000 }
+                }
+                log.d { "Keepalive ping sent" }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) { // Throwable, not Exception — see warmUp
+                rethrowIfPlatformFatal(e)
+                log.w { "Keepalive ping failed (${e.message})" }
             }
         }
     }
@@ -622,6 +687,11 @@ class OnlineGameRepository(
                         _reconnectCountdowns.update { current ->
                             current - event.playerId
                         }
+                    }
+                    is GameEvent.PlayerJoined -> {
+                        // A newcomer took the seat; whoever it was held for is not coming back
+                        // to it, so stop counting down for them. The strip and log say who came.
+                        _reconnectCountdowns.update { current -> current - event.playerId }
                     }
                     is GameEvent.PlayerReplacedByBot -> {
                         _playerEvents.emit(

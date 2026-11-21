@@ -810,6 +810,7 @@ private fun consolidateEvents(
     fmtTimedOut: (playerName: String) -> String,
     fmtReplaced: (playerName: String) -> String,
     fmtBack: (playerName: String) -> String,
+    fmtJoined: (playerName: String, replacedName: String) -> String,
     limit: Int = 5
 ): List<StripMessage> {
     val messages = mutableListOf<StripMessage>()
@@ -869,6 +870,9 @@ private fun consolidateEvents(
             }
             is GameEvent.PlayerReconnected -> {
                 messages.add(StripMessage("↩", LightGreen, fmtBack(event.playerName)))
+            }
+            is GameEvent.PlayerJoined -> {
+                messages.add(StripMessage("👋", LightGreen, fmtJoined(event.playerName, event.replacedName)))
             }
             else -> {}
         }
@@ -978,6 +982,7 @@ private fun LastEventStrip(events: List<GameEvent>) {
     val fmtTimedOut = stringResource(Res.string.game_log_timed_out)
     val fmtReplaced = stringResource(Res.string.game_log_replaced_by_bot)
     val fmtBack = stringResource(Res.string.game_log_player_back)
+    val fmtJoined = stringResource(Res.string.game_log_player_joined)
 
     val messages = consolidateEvents(
         events = displayEvents,
@@ -988,7 +993,8 @@ private fun LastEventStrip(events: List<GameEvent>) {
         textGameOver = textGameOver,
         fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) },
         fmtReplaced = { p -> fmtReplaced.formatArgs(p) },
-        fmtBack = { p -> fmtBack.formatArgs(p) }
+        fmtBack = { p -> fmtBack.formatArgs(p) },
+        fmtJoined = { p, r -> fmtJoined.formatArgs(p, r) }
     )
     if (messages.isEmpty()) return
 
@@ -1274,6 +1280,7 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
     val fmtTimedOut = stringResource(Res.string.game_log_timed_out)
     val fmtReplaced = stringResource(Res.string.game_log_replaced_by_bot)
     val fmtBack = stringResource(Res.string.game_log_player_back)
+    val fmtJoined = stringResource(Res.string.game_log_player_joined)
 
     val messages = consolidateEvents(
         events = displayEvents,
@@ -1285,6 +1292,7 @@ private fun LandscapeLastEventStrip(events: List<GameEvent>) {
         fmtTimedOut = { p -> fmtTimedOut.formatArgs(p) },
         fmtReplaced = { p -> fmtReplaced.formatArgs(p) },
         fmtBack = { p -> fmtBack.formatArgs(p) },
+        fmtJoined = { p, r -> fmtJoined.formatArgs(p, r) },
         limit = 1
     )
     if (messages.isEmpty()) return

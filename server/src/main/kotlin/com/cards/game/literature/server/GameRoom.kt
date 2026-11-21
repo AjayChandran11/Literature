@@ -17,7 +17,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class GameRoom(
     val roomCode: String,
-    val targetPlayerCount: Int
+    val targetPlayerCount: Int,
+    /** Quick Play may seat strangers here while the room is still waiting to deal. */
+    val isPublic: Boolean = false,
 ) {
     private val log = LoggerFactory.getLogger("GameRoom")
     private val engine = GameEngine()
@@ -69,6 +71,12 @@ class GameRoom(
     private var lastAskerId: String? = null
     // Per-player reaction rate limiting
     private val lastReactionTime = ConcurrentHashMap<String, Long>()
+    /** Pre-game housekeeping (the Quick Play countdown); [botScope] only exists once a game runs. */
+    private val roomScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var autoStartJob: Job? = null
+    /** When this table will deal itself (epoch ms); null when no countdown runs. */
+    var autoStartAtMs: Long? = null
+        private set
 
     var phase: RoomPhase = RoomPhase.WAITING
         private set
@@ -76,6 +84,8 @@ class GameRoom(
     // measure from the room's original creation
     var createdAt: Long = System.currentTimeMillis()
         private set
+    /** Creation order, for ranking ties: [createdAt] is only millisecond-precise. */
+    val createdSeq: Long = creationCounter.getAndIncrement()
     var finishedAt: Long = 0L
         private set
 
@@ -91,6 +101,7 @@ class GameRoom(
     internal var waitingWindowMs: Long = WAITING_RECONNECT_WINDOW_MS
     // How long a seat must have been absent before it can be given up.
     internal var evictableAfterMs: Long = EVICTABLE_AFTER_MS
+    internal var takeoverAfterMs: Long = TAKEOVER_AFTER_MS
 
     companion object {
         private const val TURN_TIMEOUT_MS = 60_000L
@@ -109,11 +120,14 @@ class GameRoom(
         // Without it, two players on a flaky network in a full room could take turns evicting
         // each other; a momentary drop now keeps your seat outright.
         private const val EVICTABLE_AFTER_MS = 60_000L
+        /** A held seat at a running table may be given to a newcomer after this long away. */
+        private const val TAKEOVER_AFTER_MS = 10 * 60_000L
         // How many consecutive rejected bot moves to tolerate before giving up the
         // turn. A bot with cards always has a legal move, so this should never be
         // hit; it's a backstop so a wedged decision can never spin forever.
         private const val MAX_BOT_MOVE_FAILURES = 3
         private val secureRandom = java.security.SecureRandom()
+        private val creationCounter = java.util.concurrent.atomic.AtomicLong()
 
         /** 128-bit random hex token — proof of identity for reconnects. */
         private fun generateReconnectToken(): String {
@@ -150,17 +164,118 @@ class GameRoom(
         data class Seated(val playerId: String, val reclaimed: Boolean) : SeatResult()
         data object RoomFull : SeatResult()
         data object NotWaiting : SeatResult()
+        /** A running table with no seat a newcomer may take (every bot seat is on hold). */
+        data object NoSeat : SeatResult()
+    }
+
+    /**
+     * A seat at a RUNNING table for someone arriving by code or invite link. Only a seat a bot
+     * has played from the deal, or one whose human has been gone past [takeoverAfterMs], is
+     * given away: a seat on hold is its owner's. Prefers the team with fewer people present.
+     * Seat bookkeeping only; [completeSeatInGame] does the game-state part under the mutex.
+     */
+    fun claimSeatInGame(name: String, now: Long = System.currentTimeMillis()): SeatResult = synchronized(seatLock) {
+        if (phase != RoomPhase.IN_PROGRESS) return@synchronized SeatResult.NotWaiting
+        val state = gameState ?: return@synchronized SeatResult.NotWaiting
+        val candidates = state.players.filter { seat ->
+            seat.isBot && (players[seat.id]?.let { held ->
+                !held.isConnected && now - held.lastSeen >= takeoverAfterMs
+            } ?: true)
+        }
+        if (candidates.isEmpty()) return@synchronized SeatResult.NoSeat
+        val presentByTeam = players.values.filter { it.isConnected }
+            .groupingBy { playerTeams[it.playerId] ?: "team_1" }.eachCount()
+        val seat = candidates.minByOrNull { presentByTeam[it.teamId] ?: 0 }!!
+        if (players.remove(seat.id) != null) {
+            // The previous owner was gone past the hold; their Reconnect now gets "Player not
+            // found in room", which the app shows as "your seat was taken".
+            disconnectJobs.remove(seat.id)?.cancel()
+            pendingReclaims.remove(seat.id)
+        }
+        players[seat.id] = PlayerSession(
+            playerId = seat.id,
+            playerName = name,
+            session = null,
+            reconnectToken = generateReconnectToken()
+        )
+        playerTeams[seat.id] = seat.teamId
+        SeatResult.Seated(seat.id, reclaimed = false)
+    }
+
+    /**
+     * Second half of a takeover, once the socket is wired: the seat takes the newcomer's name
+     * and becomes human, the newcomer gets the board, and the table hears who arrived. If the
+     * seat is on turn right now the bot loop may be mid-decision for it, so the turn boundary
+     * hands it over instead (the same path a reconnecting player takes).
+     */
+    suspend fun completeSeatInGame(seatId: String) {
+        val session = players[seatId] ?: return
+        var replacedName = ""
+        mutex.withLock {
+            val state = gameState ?: return
+            val seat = state.getPlayer(seatId) ?: return
+            replacedName = seat.name
+            val onTurn = state.currentPlayer.id == seatId
+            gameState = state.copy(players = state.players.map {
+                if (it.id == seatId) it.copy(name = session.playerName, isBot = onTurn) else it
+            })
+            if (onTurn) pendingReclaims[seatId] = true
+            log.info("[{}] {} took over a seat at the running table", roomCode, seatId)
+            val view = gameState!!.toPlayerView(seatId, getConnectionStatus(), getDisconnectDeadlines(), passSelectionDeadline, turnDeadlineMs)
+            session.send(ServerMessage.GameUpdate(view))
+        }
+        broadcastEvents(listOf(GameEvent.PlayerJoined(seatId, session.playerName, replacedName)))
+        broadcastGameViews()
+        broadcastRoomUpdate()
+    }
+
+    /**
+     * Quick Play: deal in [delayMs] unless someone starts the game first, so the next Quick
+     * Player still has a table to find. Declines if everyone has left by then; a table nobody is
+     * at is not offered to anyone (see RoomManager.openPublicTables), so no one inherits it.
+     */
+    fun scheduleAutoStart(delayMs: Long) {
+        autoStartJob?.cancel()
+        autoStartAtMs = System.currentTimeMillis() + delayMs
+        autoStartJob = roomScope.launch {
+            delay(delayMs)
+            autoStartJob = null
+            if (phase != RoomPhase.WAITING || closed) {
+                autoStartAtMs = null
+                return@launch
+            }
+            if (players.values.none { it.isConnected }) {
+                autoStartAtMs = null
+                log.info("[{}] Auto-start skipped: nobody left at the table", roomCode)
+                return@launch
+            }
+            if (startGame(fillWithBots = true) || phase != RoomPhase.WAITING) return@launch
+            // With bots to fill the gaps only uneven teams can refuse a deal (three people on one
+            // side of a four-seat table), and the host's own Start fails the same way. Say so and
+            // keep the clock running: a public table must never sit with no countdown.
+            log.info("[{}] Auto-start declined; trying again in {} ms", roomCode, delayMs)
+            scheduleAutoStart(delayMs)
+            players.values.filter { it.isConnected }.forEach {
+                it.send(ServerMessage.Error("Both teams must have the same number of players"))
+            }
+            broadcastRoomUpdate()
+        }
     }
 
     /**
      * The whole join decision — still waiting? own seat to reclaim? room full? evict? new seat? —
      * as ONE atomic step. Split across the handler as separate calls it was a check-then-act
      * race: see [seatLock].
+     *
+     * [reclaimByName] is for arrivals by room code, where the code is the secret and a held seat
+     * under the same name is its owner coming back. Quick Play passes false: on a public table a
+     * stranger who happens to share the name would otherwise be handed the seat AND its reconnect
+     * token, and the owner's own Reconnect then bound a second socket to the same seat.
      */
-    fun trySeat(name: String): SeatResult = synchronized(seatLock) {
+    fun trySeat(name: String, reclaimByName: Boolean = true): SeatResult = synchronized(seatLock) {
         if (phase != RoomPhase.WAITING) return@synchronized SeatResult.NotWaiting
 
-        findSeatToReclaim(name)?.let { held ->
+        if (reclaimByName) findSeatToReclaim(name)?.let { held ->
             reclaimSeat(held)
             return@synchronized SeatResult.Seated(held, reclaimed = true)
         }
@@ -266,6 +381,9 @@ class GameRoom(
 
     fun getHumanPlayerCount(): Int = players.size
 
+    /** Seats with someone actually on the other end right now (held seats excluded). */
+    fun connectedPlayerCount(): Int = players.values.count { it.isConnected }
+
     fun isHost(playerId: String): Boolean = playerId == hostPlayerId
 
     fun allDisconnected(): Boolean = players.values.all { !it.isConnected }
@@ -312,76 +430,91 @@ class GameRoom(
             phase = phase,
             players = roomPlayers,
             hostPlayerId = hostPlayerId ?: "",
-            targetPlayerCount = targetPlayerCount
+            targetPlayerCount = targetPlayerCount,
+            isPublic = isPublic,
+            autoStartInMs = autoStartAtMs?.let { (it - System.currentTimeMillis()).coerceAtLeast(0L) },
         )
     }
 
     suspend fun startGame(fillWithBots: Boolean, botDifficultyName: String = "MEDIUM"): Boolean {
-        if (phase != RoomPhase.WAITING) return false
-
         val difficulty = runCatching { BotDifficulty.valueOf(botDifficultyName) }.getOrDefault(BotDifficulty.MEDIUM)
-        botPlayer = BotPlayer(difficulty = difficulty)
 
-        val humanPlayers = players.values.toList()
-        val setupPlayers = mutableListOf<PlayerSetupInfo>()
+        // Seat snapshot, team check and the flip to IN_PROGRESS are one step under seatLock,
+        // the lock trySeat checks the phase under. Between them as plain statements, a join
+        // (a code, or a Quick Play racing the countdown) was seated in the room but not in the
+        // game: a name on the roster with no hand and no turn.
+        val humanPlayers = synchronized(seatLock) {
+            if (phase != RoomPhase.WAITING) return false
 
-        // Use stored team assignments chosen in the waiting room. A seat whose owner is
-        // disconnected right now (kept through a Rematch grace window, or mid-drop) starts as
-        // a bot under their name so nobody waits on them; handleReconnect queues the seat to
-        // be handed back at their next turn, exactly like a mid-game bot replacement.
-        humanPlayers.forEachIndexed { index, session ->
-            val teamId = playerTeams[session.playerId] ?: if (index % 2 == 0) "team_1" else "team_2"
-            setupPlayers.add(
-                PlayerSetupInfo(
-                    id = session.playerId,
-                    name = session.playerName,
-                    teamId = teamId,
-                    isBot = !session.isConnected
-                )
-            )
-        }
+            val humans = players.values.toList()
+            val setupPlayers = mutableListOf<PlayerSetupInfo>()
 
-        // Fill remaining slots with bots, always adding to the smaller team to balance
-        if (fillWithBots) {
-            val botNames = listOf("Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace")
-            var botIndex = 0
-            while (setupPlayers.size < targetPlayerCount) {
-                val t1Count = setupPlayers.count { it.teamId == "team_1" }
-                val t2Count = setupPlayers.count { it.teamId == "team_2" }
-                val teamId = if (t1Count <= t2Count) "team_1" else "team_2"
+            // Use stored team assignments chosen in the waiting room. A seat whose owner is
+            // disconnected right now (kept through a Rematch grace window, or mid-drop) starts as
+            // a bot under their name so nobody waits on them; handleReconnect queues the seat to
+            // be handed back at their next turn, exactly like a mid-game bot replacement.
+            humans.forEachIndexed { index, session ->
+                val teamId = playerTeams[session.playerId] ?: if (index % 2 == 0) "team_1" else "team_2"
                 setupPlayers.add(
                     PlayerSetupInfo(
-                        id = "bot_$botIndex",
-                        name = botNames.getOrElse(botIndex) { "Bot ${botIndex + 1}" },
+                        id = session.playerId,
+                        name = session.playerName,
                         teamId = teamId,
-                        isBot = true
+                        isBot = !session.isConnected
                     )
                 )
-                botIndex++
             }
-        } else if (humanPlayers.size < targetPlayerCount) {
-            return false // Not enough players
-        }
 
-        // Literature needs two equal teams. The waiting room already blocks an uneven start on
-        // the client; this keeps a stale or custom client from starting 3v1 (or 4v0, which the
-        // engine ends on the first move because an empty team counts as "all out of cards").
-        val t1 = setupPlayers.count { it.teamId == "team_1" }
-        val t2 = setupPlayers.count { it.teamId == "team_2" }
-        if (t1 != t2) {
-            log.info("[{}] Refusing to start with unequal teams ({} v {})", roomCode, t1, t2)
-            return false
-        }
+            // Fill remaining slots with bots, always adding to the smaller team to balance
+            if (fillWithBots) {
+                val botNames = listOf("Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace")
+                var botIndex = 0
+                while (setupPlayers.size < targetPlayerCount) {
+                    val t1Count = setupPlayers.count { it.teamId == "team_1" }
+                    val t2Count = setupPlayers.count { it.teamId == "team_2" }
+                    val teamId = if (t1Count <= t2Count) "team_1" else "team_2"
+                    setupPlayers.add(
+                        PlayerSetupInfo(
+                            id = "bot_$botIndex",
+                            name = botNames.getOrElse(botIndex) { "Bot ${botIndex + 1}" },
+                            teamId = teamId,
+                            isBot = true
+                        )
+                    )
+                    botIndex++
+                }
+            } else if (humans.size < targetPlayerCount) {
+                return false // Not enough players
+            }
 
-        val gameId = "game_${roomCode}_${System.currentTimeMillis()}"
-        gameState = engine.createMultiplayerGame(gameId, setupPlayers)
-        phase = RoomPhase.IN_PROGRESS
+            // Literature needs two equal teams. The waiting room already blocks an uneven start on
+            // the client; this keeps a stale or custom client from starting 3v1 (or 4v0, which the
+            // engine ends on the first move because an empty team counts as "all out of cards").
+            val t1 = setupPlayers.count { it.teamId == "team_1" }
+            val t2 = setupPlayers.count { it.teamId == "team_2" }
+            if (t1 != t2) {
+                log.info("[{}] Refusing to start with unequal teams ({} v {})", roomCode, t1, t2)
+                return false
+            }
+
+            // Only a deal that is going ahead stops the clock: a refused start used to cancel the
+            // Quick Play countdown too, leaving the table waiting on nothing.
+            autoStartJob?.cancel()
+            autoStartJob = null
+            autoStartAtMs = null
+            botPlayer = BotPlayer(difficulty = difficulty)
+
+            val gameId = "game_${roomCode}_${System.currentTimeMillis()}"
+            gameState = engine.createMultiplayerGame(gameId, setupPlayers)
+            phase = RoomPhase.IN_PROGRESS
+            humans
+        }
 
         botScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         botTurnActive.set(false) // fresh scope → no loop can be running yet
         val seatedHumans = humanPlayers.count { it.isConnected }
         log.info("[{}] Game started with {} players ({} human, {} bots)",
-            roomCode, setupPlayers.size, seatedHumans, setupPlayers.size - seatedHumans)
+            roomCode, targetPlayerCount, seatedHumans, targetPlayerCount - seatedHumans)
         // Their waiting-room removal no longer applies; the seat is a bot until they return.
         val absent = humanPlayers.filter { !it.isConnected }
         absent.forEach { disconnectJobs.remove(it.playerId)?.cancel() }
@@ -1052,9 +1185,15 @@ class GameRoom(
     private suspend fun broadcastEvents(events: List<GameEvent>) {
         players.values.filter { it.isConnected }.forEach { session ->
             events.forEach { event ->
-                session.send(ServerMessage.GameEventOccurred(event))
+                session.send(ServerMessage.GameEventOccurred(event.forProtocol(session.protocolVersion)))
             }
         }
+    }
+
+    /** A client cannot decode an event type it never knew; say the nearest thing it can show. */
+    private fun GameEvent.forProtocol(version: Int): GameEvent = when {
+        this is GameEvent.PlayerJoined && version < 4 -> GameEvent.PlayerReconnected(playerId, playerName, timestamp)
+        else -> this
     }
 
     /**
@@ -1207,6 +1346,9 @@ class GameRoom(
     }
 
     fun cleanup() {
+        autoStartJob?.cancel()
+        autoStartAtMs = null
+        roomScope.cancel()
         turnTimeoutJob?.cancel()
         passSelectionJob?.cancel()
         passSelectionDeadline = null
