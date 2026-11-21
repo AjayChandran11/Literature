@@ -89,12 +89,13 @@ fun WaitingRoomScreen(
     // Primer targets a player who's never finished a game (e.g. a deep-link novice landing
     // cold). gamesPlayed also covers online-first players, who never mark the offline tutorial.
     val isNovice = remember { StatsStore.stats.value.gamesPlayed == 0 }
-    val showPrimer = isNovice && !primerDismissed
     // One-time card for a table with a clock: shown once, dismissible, never again.
     val quickPlayPrimerSeenBefore = rememberSaveable { TutorialPrefs.isQuickPlayPrimerShown() }
     var quickPlayPrimerDismissed by rememberSaveable { mutableStateOf(false) }
     val showQuickPlayPrimer = uiState.autoStartAtMs != null && !quickPlayPrimerSeenBefore && !quickPlayPrimerDismissed
     LaunchedEffect(showQuickPlayPrimer) { if (showQuickPlayPrimer) TutorialPrefs.markQuickPlayPrimerShown() }
+    // One card at a time: the rules primer waits while the Quick Play card is up.
+    val showPrimer = isNovice && !primerDismissed && !showQuickPlayPrimer
 
     BackHandler {
         showLeaveDialog = true
