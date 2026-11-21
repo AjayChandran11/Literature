@@ -152,12 +152,12 @@ fun LobbyScreen(
                         strokeWidth = 2.5.dp
                     )
                 } else {
-                    Icon(Icons.Filled.Bolt, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Filled.Bolt, contentDescription = null, modifier = Modifier.size(24.dp))
                     // The bolt glyph carries ~6dp of empty box on each side, so 2dp here reads as the usual 8dp.
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = stringResource(Res.string.lobby_quick_play),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }
