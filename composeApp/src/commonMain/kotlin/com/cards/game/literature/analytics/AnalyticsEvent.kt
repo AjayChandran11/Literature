@@ -132,17 +132,24 @@ sealed class AnalyticsEvent(
     /** Player asked to create an online room. Fires on the attempt, not on admission — the drop
      *  to [GameStarted] with mode "online" covers both creates that never landed (a cold server)
      *  and rooms that landed but never filled. */
-    class RoomCreated(playerCount: Int) : AnalyticsEvent(
+    class RoomCreated(playerCount: Int, isPublic: Boolean = false) : AnalyticsEvent(
         name = "room_created",
-        params = mapOf("player_count" to playerCount),
+        params = mapOf("player_count" to playerCount, "public" to isPublic),
+    )
+
+    /** Player tapped Quick Play and was admitted. [outcome] is "joined" (an existing public table
+     *  still waiting to deal) or "created" (none was open, so a new one was opened for them). */
+    class QuickPlay(outcome: String) : AnalyticsEvent(
+        name = "quick_play",
+        params = mapOf("outcome" to outcome),
     )
 
     /** A guest was admitted to a room — the invite funnel's conversion step, which had no event
      *  before (invite_opened fires on URL parse, long before anyone reaches a room). [source] is
      *  "invite" (deep link / referrer auto-join) or "code" (typed by hand). */
-    class RoomJoined(source: String, playerCount: Int) : AnalyticsEvent(
+    class RoomJoined(source: String, playerCount: Int, inProgress: Boolean = false) : AnalyticsEvent(
         name = "room_joined",
-        params = mapOf("source" to source, "player_count" to playerCount),
+        params = mapOf("source" to source, "player_count" to playerCount, "in_progress" to inProgress),
     )
 
     /** Player shared a room-invite link — top of the Phase 2 invite funnel. [surface] e.g.

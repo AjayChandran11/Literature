@@ -24,6 +24,7 @@ class AnalyticsEventTest {
         AnalyticsEvent.LobbyOpened,
         AnalyticsEvent.RoomCreated(playerCount = 6),
         AnalyticsEvent.RoomJoined(source = "invite", playerCount = 6),
+        AnalyticsEvent.QuickPlay(outcome = "joined"),
         AnalyticsEvent.InviteShared(surface = "waiting_room"),
         AnalyticsEvent.InviteOpened(source = "app_link"),
         AnalyticsEvent.InstallReferrerJoin,
@@ -46,6 +47,7 @@ class AnalyticsEventTest {
         assertEquals("lobby_opened", AnalyticsEvent.LobbyOpened.name)
         assertEquals("room_created", AnalyticsEvent.RoomCreated(6).name)
         assertEquals("room_joined", AnalyticsEvent.RoomJoined("code", 4).name)
+        assertEquals("quick_play", AnalyticsEvent.QuickPlay("created").name)
         assertEquals("invite_shared", AnalyticsEvent.InviteShared("waiting_room").name)
         assertEquals("invite_opened", AnalyticsEvent.InviteOpened("web").name)
         assertEquals("install_referrer_join", AnalyticsEvent.InstallReferrerJoin.name)
@@ -80,8 +82,11 @@ class AnalyticsEventTest {
             solved.params,
         )
 
-        assertEquals(mapOf("player_count" to 6), AnalyticsEvent.RoomCreated(6).params)
-        assertEquals(mapOf("source" to "invite", "player_count" to 6), AnalyticsEvent.RoomJoined("invite", 6).params)
+        assertEquals(mapOf("player_count" to 6, "public" to false), AnalyticsEvent.RoomCreated(6).params)
+        assertEquals(mapOf("player_count" to 4, "public" to true), AnalyticsEvent.RoomCreated(4, isPublic = true).params)
+        assertEquals(mapOf("source" to "invite", "player_count" to 6, "in_progress" to false), AnalyticsEvent.RoomJoined("invite", 6).params)
+        assertEquals(mapOf("source" to "code", "player_count" to 4, "in_progress" to true), AnalyticsEvent.RoomJoined("code", 4, inProgress = true).params)
+        assertEquals(mapOf("outcome" to "created"), AnalyticsEvent.QuickPlay("created").params)
         assertEquals(mapOf("source" to "referrer"), AnalyticsEvent.InviteOpened("referrer").params)
 
         assertEquals(

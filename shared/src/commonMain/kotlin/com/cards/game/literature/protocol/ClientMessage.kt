@@ -10,7 +10,18 @@ import kotlinx.serialization.Serializable
 sealed class ClientMessage {
     @Serializable
     @SerialName("com.cards.game.literature.protocol.ClientMessage.CreateRoom")
-    data class CreateRoom(val playerName: String, val playerCount: Int) : ClientMessage()
+    data class CreateRoom(
+        val playerName: String,
+        val playerCount: Int,
+        /** v4: a public table, which Quick Play may seat strangers at while it waits to deal. */
+        val isPublic: Boolean = false,
+    ) : ClientMessage()
+
+    /** v4: seat me at a public table that has not dealt yet, or open one that deals itself
+     *  shortly. Never a running game: every ask is information the newcomer would have missed. */
+    @Serializable
+    @SerialName("com.cards.game.literature.protocol.ClientMessage.QuickPlay")
+    data class QuickPlay(val playerName: String) : ClientMessage()
 
     @Serializable
     @SerialName("com.cards.game.literature.protocol.ClientMessage.JoinRoom")

@@ -1,5 +1,6 @@
 package com.cards.game.literature.viewmodel
 
+import com.cards.game.literature.model.currentTimeMillis
 import com.cards.game.literature.protocol.RoomPhase
 import com.cards.game.literature.protocol.RoomPlayerInfo
 import com.cards.game.literature.protocol.RoomState
@@ -174,5 +175,25 @@ class WaitingRoomViewModelTest {
         runCurrent()
 
         assertTrue(seen.any { it is PlayerConnectionEvent.HostChanged })
+    }
+
+    @Test
+    fun aQuickPlayTableTellsTheRoomWhenItDeals() = runTest(dispatcher) {
+        val repo = repo()
+        val vm = WaitingRoomViewModel(repo)
+        runCurrent()
+
+        repo.receive(ServerMessage.RoomCreated("ABC123", "player_0", 4, "tok"))
+        repo.receive(
+            ServerMessage.RoomUpdate(
+                room(listOf(player("player_0", "Me", "team_1", host = true))).copy(isPublic = true, autoStartInMs = 60_000L)
+            )
+        )
+        runCurrent()
+
+        // The wire says "60 s from now"; the screen counts down to a deadline on ITS OWN clock,
+        // so a device running a minute slow still shows 60, not 120.
+        val startsAt = vm.uiState.value.autoStartAtMs ?: error("no countdown")
+        assertTrue(startsAt - currentTimeMillis() in 55_000L..60_000L)
     }
 }

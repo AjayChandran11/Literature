@@ -12,6 +12,7 @@ import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -120,6 +121,9 @@ class LobbyViewModelTest {
         backgroundScope.launch { vm.navigateToWaitingRoom.collect { destinations += it } }
         runCurrent()
 
+        vm.createRoom("Me", 4)
+        vm.uiState.first { it.isServerReady } // the request goes out only after the warm-up
+        runCurrent()
         repo.receive(ServerMessage.RoomCreated("ABC123", "player_0", 3, "tok"))
         repo.receive(
             ServerMessage.RoomUpdate(
@@ -135,6 +139,54 @@ class LobbyViewModelTest {
         runCurrent()
 
         assertTrue(destinations.contains("ABC123"), "being seated is what moves the player on")
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun quickPlayNavigatesToTheTableOnAdmission() = runTest(dispatcher) {
+        val repo = repo()
+        val vm = LobbyViewModel(repo)
+        var navigatedTo: String? = null
+        backgroundScope.launch { vm.navigateToWaitingRoom.collect { navigatedTo = it } }
+        runCurrent()
+
+        vm.quickPlay("Me")
+        vm.uiState.first { it.isServerReady } // the request goes out only after the warm-up
+        runCurrent()
+        // The connect fails against the mock engine; the admission frames below are what matter.
+        repo.receive(ServerMessage.RoomCreated("QP1234", "player_0", 4, "tok"))
+        repo.receive(ServerMessage.RoomUpdate(RoomState("QP1234", RoomPhase.WAITING, emptyList(), "player_0", 4, isPublic = true)))
+        runCurrent()
+
+        assertEquals("QP1234", navigatedTo)
+    }
+
+    @Test
+    fun aSecondQuickPlayAfterAnEarlierTableNavigatesAgain() = runTest(dispatcher) {
+        val repo = repo()
+        val vm = LobbyViewModel(repo)
+        val destinations = mutableListOf<String>()
+        backgroundScope.launch { vm.navigateToWaitingRoom.collect { destinations += it } }
+        runCurrent()
+
+        vm.quickPlay("Me")
+        vm.uiState.first { it.isServerReady } // the request goes out only after the warm-up
+        runCurrent()
+        repo.receive(ServerMessage.RoomCreated("QP1234", "player_0", 4, "tok"))
+        repo.receive(ServerMessage.RoomUpdate(RoomState("QP1234", RoomPhase.WAITING, emptyList(), "player_0", 4, isPublic = true)))
+        runCurrent()
+
+        // The player backs out of that table and taps Quick Play again from the same lobby, the
+        // old room state still in the repository. This spun forever: the one listener the lobby
+        // armed at start-up had been spent on the first table.
+        vm.quickPlay("Me")
+        vm.uiState.first { it.isServerReady } // the request goes out only after the warm-up
+        runCurrent()
+        repo.receive(ServerMessage.RoomCreated("QP5678", "player_0", 4, "tok2"))
+        repo.receive(ServerMessage.RoomUpdate(RoomState("QP5678", RoomPhase.WAITING, emptyList(), "player_0", 4, isPublic = true)))
+        runCurrent()
+
+        assertEquals(listOf("QP1234", "QP5678"), destinations)
         assertFalse(vm.uiState.value.isLoading)
     }
 }

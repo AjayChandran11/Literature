@@ -27,7 +27,7 @@ class WireNamesTest {
             setOf(
                 "$p.CreateRoom", "$p.JoinRoom", "$p.StartGame", "$p.AskCards", "$p.ClaimDeck",
                 "$p.SelectPassTarget", "$p.LeaveRoom", "$p.Reconnect", "$p.LeaveGame", "$p.SwitchTeam",
-                "$p.SendReaction", "$p.Rematch",
+                "$p.SendReaction", "$p.Rematch", "$p.QuickPlay",
             ),
             wireNames(ClientMessage.serializer()),
         )
@@ -52,6 +52,7 @@ class WireNamesTest {
             setOf(
                 "$p.CardAsked", "$p.DeckClaimed", "$p.TurnChanged", "$p.GameStarted", "$p.GameEnded",
                 "$p.TurnTimedOut", "$p.PlayerDisconnected", "$p.PlayerReconnected", "$p.PlayerReplacedByBot",
+                "$p.PlayerJoined",
             ),
             wireNames(GameEvent.serializer()),
         )
