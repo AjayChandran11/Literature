@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -213,6 +214,9 @@ fun WaitingRoomScreen(
         val windowInfo = currentWindowAdaptiveInfo()
         val isCompact = windowInfo.isCompactHeight
         val sideBySide = windowInfo.useSideBySide
+        // The server's clock deals with bots whatever the host ticked.
+        val countingDown = uiState.autoStartAtMs != null
+        val startWithBots = fillWithBots || countingDown
 
         if (sideBySide) {
             // Landscape / tablet / unfolded foldable: two panes. The players list gets its own
@@ -251,26 +255,27 @@ fun WaitingRoomScreen(
                             )
                             Spacer(modifier = Modifier.height(if (isCompact) 12.dp else 20.dp))
                         }
-                        if (uiState.isHost) {
-                            HostSetupControls(
-                                players = uiState.players,
-                                fillWithBots = fillWithBots,
-                                onFillWithBots = { fillWithBots = it },
-                                selectedDifficulty = selectedDifficulty,
-                                onDifficulty = { selectedDifficulty = it }
-                            )
-                        } else {
-                            WaitingForHostText(countingDown = uiState.autoStartAtMs != null)
+                        if (!uiState.isHost) {
+                            WaitingForHostText(countingDown = countingDown)
                         }
                     }
                     if (uiState.isHost) {
                         Spacer(modifier = Modifier.height(12.dp))
+                        HostSetupControls(
+                            players = uiState.players,
+                            fillWithBots = fillWithBots,
+                            onFillWithBots = { fillWithBots = it },
+                            selectedDifficulty = selectedDifficulty,
+                            onDifficulty = { selectedDifficulty = it },
+                            countingDown = countingDown
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
                         StartGameButton(
                             players = uiState.players,
                             targetPlayerCount = uiState.targetPlayerCount,
-                            fillWithBots = fillWithBots,
+                            fillWithBots = startWithBots,
                             isStarting = uiState.isStarting,
-                            onStartGame = { viewModel.startGame(fillWithBots, selectedDifficulty) }
+                            onStartGame = { viewModel.startGame(startWithBots, selectedDifficulty) }
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
@@ -349,18 +354,19 @@ fun WaitingRoomScreen(
                         fillWithBots = fillWithBots,
                         onFillWithBots = { fillWithBots = it },
                         selectedDifficulty = selectedDifficulty,
-                        onDifficulty = { selectedDifficulty = it }
+                        onDifficulty = { selectedDifficulty = it },
+                        countingDown = countingDown
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     StartGameButton(
                         players = uiState.players,
                         targetPlayerCount = uiState.targetPlayerCount,
-                        fillWithBots = fillWithBots,
+                        fillWithBots = startWithBots,
                         isStarting = uiState.isStarting,
-                        onStartGame = { viewModel.startGame(fillWithBots, selectedDifficulty) }
+                        onStartGame = { viewModel.startGame(startWithBots, selectedDifficulty) }
                     )
                 } else {
-                    WaitingForHostText(countingDown = uiState.autoStartAtMs != null)
+                    WaitingForHostText(countingDown = countingDown)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -847,74 +853,86 @@ private fun HostSetupControls(
     onFillWithBots: (Boolean) -> Unit,
     selectedDifficulty: BotDifficulty,
     onDifficulty: (BotDifficulty) -> Unit,
+    countingDown: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val team1Count = players.count { it.teamId == "team_1" }
     val team2Count = players.count { it.teamId == "team_2" }
-    val teamsUneven = !fillWithBots && team1Count != team2Count
+    val teamsUneven = !fillWithBots && !countingDown && team1Count != team2Count
 
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(0.8f)
-        ) {
-            RoundedCheckbox(checked = fillWithBots, onCheckedChange = onFillWithBots)
+        if (countingDown) {
             Text(
-                text = stringResource(Res.string.waiting_room_fill_bots),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                text = stringResource(Res.string.waiting_room_bots_on_clock),
+                style = MaterialTheme.typography.bodyMedium,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(0.8f)
             )
-        }
-
-        // Bot difficulty selector — shown when filling with bots. No caption row: the
-        // Easy/Medium/Hard chips directly under the bots checkbox are self-describing,
-        // and in portrait every fixed row here is paid for by the players list. (The
-        // Game Setup sheet keeps its caption — it has the room.)
-        if (fillWithBots) {
-            Spacer(modifier = Modifier.height(6.dp))
+        } else {
             Row(
-                modifier = Modifier.fillMaxWidth(0.8f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(0.8f)
             ) {
-                val difficultyLabels = mapOf(
-                    BotDifficulty.EASY to stringResource(Res.string.difficulty_easy),
-                    BotDifficulty.MEDIUM to stringResource(Res.string.difficulty_medium),
-                    BotDifficulty.HARD to stringResource(Res.string.difficulty_hard)
+                RoundedCheckbox(checked = fillWithBots, onCheckedChange = onFillWithBots)
+                Text(
+                    text = stringResource(Res.string.waiting_room_fill_bots),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                BotDifficulty.entries.forEach { difficulty ->
-                    val isSelected = selectedDifficulty == difficulty
-                    val label = difficultyLabels[difficulty] ?: difficulty.label
-                    val primary = MaterialTheme.colorScheme.primary
+            }
 
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) primary.copy(alpha = 0.12f)
-                                else MaterialTheme.colorScheme.surfaceVariant
+            // Bot difficulty selector — shown when filling with bots. No caption row: the
+            // Easy/Medium/Hard chips directly under the bots checkbox are self-describing,
+            // and in portrait every fixed row here is paid for by the players list. (The
+            // Game Setup sheet keeps its caption — it has the room.)
+            if (fillWithBots) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(0.8f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val difficultyLabels = mapOf(
+                        BotDifficulty.EASY to stringResource(Res.string.difficulty_easy),
+                        BotDifficulty.MEDIUM to stringResource(Res.string.difficulty_medium),
+                        BotDifficulty.HARD to stringResource(Res.string.difficulty_hard)
+                    )
+                    BotDifficulty.entries.forEach { difficulty ->
+                        val isSelected = selectedDifficulty == difficulty
+                        val label = difficultyLabels[difficulty] ?: difficulty.label
+                        val primary = MaterialTheme.colorScheme.primary
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isSelected) primary.copy(alpha = 0.12f)
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                .border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) primary else primary.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .clickable { onDifficulty(difficulty) }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Single line — the "Forgiving/Balanced/Expert" blurbs live in the
+                            // Game Setup sheet; here they doubled the chip height for words the
+                            // host has already seen.
+                            Text(
+                                text = label,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
                             )
-                            .border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) primary else primary.copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .clickable { onDifficulty(difficulty) }
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Single line — the "Forgiving/Balanced/Expert" blurbs live in the
-                        // Game Setup sheet; here they doubled the chip height for words the
-                        // host has already seen.
-                        Text(
-                            text = label,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
-                        )
+                        }
                     }
                 }
             }
