@@ -113,6 +113,17 @@ object DeepLinkHandler {
     }
 
     /**
+     * The puzzle number from a share link (`https://literature-game.pages.dev/?puzzle=126`), or
+     * null when the URL carries none. The number is informational: the puzzle that opens is
+     * today's, since every player gets the same one; it feeds analytics and a future archive.
+     */
+    fun extractPuzzleNumber(raw: String?): Int? {
+        val input = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return Regex("[?&]puzzle=(\\d{1,6})(?:[&#]|$)", RegexOption.IGNORE_CASE)
+            .find(input)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it > 0 }
+    }
+
+    /**
      * Pulls a room code out of a Play Install Referrer string (e.g. `room=ABC123` or
      * `room=ABC123&utm_source=...`). The referrer is a bare query string with no leading
      * `?`, so we prepend one and reuse [extractRoomCode]'s query parsing. Returns null for

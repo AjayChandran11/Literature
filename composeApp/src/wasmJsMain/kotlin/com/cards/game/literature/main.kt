@@ -3,6 +3,8 @@ package com.cards.game.literature
 import androidx.compose.ui.ExperimentalComposeUiApi
 import kotlin.js.ExperimentalWasmJsInterop
 import androidx.compose.ui.window.ComposeViewport
+import com.cards.game.literature.analytics.Analytics
+import com.cards.game.literature.analytics.AnalyticsEvent
 import com.cards.game.literature.deeplink.DeepLinkHandler
 import com.cards.game.literature.di.appModule
 import com.cards.game.literature.network.NetworkMonitor
@@ -24,7 +26,13 @@ fun main() {
     // opened into a tab that inherited sessionStorage) and must win over the old seat.
     val resume = OnlineSessionBackup.load()
     val urlRoom = DeepLinkHandler.extractRoomCode(window.location.href)
-    if (resume != null && (urlRoom == null || urlRoom == resume.roomCode)) {
+    val urlPuzzle = DeepLinkHandler.extractPuzzleNumber(window.location.href)
+    if (urlPuzzle != null) {
+        // A puzzle share link: the visitor came to play this puzzle, ahead of any saved session.
+        Analytics.log(AnalyticsEvent.PuzzleLinkOpened(urlPuzzle))
+        DeepLinkHandler.submitDestination(DeepLinkHandler.LaunchDestination.DAILY_PUZZLE)
+        window.history.replaceState(null, "", window.location.pathname)
+    } else if (resume != null && (urlRoom == null || urlRoom == resume.roomCode)) {
         DeepLinkHandler.submitResume(
             DeepLinkHandler.PendingResume(resume.roomCode, resume.playerId, resume.reconnectToken)
         )
