@@ -1,5 +1,6 @@
 package com.cards.game.literature.ui.lobby
 
+import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.ui.common.BackHandler
 import com.cards.game.literature.ui.common.enumSaver
 import com.cards.game.literature.ui.common.formatArgs
@@ -89,6 +90,11 @@ fun WaitingRoomScreen(
     // cold). gamesPlayed also covers online-first players, who never mark the offline tutorial.
     val isNovice = remember { StatsStore.stats.value.gamesPlayed == 0 }
     val showPrimer = isNovice && !primerDismissed
+    // One-time card for a table with a clock: shown once, dismissible, never again.
+    val quickPlayPrimerSeenBefore = rememberSaveable { TutorialPrefs.isQuickPlayPrimerShown() }
+    var quickPlayPrimerDismissed by rememberSaveable { mutableStateOf(false) }
+    val showQuickPlayPrimer = uiState.autoStartAtMs != null && !quickPlayPrimerSeenBefore && !quickPlayPrimerDismissed
+    LaunchedEffect(showQuickPlayPrimer) { if (showQuickPlayPrimer) TutorialPrefs.markQuickPlayPrimerShown() }
 
     BackHandler {
         showLeaveDialog = true
@@ -248,6 +254,10 @@ fun WaitingRoomScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         InviteButton(uiState.roomCode)
                         Spacer(modifier = Modifier.height(if (isCompact) 12.dp else 20.dp))
+                        if (showQuickPlayPrimer) {
+                            QuickPlayPrimer(onDismiss = { quickPlayPrimerDismissed = true })
+                            Spacer(modifier = Modifier.height(if (isCompact) 12.dp else 20.dp))
+                        }
                         if (showPrimer) {
                             WaitingRoomPrimer(
                                 onHowToPlay = { showHowToPlay = true },
@@ -336,12 +346,20 @@ fun WaitingRoomScreen(
                     myPlayerId = uiState.myPlayerId,
                     onSwitchTeam = viewModel::switchTeam,
                     modifier = Modifier.weight(1f),
-                    header = if (showPrimer) {
+                    header = if (showPrimer || showQuickPlayPrimer) {
                         {
-                            WaitingRoomPrimer(
-                                onHowToPlay = { showHowToPlay = true },
-                                onDismiss = { primerDismissed = true }
-                            )
+                            Column {
+                                if (showQuickPlayPrimer) {
+                                    QuickPlayPrimer(onDismiss = { quickPlayPrimerDismissed = true })
+                                    if (showPrimer) Spacer(modifier = Modifier.height(8.dp))
+                                }
+                                if (showPrimer) {
+                                    WaitingRoomPrimer(
+                                        onHowToPlay = { showHowToPlay = true },
+                                        onDismiss = { primerDismissed = true }
+                                    )
+                                }
+                            }
                         }
                     } else null
                 )
@@ -1021,6 +1039,48 @@ private fun ErrorSection(error: String, onClearError: () -> Unit) {
 /** A dismissible "what is this game" card for first-timers waiting in the room — the invited
  *  novice who lands here cold via a deep link. Reuses the objective/teams help copy and opens
  *  the full [HowToPlaySheet] for the rest. Shown only when [gamesPlayed] is 0. */
+@Composable
+private fun QuickPlayPrimer(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(Res.string.quick_play_primer_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = stringResource(Res.string.cd_dismiss),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+            Text(
+                text = stringResource(Res.string.quick_play_primer_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = stringResource(Res.string.quick_play_primer_body_2),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+            )
+        }
+    }
+}
+
 @Composable
 private fun WaitingRoomPrimer(
     onHowToPlay: () -> Unit,

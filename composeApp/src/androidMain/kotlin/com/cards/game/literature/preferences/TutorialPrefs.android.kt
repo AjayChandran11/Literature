@@ -44,4 +44,28 @@ actual object TutorialPrefs {
         ctx.getSharedPreferences("lit_prefs", Context.MODE_PRIVATE)
             .edit().putBoolean("first_debrief_shown", true).apply()
     }
+
+    actual fun isQuickPlayTried(): Boolean {
+        val ctx = appContext ?: return false
+        return ctx.getSharedPreferences("lit_prefs", Context.MODE_PRIVATE)
+            .getBoolean("quick_play_tried", false)
+    }
+
+    actual fun markQuickPlayTried() {
+        val ctx = appContext ?: return
+        ctx.getSharedPreferences("lit_prefs", Context.MODE_PRIVATE)
+            .edit().putBoolean("quick_play_tried", true).apply()
+    }
+
+    actual fun isQuickPlayPrimerShown(): Boolean {
+        val ctx = appContext ?: return false
+        return ctx.getSharedPreferences("lit_prefs", Context.MODE_PRIVATE)
+            .getBoolean("quick_play_primer_shown", false)
+    }
+
+    actual fun markQuickPlayPrimerShown() {
+        val ctx = appContext ?: return
+        ctx.getSharedPreferences("lit_prefs", Context.MODE_PRIVATE)
+            .edit().putBoolean("quick_play_primer_shown", true).apply()
+    }
 }

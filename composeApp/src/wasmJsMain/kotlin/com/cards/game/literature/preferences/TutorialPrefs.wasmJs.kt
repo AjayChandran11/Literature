@@ -22,4 +22,18 @@ actual object TutorialPrefs {
     actual fun markFirstGameDebriefShown() {
         WebStorage.set("first_debrief_shown", "true")
     }
+
+    actual fun isQuickPlayTried(): Boolean =
+        WebStorage.get("quick_play_tried")?.toBoolean() ?: false
+
+    actual fun markQuickPlayTried() {
+        WebStorage.set("quick_play_tried", "true")
+    }
+
+    actual fun isQuickPlayPrimerShown(): Boolean =
+        WebStorage.get("quick_play_primer_shown")?.toBoolean() ?: false
+
+    actual fun markQuickPlayPrimerShown() {
+        WebStorage.set("quick_play_primer_shown", "true")
+    }
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.cards.game.literature.preferences.TutorialPrefs
 import com.cards.game.literature.network.NetworkMonitor
 import com.cards.game.literature.notifications.RequestNotificationPermissionOnce
 import com.cards.game.literature.ui.home.GameSetupDialog
@@ -137,7 +138,7 @@ fun LobbyScreen(
             // Quick Play: a table in seconds, every time. The server seats you at a public table
             // that has not dealt yet or opens one that deals itself shortly; never a running game.
             Button(
-                onClick = { viewModel.quickPlay(playerName) },
+                onClick = { TutorialPrefs.markQuickPlayTried(); viewModel.quickPlay(playerName) },
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
                     .height(56.dp),

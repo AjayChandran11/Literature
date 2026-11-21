@@ -23,4 +23,18 @@ actual object TutorialPrefs {
     actual fun markFirstGameDebriefShown() {
         NSUserDefaults.standardUserDefaults.setBool(true, forKey = "first_debrief_shown")
     }
+
+    actual fun isQuickPlayTried(): Boolean =
+        NSUserDefaults.standardUserDefaults.boolForKey("quick_play_tried")
+
+    actual fun markQuickPlayTried() {
+        NSUserDefaults.standardUserDefaults.setBool(true, forKey = "quick_play_tried")
+    }
+
+    actual fun isQuickPlayPrimerShown(): Boolean =
+        NSUserDefaults.standardUserDefaults.boolForKey("quick_play_primer_shown")
+
+    actual fun markQuickPlayPrimerShown() {
+        NSUserDefaults.standardUserDefaults.setBool(true, forKey = "quick_play_primer_shown")
+    }
 }

@@ -83,6 +83,8 @@ fun HomeScreen(
         p.status != PuzzleStatus.SOLVED && p.status != PuzzleStatus.FAILED && p.readyHintShownDay != today
     }
     LaunchedEffect(Unit) { if (showPuzzleHighlight) PuzzleStore.markReadyHintShown(today) }
+    // "NEW" on Play Online until Quick Play has been pressed once (1.2.0 announcement).
+    val showQuickPlayBadge = remember { !TutorialPrefs.isQuickPlayTried() }
 
     HomeScreenContent(
         playerName = playerName,
@@ -93,6 +95,7 @@ fun HomeScreen(
         pendingInvite = pendingInvite,
         stats = stats,
         showPuzzleHighlight = showPuzzleHighlight,
+        showQuickPlayBadge = showQuickPlayBadge,
         isIndependenceDay = festival == Festival.INDEPENDENCE_DAY,
         showFestivalBanner = showFestivalBanner,
         onConsumeInvite = { DeepLinkHandler.consume() },
@@ -114,6 +117,7 @@ internal fun HomeScreenContent(
     pendingInvite: String?,
     stats: PlayerStats,
     showPuzzleHighlight: Boolean,
+    showQuickPlayBadge: Boolean = false,
     isIndependenceDay: Boolean,
     showFestivalBanner: Boolean,
     onConsumeInvite: () -> Unit,
@@ -266,19 +270,32 @@ internal fun HomeScreenContent(
                 modifier = Modifier.fillMaxWidth(0.8f),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                HomeModeTile(
-                    icon = Icons.Filled.Public,
-                    label = stringResource(Res.string.home_play_online),
-                    enabled = playerName.isNotBlank(),
-                    onClick = {
-                        if (!TutorialPrefs.isFirstGameCompleted() && !TutorialPrefs.isOnlineGateDismissed()) {
-                            showOnlineGateDialog = true
-                        } else {
-                            onPlayOnline(playerName.trim())
+                // Badge on the OUTER (top-start) corner: BadgedBox would hang it in the gutter
+                // between the two tiles.
+                Box(modifier = Modifier.weight(1f)) {
+                    HomeModeTile(
+                        icon = Icons.Filled.Public,
+                        label = stringResource(Res.string.home_play_online),
+                        enabled = playerName.isNotBlank(),
+                        onClick = {
+                            if (!TutorialPrefs.isFirstGameCompleted() && !TutorialPrefs.isOnlineGateDismissed()) {
+                                showOnlineGateDialog = true
+                            } else {
+                                onPlayOnline(playerName.trim())
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (showQuickPlayBadge) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary,
+                            modifier = Modifier.align(Alignment.TopStart).offset(x = (-6).dp, y = (-8).dp)
+                        ) {
+                            Text(stringResource(Res.string.home_badge_new))
                         }
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+                    }
+                }
                 BadgedBox(
                     modifier = Modifier.weight(1f),
                     badge = {

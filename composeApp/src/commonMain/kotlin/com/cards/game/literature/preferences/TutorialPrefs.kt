@@ -13,4 +13,12 @@ expect object TutorialPrefs {
     /** True once the one-time first-game debrief has shown on the result screen. */
     fun isFirstGameDebriefShown(): Boolean
     fun markFirstGameDebriefShown()
+
+    /** True once Quick Play has been pressed; the Home badge announcing it then goes away. */
+    fun isQuickPlayTried(): Boolean
+    fun markQuickPlayTried()
+
+    /** True once the Quick Play primer card has been shown at a counting-down table. */
+    fun isQuickPlayPrimerShown(): Boolean
+    fun markQuickPlayPrimerShown()
 }
