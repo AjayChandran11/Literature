@@ -96,8 +96,8 @@
     <string name="waiting_room_waiting_for_players">Waiting for more players…</string>
     <string name="waiting_room_bots_on_clock">Empty seats go to bots when the clock runs out</string>
     <string name="home_badge_new">NEW</string>
-    <string name="quick_play_primer_title">This table starts itself</string>
-    <string name="quick_play_primer_body">It deals within a minute, and bots take any empty seats. Anyone on Quick Play can sit down until then.</string>
+    <string name="quick_play_primer_title">How Quick Play works</string>
+    <string name="quick_play_primer_body">The game starts within a minute, and bots take any empty seats. Anyone on Quick Play can sit down until then.</string>
     <string name="quick_play_primer_body_2">Friends can still join with the room code, even after the deal.</string>
     <string name="error_start_game_timeout">Failed to start game. Please go back and try again.</string>
     <string name="snackbar_player_disconnected">%1$s disconnected</string>
